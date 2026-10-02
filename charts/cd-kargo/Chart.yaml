@@ -1,0 +1,23 @@
+apiVersion: v2
+name: cd-kargo
+description: >-
+  Kargo, installed from the upstream kargo chart, with this repository's
+  schema, goldens and adoption gate around it. With no values and no preset
+  it renders exactly what the upstream chart renders.
+type: application
+# Stamped from the tag by the release workflow; never moved by hand.
+version: 0.0.0
+# The upstream APPLICATION version; see charts/cd-argocd/Chart.yaml.
+appVersion: v1.11.6
+keywords:
+  - kargo
+  - gitops
+  - kubernetes
+home: https://github.com/truvity/cd
+sources:
+  - https://github.com/truvity/cd
+  - https://github.com/akuity/kargo
+dependencies:
+  - name: kargo
+    version: 1.11.6
+    repository: oci://ghcr.io/akuity/kargo-charts

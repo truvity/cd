@@ -1,0 +1,5 @@
+# The smallest install that renders. Upstream refuses an enabled API with no
+# admin account password and no OIDC; the controller alone needs neither.
+kargo:
+  api:
+    enabled: false

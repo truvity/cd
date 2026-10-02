@@ -1,0 +1,12 @@
+version: 2
+
+project_name: cd
+
+# Chart-only repository: goreleaser cuts the GitHub release and its
+# changelog; the artifacts are the Helm charts, packaged and pushed by the
+# shared release workflow after this.
+builds:
+  - skip: true
+
+changelog:
+  use: github-native

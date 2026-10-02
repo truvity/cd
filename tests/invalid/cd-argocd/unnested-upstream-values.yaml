@@ -1,0 +1,5 @@
+# expect: additional properties 'server' not allowed
+# The adoption trap: values written for the upstream chart, pasted at the
+# root. Without the schema they are ignored and the install runs on defaults.
+server:
+  replicas: 2

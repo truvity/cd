@@ -1,0 +1,29 @@
+apiVersion: v2
+name: cd-argocd
+description: >-
+  Argo CD, installed from the upstream argo-cd chart, with this repository's
+  schema, goldens and adoption gate around it. With no values and no preset
+  it renders exactly what the upstream chart renders.
+type: application
+# Stamped from the tag by the release workflow; never moved by hand.
+version: 0.0.0
+# The upstream APPLICATION version, kept in step with the dependency below
+# by renovate (and checked by hack/parity.sh). The release workflow leaves
+# it alone (chart-app-version: chart): it records what is installed, not
+# which release of this chart installed it.
+appVersion: v3.4.4
+keywords:
+  - argocd
+  - gitops
+  - kubernetes
+home: https://github.com/truvity/cd
+sources:
+  - https://github.com/truvity/cd
+  - https://github.com/argoproj/argo-helm/tree/main/charts/argo-cd
+# An exact pin, never a range: a range lets two renders of one commit
+# differ. The archive is vendored under charts/ on purpose and `just lint`
+# proves it still matches this line.
+dependencies:
+  - name: argo-cd
+    version: 9.7.0
+    repository: https://argoproj.github.io/argo-helm

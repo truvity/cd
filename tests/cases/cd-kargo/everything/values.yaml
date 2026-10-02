@@ -1,0 +1,50 @@
+# A fully set installation, with neutral values (example.com, an issuer that
+# does not exist). Mirrors the shape of a real one: the API behind a gateway,
+# OIDC-only sign-in with admins by group, HA on the request-serving parts,
+# metrics, restricted pod security and scheduling.
+kargo:
+  api:
+    enabled: true
+    replicas: 2
+    host: kargo.example.com
+    tls:
+      enabled: false
+    adminAccount:
+      enabled: false
+    oidc:
+      enabled: true
+      issuerURL: https://issuer.example.com
+      clientID: kargo
+      cliClientID: kargo-cli
+      usernameClaim: email
+      users:
+        claims:
+          iss:
+            - https://issuer.example.com
+      admins:
+        claims:
+          groups:
+            - example:admin
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 1
+  webhooksServer:
+    replicas: 2
+  externalWebhooksServer:
+    replicas: 2
+  controller:
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
+  global:
+    securityContext:
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      seccompProfile:
+        type: RuntimeDefault
+    nodeSelector:
+      kubernetes.io/arch: arm64

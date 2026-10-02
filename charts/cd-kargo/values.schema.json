@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "cd-kargo",
+  "description": "Kargo from its upstream chart. Strict at the top level: an upstream value written at the root of the file (server: ... instead of kargo: server: ...) is refused rather than silently ignored, because that mistake installs the defaults nobody chose. Open below: kargo is the upstream chart's own values, validated by the upstream chart, and global is shared with it.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "kargo": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "The upstream chart's own values, verbatim."
+    },
+    "global": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Shared with the upstream chart as its global."
+    }
+  }
+}

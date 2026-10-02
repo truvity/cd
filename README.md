@@ -1,0 +1,137 @@
+# cd
+
+**Continuous delivery as Helm charts: Argo CD and Kargo, installed from their upstream charts with a strict schema, goldens and a zero-diff adoption gate around them.**
+
+An installation that runs the upstream `argo-cd` or `kargo` chart today can
+move onto these with its values nested one level and no change to a single
+object in the cluster. After that, the pieces that make a delivery pipeline
+out of the two (promotion stages, health gates, cluster registration) arrive
+here as further charts and a small gate binary, each one adopted the same
+way.
+
+| What | Where |
+| --- | --- |
+| `cd-argocd` — Argo CD, from the upstream `argo-cd` chart 9.7.0 | `oci://ghcr.io/truvity/charts/cd-argocd` |
+| `cd-kargo` — Kargo, from the upstream `kargo` chart 1.11.6 | `oci://ghcr.io/truvity/charts/cd-kargo` |
+
+The `delivery` chart (Kargo projects, warehouses and stages), the
+`cluster-registration` chart and the gate binary are not in `v0.1.0`; they
+arrive one reviewed change at a time and are listed in the
+[CHANGELOG](CHANGELOG.md).
+
+## Who it is for
+
+A team that runs Kubernetes and wants Argo CD and Kargo installed from a
+chart that is the upstream's, pinned exactly, with its values checked by a
+schema and its renders held in version control. It assumes a cluster, Helm
+(or Argo CD itself) to install a chart, and a Gateway or Ingress of the
+installer's own for the web consoles.
+
+It deliberately installs no identity provider, no ingress, no secret store
+and no network policy. Where the consoles are reached, who signs in and
+where the repository credentials come from are the installer's values and
+Secrets.
+
+## The model
+
+- **A wrapper chart.** `cd-argocd` and `cd-kargo` each depend on exactly one
+  upstream chart, vendored as an archive in the repository. The chart
+  defines no template and no default of its own.
+- **Two namespaces of values.** The upstream chart's values live under its
+  own key, `argo-cd` or `kargo`; `global` is shared with it. What the
+  upstream documents as `server.replicas` is `argo-cd.server.replicas`.
+- **The parity gate.** For every case under `tests/cases/`, the wrapper's
+  render and the upstream chart's render, given the same values, are the
+  same objects. [docs/adoption.md](docs/adoption.md) shows how to run the
+  same proof with your own values before you move a live installation.
+
+## Install and a worked example
+
+```sh
+helm install argocd oci://ghcr.io/truvity/charts/cd-argocd \
+  --version 0.1.0 --namespace argocd --create-namespace -f values.yaml
+```
+
+```yaml
+# values.yaml: neutral values (example.com, an issuer that does not exist).
+argo-cd:
+  server:
+    replicas: 2
+  configs:
+    cm:
+      url: https://argocd.example.com
+      oidc.config: |
+        name: Example
+        issuer: https://issuer.example.com
+        clientID: $argocd-client:client-id
+        clientSecret: $argocd-client:client-secret
+    rbac:
+      policy.csv: |
+        g, example:admin, role:admin
+      policy.default: role:none
+      scopes: '[groups]'
+```
+
+`cd-kargo` installs the same way, with `--namespace kargo` and its values under
+`kargo:`. Upstream refuses an enabled API without an admin account password
+or an OIDC configuration; set one of them
+(see [docs/reference.md](docs/reference.md)).
+
+## Consumers
+
+No consumer is recorded at `v0.1.0`; a repository that adopts these charts
+adds a line here, naming the repository and the chart.
+
+## Neighbours
+
+- [ci-workflows](https://github.com/truvity/ci-workflows) — the shared CI and
+  release workflows this repository calls.
+- [policy](https://github.com/truvity/policy) — the contracts this repository
+  is held to (`docs/contracts/component.md`).
+- [observability](https://github.com/truvity/observability) — the charts that
+  scrape and dashboard what these install; it carries Argo CD and Kargo
+  dashboards.
+
+## Documentation
+
+- [docs/adoption.md](docs/adoption.md) — moving an installation onto these
+  charts with a zero diff, and proving it first.
+- [docs/safety.md](docs/safety.md) — each refusal and the failure that earned
+  it.
+- [docs/reference.md](docs/reference.md) — the values, the pins and what is
+  compared.
+- [CHANGELOG.md](CHANGELOG.md) — every release, and every default that moved.
+
+## The rule that makes this repository public
+
+Mechanism only. Nothing an estate owns has a default here: no hostname, no
+identity provider, no organisation, no account, no cluster name, no node
+selector. They are the installer's values. `hack/leak-canary.sh` fails the
+build on the mechanical shapes of an estate's particulars, and review catches
+the rest.
+
+## Status
+
+`v0.1.0` ships `cd-argocd` and `cd-kargo`. Both render the upstream chart's objects
+unchanged; that is what the parity gate proves on every pull request. No
+chart in this repository sets a default of its own yet.
+
+## Development
+
+```sh
+devbox shell
+just check      # lint, goldens, the zero-diff gate, the leak canary
+just golden     # regenerate tests/golden/ after an intended change; read the diff
+just vendor cd-argocd   # re-vendor the upstream archive after moving its pin
+```
+
+## Releasing
+
+A tag `vX.Y.Z` publishes both charts at that version to
+`oci://ghcr.io/truvity/charts`. The first release is hand-cut. Automatic
+patch releases are off until they are armed on purpose; minors and majors
+are always manual.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).

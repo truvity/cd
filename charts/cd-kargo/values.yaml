@@ -1,0 +1,24 @@
+# cd-kargo: Kargo from its upstream chart, unchanged.
+#
+# TWO NAMESPACES OF VALUES, and the split is Helm's, not a taste. Helm
+# gives a subchart its own key and `global`, nothing else:
+#
+#   kargo       every value of the upstream chart, verbatim. What the
+#            upstream documents as `server.replicas` is
+#            `kargo.server.replicas` here.
+#   global   shared with the subchart. Put a `global` value here and the
+#            subchart reads it as its own `global`; nesting it under
+#            `kargo` works too and renders the same. See docs/adoption.md.
+#
+# THIS FILE SETS NOTHING. With no values the render is the upstream's, and
+# hack/parity.sh proves it for every case under tests/cases/: the same
+# values, flattened, through the upstream chart alone, must render the same
+# objects. That is what lets an installation that runs the upstream chart
+# today move onto this one with a zero diff. A default that changes the
+# render is a Behaviour change (CHANGELOG.md) and lands as an opt-in
+# preset, never here.
+#
+# Nothing an estate owns has a default: no hostname, no issuer, no node
+# selector, no toleration, no registry. They are the caller's values.
+kargo: {}
+global: {}

@@ -1,0 +1,3 @@
+# Chart sources are read from the vendored archive, not from here.
+.git
+*.tmp

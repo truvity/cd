@@ -1,0 +1,14 @@
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Devbox
+.devbox/
+
+# Helm: a packaged chart is a build product; the vendored dependency
+# archives under charts/*/charts/ ARE committed, on purpose.
+/dist/
+*.tgz.tmp

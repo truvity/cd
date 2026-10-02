@@ -1,0 +1,36 @@
+# Tag-triggered release, the shared implementation. Chart-only: goreleaser
+# cuts the GitHub release and its changelog (builds are skipped, see
+# .goreleaser.yaml), and each chart is then packaged at the tag's version and
+# pushed to oci://ghcr.io/truvity/charts/<name>.
+#
+# The caller grants the permissions because a reusable workflow can narrow
+# them but never widen them.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  packages: write
+
+# Never cancel a running publish: a half-pushed artifact set is worse than a
+# queued wait.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    permissions:
+      contents: write
+      packages: write
+    uses: truvity/ci-workflows/.github/workflows/release-public.yaml@8a6f582944123bbce3bb79d8057dc05797b1db49 # v3.18.0
+    with:
+      charts: '["cd-argocd", "cd-kargo"]'
+      # These charts package software we do not build: appVersion keeps
+      # recording the upstream release (hack/check-app-version.sh holds it
+      # to the vendored archive), while version is the tag.
+      chart-app-version: chart
