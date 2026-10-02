@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.3.0
+
 - **Added:** the `cd-delivery` chart, which renders the Argo CD Applications
   that deliver a product's charts to a cluster: per product up to three, the
   infrastructure ring (`<product>-infra`), the application ring (`<product>`)
