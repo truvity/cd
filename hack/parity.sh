@@ -59,16 +59,33 @@ for values in "$root"/tests/cases/*/*/values.yaml; do
   upstream="$(ls "$root"/charts/"$chart"/charts/"$k"-*.tgz)"
   tmp="$(mktemp -d)"
 
+  # A case may name presets (tests/cases/<chart>/<case>/presets, one per
+  # line): values files shipped in the chart, layered BEFORE the case's own
+  # values. They are values and nothing more, so the upstream chart given the
+  # same layers, flattened, must render the same objects.
+  files=()
+  if [ -f "$case_dir/presets" ]; then
+    while read -r preset; do
+      [ -n "$preset" ] && files+=("$root/charts/$chart/presets/$preset.yaml")
+    done < "$case_dir/presets"
+  fi
+  files+=("$values")
+  args=()
+  for f in "${files[@]}"; do args+=(-f "$f"); done
+
+  # The layers deep-merged, maps merged and lists replaced: what Helm hands
+  # the chart.
+  yq eval-all '. as $item ireduce ({}; . * $item)' "${files[@]}" > "$tmp/merged.yaml"
   # shellcheck disable=SC2016
   yq eval "(.[\"$k\"] // {}) * {\"global\": ((.[\"$k\"].global // {}) * (.global // {}))}" \
-    "$values" > "$tmp/flat.yaml"
+    "$tmp/merged.yaml" > "$tmp/flat.yaml"
 
   # The wrapper's own templates (charts/<chart>/templates/: the opt-in
   # extras) are objects the upstream chart does not render at all, so they
   # are held out of this comparison and pinned by the goldens instead. What
   # is compared is every object the UPSTREAM chart contributes: the extras
   # being switched on must not move one of them.
-  helm template "$chart" "$root/charts/$chart" --namespace "$ns" -f "$values" \
+  helm template "$chart" "$root/charts/$chart" --namespace "$ns" "${args[@]}" \
     | normalize "# Source: $chart/templates/" > "$tmp/wrapped.yaml"
   helm template "$chart" "$upstream" --namespace "$ns" -f "$tmp/flat.yaml" \
     | normalize "" > "$tmp/upstream.yaml"

@@ -44,6 +44,11 @@ lint:
 test:
     hack/golden.sh
     hack/parity.sh
+    hack/health.sh
+
+# The Lua health checks of presets/health.yaml, each run against its fixtures.
+health:
+    hack/health.sh
 
 # Regenerate the golden renders. Review the diff before committing.
 golden:

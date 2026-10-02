@@ -1,0 +1,373 @@
+# Health checks for the custom resources a GitOps install typically waits on.
+# OPT-IN: layer this file before your own values.
+#
+# Argo CD reads a resource as Healthy the instant a custom resource exists
+# unless it is told how that kind reports readiness. Anything gated on
+# health (sync waves, a parent Application waiting on its children) then
+# races ahead of an operator that has not finished. Each check below reads
+# the status the kind's own controller writes. They are Lua, run by Argo CD
+# 3.x (Lua 5.1); every one is exercised by fixtures under tests/health/ and
+# `just health` (hack/health.sh).
+#
+# What it sets: argocd-cm entries under `argo-cd.configs.cm`. The keys are
+# the ones Argo CD documents: resource.customizations.health.<group>_<kind>
+# for a single kind, and the combined `resource.customizations` key for the
+# checks that need a wildcard ('*' cannot be written in a ConfigMap key of
+# the first form). Argo CD merges the two forms.
+#
+# Layering: values files merge by key, a string is replaced whole. A
+# resource.customizations.health.<group>_<kind> key of your own replaces that
+# check outright; the combined `resource.customizations` key is ONE string,
+# so setting it yourself replaces every check that lives in it (CNPG Cluster
+# and Database, ValkeyCluster, Keycloak, NACK Stream and Consumer, ACK,
+# external-secrets, CAPI operator providers). Re-state the ones you want.
+#
+# The Application check is the sync gate: an Application is Healthy only
+# when it is Synced, with no sync operation running, and Healthy itself. It
+# has NO exemption: an estate that wants some Applications to report Healthy
+# at once (so a last wave is not held up by their health) keeps its own copy
+# of this one key, with its own rule for which Applications those are.
+argo-cd:
+  configs:
+    cm:
+      resource.customizations.health.argoproj.io_Application: |
+        hs = {}
+        hs.status = "Progressing"
+        hs.message = ""
+        -- A never-synced Application reports vacuous Healthy (empty resource
+        -- set) for a few seconds after creation, which lets app-of-apps sync
+        -- waves march past it before its first sync runs: a later wave can
+        -- be admitted before an earlier one created what it depends on.
+        -- Gate on sync status: a wave is complete only when its Applications
+        -- are BOTH Synced and Healthy. (status.history is NOT a reliable
+        -- has-synced signal: Synced+Healthy apps are seen with empty
+        -- history.) Degraded passes through so real failures stay visible.
+        if obj.status ~= nil and obj.status.health ~= nil and obj.status.health.status == "Degraded" then
+          hs.status = "Degraded"
+          if obj.status.health.message ~= nil then
+            hs.message = obj.status.health.message
+          end
+          return hs
+        end
+        if obj.status == nil or obj.status.sync == nil or obj.status.sync.status ~= "Synced" then
+          hs.message = "waiting for sync to complete"
+          return hs
+        end
+        -- A running sync OPERATION means the app has not proven this revision:
+        -- comparison-based sync.status turns Synced as soon as resources match
+        -- git, while the operation may still be waiting on resource health or
+        -- running Sync/PostSync hooks, so a wave would march past an app whose
+        -- hook has not run. Failed/Error pass through as Degraded.
+        if obj.status.operationState ~= nil and obj.status.operationState.phase ~= nil and obj.status.operationState.phase ~= "Succeeded" then
+          if obj.status.operationState.phase == "Failed" or obj.status.operationState.phase == "Error" then
+            hs.status = "Degraded"
+            hs.message = obj.status.operationState.message or "sync operation failed"
+            return hs
+          end
+          hs.message = "sync operation in progress"
+          return hs
+        end
+        if obj.status.health ~= nil then
+          hs.status = obj.status.health.status
+          if obj.status.health.message ~= nil then
+            hs.message = obj.status.health.message
+          end
+        end
+        return hs
+      resource.customizations.health.apiextensions.k8s.io_CustomResourceDefinition: |
+        hs = {}
+        hs.status = "Healthy"
+        hs.message = ""
+        if obj.status ~= nil and obj.status.conditions ~= nil then
+          for i, condition in ipairs(obj.status.conditions) do
+            if condition.type == "NamesAccepted" and condition.status == "False" then
+              hs.status = "Degraded"
+              hs.message = condition.message
+              return hs
+            end
+          end
+        end
+        return hs
+      # Wildcard health checks live in the combined resource.customizations key:
+      # ConfigMap keys must match [-._a-zA-Z0-9]+, so the flattened
+      # resource.customizations.health.<group>_<kind> form cannot carry '*'.
+      # ArgoCD merges this map with the flattened keys below.
+      resource.customizations: |
+        # CloudNativePG: Cluster healthy on "Cluster in healthy state"; Database
+        # on status.applied.
+        "postgresql.cnpg.io/Cluster":
+          health.lua: |
+            hs = {}
+            hs.status = "Progressing"
+            hs.message = "waiting for CNPG cluster"
+            if obj.status ~= nil and obj.status.phase ~= nil then
+              hs.message = obj.status.phase
+              if obj.status.phase == "Cluster in healthy state" then
+                hs.status = "Healthy"
+              elseif obj.status.phase == "Failed" then
+                hs.status = "Degraded"
+              end
+            end
+            return hs
+        # Valkey: the operator reports readiness on status.conditions Ready.
+        # Without this Argo CD reads the CR Healthy the instant it is created
+        # and anything gated on the store being up races ahead of it.
+        "valkey.io/ValkeyCluster":
+          health.lua: |
+            hs = {}
+            hs.status = "Progressing"
+            hs.message = "waiting for ValkeyCluster Ready"
+            if obj.status ~= nil and obj.status.conditions ~= nil then
+              for i, condition in ipairs(obj.status.conditions) do
+                if condition.type == "Ready" then
+                  if condition.status == "True" then
+                    hs.status = "Healthy"
+                    hs.message = ""
+                  elseif condition.message ~= nil then
+                    hs.message = condition.message
+                  end
+                end
+              end
+            end
+            return hs
+        # Keycloak: the operator reports Ready and HasErrors conditions.
+        # Without this Argo CD reads the resource Healthy the instant it
+        # exists, and a rollout would look done while pods are still
+        # clustering or crashlooping.
+        "k8s.keycloak.org/Keycloak":
+          health.lua: |
+            hs = {}
+            hs.status = "Progressing"
+            hs.message = "waiting for Keycloak Ready"
+            if obj.status ~= nil and obj.status.conditions ~= nil then
+              for i, condition in ipairs(obj.status.conditions) do
+                if condition.type == "HasErrors" and condition.status == "True" then
+                  hs.status = "Degraded"
+                  hs.message = condition.message or "HasErrors"
+                  return hs
+                end
+              end
+              for i, condition in ipairs(obj.status.conditions) do
+                if condition.type == "Ready" then
+                  if condition.status == "True" then
+                    hs.status = "Healthy"
+                    hs.message = ""
+                  elseif condition.message ~= nil then
+                    hs.message = condition.message
+                  end
+                end
+              end
+            end
+            return hs
+        "postgresql.cnpg.io/Database":
+          health.lua: |
+            hs = {}
+            hs.status = "Progressing"
+            hs.message = "waiting for Database Ready"
+            if obj.status ~= nil then
+              if obj.status.applied == true then
+                hs.status = "Healthy"
+                hs.message = ""
+              elseif obj.status.message ~= nil then
+                hs.message = obj.status.message
+              end
+            end
+            return hs
+        # NACK Stream/Consumer: status.conditions Ready. Deliberately NOT
+        # the jetstream.nats.io/* wildcard: Account CRs are passive config
+        # NACK only reads when a Stream references them; it never writes
+        # their status, so a Ready-wait on an Account blocks forever.
+        "jetstream.nats.io/Stream":
+          health.lua: &nackHealth |
+            hs = {}
+            hs.status = "Progressing"
+            hs.message = "waiting for NACK Ready"
+            if obj.status ~= nil and obj.status.conditions ~= nil then
+              for i, condition in ipairs(obj.status.conditions) do
+                if condition.type == "Ready" then
+                  if condition.status == "True" then
+                    hs.status = "Healthy"
+                    hs.message = ""
+                  elseif condition.message ~= nil then
+                    hs.message = condition.message
+                  end
+                end
+              end
+            end
+            return hs
+        "jetstream.nats.io/Consumer":
+          health.lua: *nackHealth
+        # ACK controllers (iam/eks/kms/s3.services.k8s.aws): ACK.Terminal =
+        # permanent failure; ACK.ResourceSynced True = AWS matches the CR.
+        "*.services.k8s.aws/*":
+          health.lua: |
+            hs = {}
+            hs.status = "Progressing"
+            hs.message = "waiting for ACK.ResourceSynced"
+            if obj.status ~= nil and obj.status.conditions ~= nil then
+              for i, condition in ipairs(obj.status.conditions) do
+                if condition.type == "ACK.Terminal" and condition.status == "True" then
+                  hs.status = "Degraded"
+                  hs.message = condition.message
+                  return hs
+                end
+                if condition.type == "ACK.ResourceSynced" then
+                  if condition.status == "True" then
+                    hs.status = "Healthy"
+                    hs.message = ""
+                  elseif condition.message ~= nil then
+                    hs.message = condition.message
+                  end
+                end
+              end
+            end
+            return hs
+        # external-secrets.io: every kind reports a Ready condition.
+        "external-secrets.io/*":
+          health.lua: |
+            hs = {}
+            hs.status = "Progressing"
+            hs.message = "waiting for Ready condition"
+            if obj.status ~= nil and obj.status.conditions ~= nil then
+              for i, condition in ipairs(obj.status.conditions) do
+                if condition.type == "Ready" then
+                  if condition.status == "True" then
+                    hs.status = "Healthy"
+                    hs.message = ""
+                  elseif condition.status == "False" then
+                    hs.status = "Degraded"
+                    hs.message = condition.message
+                  end
+                end
+              end
+            end
+            return hs
+        # CAPI Operator provider CRs (Core/Infrastructure/Bootstrap/ControlPlane
+        # Provider): Ready True = components installed and deployment available;
+        # PreflightCheckPassed False = terminal config error.
+        "operator.cluster.x-k8s.io/*":
+          health.lua: |
+            hs = {}
+            hs.status = "Progressing"
+            hs.message = "waiting for provider Ready condition"
+            if obj.status ~= nil and obj.metadata.generation ~= nil and obj.status.observedGeneration ~= nil and obj.status.observedGeneration < obj.metadata.generation then
+              hs.message = "spec change not yet observed"
+              return hs
+            end
+            if obj.status ~= nil and obj.status.conditions ~= nil then
+              for i, condition in ipairs(obj.status.conditions) do
+                if condition.type == "PreflightCheckPassed" and condition.status == "False" then
+                  hs.status = "Degraded"
+                  hs.message = condition.message
+                  return hs
+                end
+                if condition.type == "ProviderInstalled" and condition.status == "False" and condition.message ~= nil and condition.message ~= "" then
+                  hs.status = "Degraded"
+                  hs.message = condition.message
+                  return hs
+                end
+                if condition.type == "Ready" and condition.status == "True" then
+                  hs.status = "Healthy"
+                  hs.message = ""
+                end
+              end
+            end
+            return hs
+      resource.customizations.health.gateway.networking.k8s.io_Gateway: |
+        hs = {}
+        hs.status = "Progressing"
+        hs.message = "waiting for Programmed condition"
+        if obj.status ~= nil and obj.status.conditions ~= nil then
+          for i, condition in ipairs(obj.status.conditions) do
+            if condition.type == "Programmed" then
+              if condition.status == "True" then
+                hs.status = "Healthy"
+                hs.message = ""
+              elseif condition.status == "False" then
+                hs.status = "Degraded"
+                hs.message = condition.message
+              end
+            end
+          end
+        end
+        return hs
+      resource.customizations.health.gateway.networking.k8s.io_GatewayClass: |
+        hs = {}
+        hs.status = "Progressing"
+        hs.message = "waiting for Accepted condition"
+        if obj.status ~= nil and obj.status.conditions ~= nil then
+          for i, condition in ipairs(obj.status.conditions) do
+            if condition.type == "Accepted" then
+              if condition.status == "True" then
+                hs.status = "Healthy"
+                hs.message = ""
+              elseif condition.status == "False" then
+                hs.status = "Degraded"
+                hs.message = condition.message
+              end
+            end
+          end
+        end
+        return hs
+      # Cluster API Cluster: gates Applications that target the child cluster
+      # until its control plane is up.
+      resource.customizations.health.cluster.x-k8s.io_Cluster: |
+        hs = {}
+        hs.status = "Progressing"
+        hs.message = "waiting for cluster provisioning"
+        -- phase Provisioned = infrastructure ready + control plane initialized.
+        -- The Available/Ready CONDITIONS (v1beta2 / v1beta1) additionally
+        -- require node readiness, which needs a CNI installed after the
+        -- cluster registers: gating on the phase alone avoids deadlocking
+        -- bring-up, same as TalosControlPlane status.ready. The conditions
+        -- are still accepted when the phase is not reported.
+        if obj.status ~= nil then
+          if obj.status.phase == "Failed" then
+            hs.status = "Degraded"
+            hs.message = "cluster phase Failed"
+            return hs
+          end
+          if obj.status.phase == "Provisioned" then
+            hs.status = "Healthy"
+            hs.message = ""
+            return hs
+          end
+          if obj.status.conditions ~= nil then
+            for i, condition in ipairs(obj.status.conditions) do
+              if (condition.type == "Available" or condition.type == "Ready") and condition.status == "True" then
+                hs.status = "Healthy"
+                hs.message = ""
+                return hs
+              end
+            end
+          end
+        end
+        return hs
+      resource.customizations.health.cluster.x-k8s.io_MachineDeployment: |
+        hs = {}
+        hs.status = "Progressing"
+        hs.message = ""
+        if obj.status ~= nil and obj.status.phase ~= nil then
+          hs.message = "phase " .. obj.status.phase
+          if obj.status.phase == "Running" then
+            hs.status = "Healthy"
+            hs.message = ""
+          elseif obj.status.phase == "Failed" then
+            hs.status = "Degraded"
+          end
+        end
+        return hs
+      resource.customizations.health.controlplane.cluster.x-k8s.io_TalosControlPlane: |
+        hs = {}
+        hs.status = "Progressing"
+        hs.message = "waiting for control plane bootstrap"
+        -- initialized (etcd formed, apiserver answering) is the right gate.
+        -- status.ready counts KUBERNETES node readiness, which needs a CNI
+        -- and a kubelet CSR approver installed AFTER the cluster registers:
+        -- gating on ready alone deadlocks bring-up. Anything that needs the
+        -- API reachable waits for it separately.
+        if obj.status ~= nil and (obj.status.ready == true or obj.status.initialized == true) then
+          hs.status = "Healthy"
+          hs.message = ""
+        end
+        return hs

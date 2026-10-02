@@ -1,0 +1,6 @@
+# expect: Progressing
+# message: waiting for ValkeyCluster Ready
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyCluster
+metadata: {name: example, generation: 2}
+spec: {}

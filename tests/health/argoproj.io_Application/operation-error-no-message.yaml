@@ -1,0 +1,10 @@
+# expect: Degraded
+# message: sync operation failed
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: example
+status:
+  sync: {status: Synced}
+  health: {status: Healthy}
+  operationState: {phase: Error}

@@ -1,0 +1,8 @@
+# expect: Healthy
+apiVersion: kms.services.k8s.aws/v1alpha1
+kind: Key
+metadata: {name: example, generation: 2}
+status:
+  conditions:
+    - {type: ACK.Terminal, status: "False"}
+    - {type: ACK.ResourceSynced, status: "True"}

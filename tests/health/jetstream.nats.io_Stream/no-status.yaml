@@ -1,0 +1,6 @@
+# expect: Progressing
+# message: waiting for NACK Ready
+apiVersion: jetstream.nats.io/v1beta2
+kind: Stream
+metadata: {name: example, generation: 2}
+spec: {}

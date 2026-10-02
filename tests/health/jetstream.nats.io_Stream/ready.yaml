@@ -1,0 +1,7 @@
+# expect: Healthy
+apiVersion: jetstream.nats.io/v1beta2
+kind: Stream
+metadata: {name: example, generation: 2}
+status:
+  conditions:
+    - {type: Ready, status: "True"}

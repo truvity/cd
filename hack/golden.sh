@@ -19,9 +19,19 @@ for values in "$root"/tests/cases/*/*/values.yaml; do
   chart="$(basename "$(dirname "$case_dir")")"
   golden="$root/tests/golden/$chart/$case_name.yaml"
 
+  # A case may name presets (tests/cases/<chart>/<case>/presets, one per
+  # line): charts/<chart>/presets/<name>.yaml, passed BEFORE the case's own
+  # values the way an adopter layers them.
+  preset_args=()
+  if [ -f "$case_dir/presets" ]; then
+    while read -r preset; do
+      [ -n "$preset" ] && preset_args+=(-f "$root/charts/$chart/presets/$preset.yaml")
+    done < "$case_dir/presets"
+  fi
+
   rendered="$(helm template "$chart" "$root/charts/$chart" \
       --namespace "$(cat "$case_dir/namespace" 2>/dev/null || echo default)" \
-      -f "$values" | "$root/hack/golden-normalize.py")"
+      "${preset_args[@]}" -f "$values" | "$root/hack/golden-normalize.py")"
 
   if [ "$mode" = update ]; then
     mkdir -p "$(dirname "$golden")"

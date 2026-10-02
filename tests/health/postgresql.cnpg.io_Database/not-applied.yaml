@@ -1,0 +1,6 @@
+# expect: Progressing
+# message: waiting for the cluster
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata: {name: example, generation: 2}
+status: {applied: false, message: waiting for the cluster}

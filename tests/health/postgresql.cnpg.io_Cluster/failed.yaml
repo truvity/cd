@@ -1,0 +1,6 @@
+# expect: Degraded
+# message: Failed
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata: {name: example, generation: 2}
+status: {phase: Failed}

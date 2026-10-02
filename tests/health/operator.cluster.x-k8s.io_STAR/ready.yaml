@@ -1,0 +1,8 @@
+# expect: Healthy
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: InfrastructureProvider
+metadata: {name: example, generation: 2}
+status:
+  observedGeneration: 2
+  conditions:
+    - {type: Ready, status: "True"}

@@ -1,0 +1,9 @@
+# expect: Progressing
+# message: spec change not yet observed
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: InfrastructureProvider
+metadata: {name: example, generation: 2}
+status:
+  observedGeneration: 1
+  conditions:
+    - {type: Ready, status: "True"}

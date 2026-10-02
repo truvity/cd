@@ -1,0 +1,9 @@
+# expect: Degraded
+# message: invalid policy
+apiVersion: kms.services.k8s.aws/v1alpha1
+kind: Key
+metadata: {name: example, generation: 2}
+status:
+  conditions:
+    - {type: ACK.Terminal, status: "True", message: invalid policy}
+    - {type: ACK.ResourceSynced, status: "False"}

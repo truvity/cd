@@ -1,0 +1,8 @@
+# expect: Degraded
+# message: store unreachable
+apiVersion: external-secrets.io/v1
+kind: ClusterSecretStore
+metadata: {name: example, generation: 2}
+status:
+  conditions:
+    - {type: Ready, status: "False", message: store unreachable}

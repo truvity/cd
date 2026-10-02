@@ -1,0 +1,7 @@
+# expect: Healthy
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata: {name: example, generation: 2}
+status:
+  conditions:
+    - {type: Ready, status: "True"}

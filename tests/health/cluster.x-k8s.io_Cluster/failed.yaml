@@ -1,0 +1,6 @@
+# expect: Degraded
+# message: cluster phase Failed
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata: {name: example, generation: 2}
+status: {phase: Failed}
