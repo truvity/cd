@@ -1,0 +1,13 @@
+{{- /*
+Opt-in (namespace.create). The Namespace Argo CD itself lives in, for an
+installation that manages its own namespace declaratively. Its name defaults
+to the release namespace; labels and annotations (Pod Security labels, sync
+options such as Prune=false/Delete=false) are the caller's.
+*/ -}}
+{{- if .Values.namespace.create }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  {{- include "cd-argocd.meta" (dict "name" (default .Release.Namespace .Values.namespace.name) "namespace" "" "item" .Values.namespace) | nindent 2 }}
+{{- end }}

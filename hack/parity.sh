@@ -11,9 +11,10 @@
 # That is the claim an adopter relies on: moving an installation from the
 # upstream chart to this one, with its values nested one level, changes
 # nothing the cluster sees. It holds because this repository's charts
-# template nothing and default nothing of their own; the day one does,
-# this script fails, and the change is a Behaviour change declared in
-# CHANGELOG.md rather than a surprise.
+# default nothing of their own and render their own objects (the opt-in
+# extras) only when asked: the day a default moves one of the upstream's
+# objects, this script fails, and the change is a Behaviour change declared
+# in CHANGELOG.md rather than a surprise.
 #
 # "The same objects" is the render with its `# Source:` comment lines
 # removed. Those name the template's path (`argo-cd/templates/...` against
@@ -28,6 +29,20 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 fail=0
 n=0
+
+# Split Helm's output into documents, drop the ones whose `# Source:` line
+# starts with $1 (none, when $1 is empty), drop every `# Source:` comment,
+# and drop blank lines at the end of a document (a template that begins with
+# a comment leaves one; no cluster sees it).
+normalize() {
+  awk -v own="$1" '
+    function flush() { if (doc != "" && !skip) { sub(/\n+$/, "\n", doc); printf "%s", doc } }
+    /^---$/ { flush(); doc = $0 "\n"; skip = 0; next }
+    own != "" && index($0, own) == 1 { skip = 1 }
+    /^# Source:/ { next }
+    { doc = doc $0 "\n" }
+    END { flush() }'
+}
 
 # chart -> the key the upstream chart's values live under
 declare -A key=([cd-argocd]=argo-cd [cd-kargo]=kargo)
@@ -45,10 +60,15 @@ for values in "$root"/tests/cases/*/*/values.yaml; do
   yq eval "(.[\"$k\"] // {}) * {\"global\": ((.[\"$k\"].global // {}) * (.global // {}))}" \
     "$values" > "$tmp/flat.yaml"
 
+  # The wrapper's own templates (charts/<chart>/templates/: the opt-in
+  # extras) are objects the upstream chart does not render at all, so they
+  # are held out of this comparison and pinned by the goldens instead. What
+  # is compared is every object the UPSTREAM chart contributes: the extras
+  # being switched on must not move one of them.
   helm template "$chart" "$root/charts/$chart" --namespace "$ns" -f "$values" \
-    | grep -v '^# Source:' > "$tmp/wrapped.yaml"
+    | normalize "# Source: $chart/templates/" > "$tmp/wrapped.yaml"
   helm template "$chart" "$upstream" --namespace "$ns" -f "$tmp/flat.yaml" \
-    | grep -v '^# Source:' > "$tmp/upstream.yaml"
+    | normalize "" > "$tmp/upstream.yaml"
 
   n=$((n + 1))
   if ! diff -u "$tmp/upstream.yaml" "$tmp/wrapped.yaml" > "$tmp/diff"; then

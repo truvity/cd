@@ -27,19 +27,26 @@ schema and its renders held in version control. It assumes a cluster, Helm
 (or Argo CD itself) to install a chart, and a Gateway or Ingress of the
 installer's own for the web consoles.
 
-It deliberately installs no identity provider, no ingress, no secret store
-and no network policy. Where the consoles are reached, who signs in and
-where the repository credentials come from are the installer's values and
-Secrets.
+It deliberately installs no identity provider, no ingress and no secret
+store. Where the consoles are reached, who signs in and where the repository
+credentials come from are the installer's values and Secrets. `cd-argocd`
+can, when asked, also render the objects that sit beside an Argo CD install
+(its Namespace, AppProjects, NetworkPolicies and ExternalSecrets) from the
+installer's values; none of them exists until it is switched on.
 
 ## The model
 
 - **A wrapper chart.** `cd-argocd` and `cd-kargo` each depend on exactly one
   upstream chart, vendored as an archive in the repository. The chart
-  defines no template and no default of its own.
+  sets no default of its own.
 - **Two namespaces of values.** The upstream chart's values live under its
   own key, `argo-cd` or `kargo`; `global` is shared with it. What the
   upstream documents as `server.replicas` is `argo-cd.server.replicas`.
+- **Opt-in extras.** `cd-argocd` has optional templates for the Namespace,
+  AppProjects, NetworkPolicies and ExternalSecrets of an install. They take
+  their names, labels, peers, CIDRs and store reference from values and have
+  no defaults: off, the render is the upstream's. See
+  [docs/reference.md](docs/reference.md#opt-in-extras-cd-argocd).
 - **The parity gate.** For every case under `tests/cases/`, the wrapper's
   render and the upstream chart's render, given the same values, are the
   same objects. [docs/adoption.md](docs/adoption.md) shows how to run the

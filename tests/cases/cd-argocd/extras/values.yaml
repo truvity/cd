@@ -1,0 +1,92 @@
+# Every opt-in extra switched on, with neutral names. The upstream chart's
+# own objects must not move (hack/parity.sh holds the extras out and compares
+# the rest); the extras themselves are pinned by the golden.
+argo-cd:
+  server:
+    replicas: 2
+namespace:
+  create: true
+  name: argocd
+  labels:
+    example.com/gateway: enabled
+    pod-security.kubernetes.io/enforce: baseline
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+appProjects:
+  team-a-prod:
+    labels:
+      example.com/layer: delivery
+    annotations:
+      argocd.argoproj.io/sync-wave: "10"
+    spec:
+      description: Team A on the prod cluster
+      destinations:
+        - name: prod
+          namespace: team-a
+      sourceRepos:
+        - "*"
+      roles:
+        - name: deployer
+          groups:
+            - team-a:deployers
+          policies:
+            - p, proj:team-a-prod:deployer, applications, sync, team-a-prod/*, allow
+networkPolicies:
+  allow-ingress:
+    annotations:
+      argocd.argoproj.io/sync-wave: "10"
+    spec:
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/component: server
+      policyTypes:
+        - Ingress
+      ingress:
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: ingress-system
+            - ipBlock:
+                cidr: 10.0.0.0/16
+                except:
+                  - 10.0.9.0/24
+          ports:
+            - protocol: TCP
+              port: 8080
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: monitoring
+              podSelector:
+                matchLabels:
+                  app.kubernetes.io/name: scraper
+          ports:
+            - protocol: TCP
+              port: 8083
+secretStoreRef:
+  kind: ClusterSecretStore
+  name: example-store
+externalSecrets:
+  repo-app-key:
+    annotations:
+      argocd.argoproj.io/sync-wave: "10"
+    spec:
+      refreshInterval: 1h
+      target:
+        name: repo-app-key
+        creationPolicy: Owner
+      data:
+        - secretKey: private-key
+          remoteRef:
+            key: /example/argocd/app-key
+  repo-other:
+    spec:
+      secretStoreRef:
+        kind: SecretStore
+        name: local-store
+      target:
+        name: repo-other
+      data:
+        - secretKey: token
+          remoteRef:
+            key: /example/argocd/token

@@ -1,0 +1,5 @@
+# expect: missing property 'spec'
+appProjects:
+  p:
+    labels:
+      a: b

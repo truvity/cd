@@ -1,0 +1,15 @@
+{{- /*
+Opt-in (a non-empty appProjects map). One AppProject per key; `spec` is the
+AppProject spec verbatim, so every field Argo CD accepts is available
+(destinations, sourceRepos, roles, orphanedResources, ...). They land in the
+release namespace, where Argo CD reads them.
+*/ -}}
+{{- range $name, $p := .Values.appProjects }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  {{- include "cd-argocd.meta" (dict "name" $name "namespace" $.Release.Namespace "item" $p) | nindent 2 }}
+spec:
+  {{- toYaml $p.spec | nindent 2 }}
+{{- end }}
