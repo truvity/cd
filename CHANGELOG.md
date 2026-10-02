@@ -7,6 +7,19 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Added:** the `cd-delivery` chart, which renders the Argo CD Applications
+  that deliver a product's charts to a cluster: per product up to three, the
+  infrastructure ring (`<product>-infra`), the application ring (`<product>`)
+  and the end-to-end ring (`<product>-e2e`), each from the platform's facts
+  and the product's pin. It carries the explicit product-chart interface only
+  (truvity/policy `docs/contracts/platform.md` section 10); a product declares
+  which interface its pinned charts read as an integer, and the keys each step
+  adds render from that number, never from a version comparison. Takes
+  `platform` (the facts of the cluster, no estate default) and `products` (pins,
+  interface, per-cluster payloads); `values.schema.json` is strict throughout.
+  Nothing installs it unless you do and no existing chart's render moves. See
+  `docs/reference.md#cd-delivery`.
+
 ## v0.2.0
 
 - **Added (opt-in):** `cd-argocd` can render the Namespace, AppProjects,

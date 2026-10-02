@@ -1,0 +1,16 @@
+apiVersion: v2
+name: cd-delivery
+description: >-
+  The Argo CD Applications that deliver a product's charts to a cluster: one
+  per ring (infrastructure, application, end-to-end), from the platform's
+  facts and the product's pins. Renders Applications and nothing else.
+type: application
+# Stamped from the tag by the release workflow; never moved by hand.
+version: 0.0.0
+keywords:
+  - argocd
+  - gitops
+  - delivery
+home: https://github.com/truvity/cd
+sources:
+  - https://github.com/truvity/cd

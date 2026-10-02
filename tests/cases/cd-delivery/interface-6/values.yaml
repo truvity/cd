@@ -1,0 +1,69 @@
+# The same product at interface 6, as a cluster still on an older pin renders
+# it: no events.tls (7), no database.tls (8), no platformOwned (9), no
+# browser telemetry (10), and the end-to-end prober trusting the components'
+# own accounts (6). The keys the product's charts do not read are not passed.
+platform:
+  clusterName: west
+  argocdNamespace: argocd
+  applicationPrefix: west-
+  appProject: "{product}-{cluster}"
+  waves:
+    infra: 10
+    app: 20
+    e2e: 30
+  chartRegistry: oci://registry.example.com/charts
+  cloud:
+    accountID: example-account
+    region: example-region-1
+    iamNameTemplate: "{cluster}-{slug}-{product}"
+    bucketNameTemplate: "example-{cluster}-{slug}-{product}"
+  postgres:
+    instances: 1
+    storage: 2Gi
+  events:
+    url: nats://broker.example:4222
+    storage: file
+    replicas: 1
+    maxAge: 24h
+    account: "{product}"
+    tls:
+      serverName: broker.west.example
+      caConfigMap: private-ca
+  database:
+    rootCA:
+      configMapName: private-ca
+      key: ca-certificates.crt
+  identity:
+    trustDomain: west.example
+  e2e:
+    mode: tenant
+products:
+  shop:
+    pin: 2.0.0
+    interface: 6
+    hostname: shop.west.example.com
+    bucketSlug: sh
+    workloadIdentity: true
+    natsIdentity: true
+    postgres:
+      serverTLS: true
+      platformOwned: false
+    e2e:
+      enabled: true
+      proberGranted: true
+      peerComponents:
+        - api
+        - web
+      events:
+        stream: shop-shop-events
+    faro:
+      enabled: true
+      apiKey: example-public-key
+      route:
+        ruleName: faro
+        path: /faro/collect
+        rewritePath: /collect
+        backend:
+          name: faro-receiver
+          namespace: rum
+          port: 12347

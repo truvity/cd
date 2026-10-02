@@ -1,0 +1,175 @@
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: west-shop-infra
+  namespace: argocd
+spec:
+  destination:
+    name: west
+    namespace: shop
+  project: shop-west
+  sources:
+  - helm:
+      releaseName: shop-infra
+      valuesObject:
+        cloud:
+          accountID: example-account
+          bucket: example-west-sh-shop
+          clusterName: west
+          iamName: west-sh-shop
+          region: example-region-1
+          serviceAccount: shop
+        events:
+          account: shop
+          maxAge: 24h
+          replicas: 1
+          storage: file
+        installName: shop
+        postgres:
+          instances: 1
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: shop-pg-runtime
+          runtimeRole: shop_app
+          serverTLS:
+            caSecretName: shop-infra-pg-server-ca
+            secretName: shop-infra-pg-server-tls
+          storage: 2Gi
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/shop-infra
+    targetRevision: 2.0.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: west-shop
+  namespace: argocd
+spec:
+  destination:
+    name: west
+    namespace: shop
+  project: shop-west
+  sources:
+  - helm:
+      releaseName: shop
+      valuesObject:
+        archive:
+          bucket:
+            name: example-west-sh-shop
+            region: example-region-1
+        database:
+          app:
+            passwordSecret: shop-pg-runtime
+            role: shop_app
+          host: shop-infra-pg-rw
+          owner:
+            passwordSecret: shop-infra-pg-app
+        events:
+          url: nats://broker.example:4222
+        installName: shop
+        route:
+          enabled: true
+          hostname: shop.west.example.com
+        serviceAccount:
+          app:
+            name: shop
+        tls:
+          grantRequest: false
+          mode: permissive
+          trustDomain: west.example
+    path: .
+    repoURL: oci://registry.example.com/charts/shop
+    targetRevision: 2.0.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "30"
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: west-shop-e2e
+  namespace: argocd
+spec:
+  destination:
+    name: west
+    namespace: shop
+  project: shop-west
+  sources:
+  - helm:
+      releaseName: shop-e2e
+      valuesObject:
+        appRelease: shop
+        archive:
+          bucket: example-west-sh-shop
+          region: example-region-1
+        database:
+          app:
+            passwordSecret: shop-pg-runtime
+            role: shop_app
+          host: shop-infra-pg-rw
+          name: shop
+          owner:
+            role: shop_owner
+        events:
+          stream: shop-shop-events
+        job:
+          annotations:
+            argocd.argoproj.io/sync-options: Force=true,Replace=true
+        mode: tenant
+        prober:
+          enabled: true
+          interval: 30s
+          serviceAccount:
+            name: shop-e2e-prober
+        serviceAccount:
+          create: true
+          name: shop-e2e
+        tls:
+          grantRequest: false
+          mode: permissive
+          peers:
+          - namespace: shop
+            serviceAccount: shop-api
+          - namespace: shop
+            serviceAccount: shop-web
+          trustDomain: west.example
+    path: .
+    repoURL: oci://registry.example.com/charts/shop-e2e
+    targetRevision: 2.0.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
