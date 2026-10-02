@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.2.0
+
 - **Added (opt-in):** `cd-argocd` can render the Namespace, AppProjects,
   NetworkPolicies and ExternalSecrets that sit beside an Argo CD install.
   New top-level values `namespace`, `appProjects`, `networkPolicies`,
