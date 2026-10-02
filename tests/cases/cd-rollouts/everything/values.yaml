@@ -1,0 +1,22 @@
+# The shape of an install that exists only so the controller can execute the
+# AnalysisRuns another tool creates (Kargo verification): CRDs on, one
+# controller replica, no dashboard, no metrics, no notifications ConfigMap,
+# plus scheduling. Neutral values.
+argo-rollouts:
+  installCRDs: true
+  controller:
+    replicas: 1
+    nodeSelector:
+      kubernetes.io/arch: arm64
+    tolerations:
+      - key: arch
+        value: arm64
+        operator: Equal
+        effect: NoSchedule
+  dashboard:
+    enabled: false
+  metrics:
+    enabled: false
+  notifications:
+    configmap:
+      create: false

@@ -29,7 +29,7 @@ jobs:
       packages: write
     uses: truvity/ci-workflows/.github/workflows/release-public.yaml@8a6f582944123bbce3bb79d8057dc05797b1db49 # v3.18.0
     with:
-      charts: '["cd-argocd", "cd-kargo"]'
+      charts: '["cd-argocd", "cd-kargo", "cd-rollouts"]'
       # These charts package software we do not build: appVersion keeps
       # recording the upstream release (hack/check-app-version.sh holds it
       # to the vendored archive), while version is the tag.

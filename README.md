@@ -13,6 +13,7 @@ way.
 | --- | --- |
 | `cd-argocd` — Argo CD, from the upstream `argo-cd` chart 9.7.0 | `oci://ghcr.io/truvity/charts/cd-argocd` |
 | `cd-kargo` — Kargo, from the upstream `kargo` chart 1.11.6 | `oci://ghcr.io/truvity/charts/cd-kargo` |
+| `cd-rollouts` — Argo Rollouts, from the upstream `argo-rollouts` chart 2.43.2 | `oci://ghcr.io/truvity/charts/cd-rollouts` |
 
 The `delivery` chart (Kargo projects, warehouses and stages), the
 `cluster-registration` chart and the gate binary are not in `v0.1.0`; they
@@ -36,7 +37,7 @@ installer's values; none of them exists until it is switched on.
 
 ## The model
 
-- **A wrapper chart.** `cd-argocd` and `cd-kargo` each depend on exactly one
+- **A wrapper chart.** `cd-argocd`, `cd-kargo` and `cd-rollouts` each depend on exactly one
   upstream chart, vendored as an archive in the repository. The chart
   sets no default of its own.
 - **Two namespaces of values.** The upstream chart's values live under its
@@ -80,7 +81,9 @@ argo-cd:
 ```
 
 `cd-kargo` installs the same way, with `--namespace kargo` and its values under
-`kargo:`. Upstream refuses an enabled API without an admin account password
+`kargo:`. `cd-rollouts` is the Argo Rollouts controller and CRDs, for the one
+reason Kargo needs them (see [docs/reference.md](docs/reference.md#cd-rollouts)):
+install it only if you use Kargo verification; values under `argo-rollouts:`. Upstream refuses an enabled API without an admin account password
 or an OIDC configuration; set one of them
 (see [docs/reference.md](docs/reference.md)).
 
@@ -119,7 +122,7 @@ the rest.
 
 ## Status
 
-`v0.1.0` ships `cd-argocd` and `cd-kargo`. Both render the upstream chart's objects
+`v0.1.0` ships `cd-argocd` and `cd-kargo`, and later releases add `cd-rollouts`. Each renders the upstream chart's objects
 unchanged; that is what the parity gate proves on every pull request. No
 chart in this repository sets a default of its own yet.
 

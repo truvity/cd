@@ -6,15 +6,39 @@
 | --- | --- | --- | --- |
 | `cd-argocd` | `argo-cd` from `https://argoproj.github.io/argo-helm` | 9.7.0 | v3.4.4 |
 | `cd-kargo` | `kargo` from `oci://ghcr.io/akuity/kargo-charts` | 1.11.6 | v1.11.6 |
+| `cd-rollouts` | `argo-rollouts` from `oci://ghcr.io/argoproj/argo-helm` | 2.43.2 | v1.10.0 |
 
 The pins are exact, the archives are vendored under `charts/<chart>/charts/`,
 and the current values are in each `Chart.yaml`. This chart's own version is
 the repository tag; it says nothing about the upstream's.
 
+## cd-rollouts
+
+Argo Rollouts (the controller and its five CRDs, in one upstream chart) as a
+chart of its own, off unless you install it. Its only job here is Kargo's
+verification: Kargo creates the `AnalysisRun` a Stage's `verification`
+spawns, but it is the Argo Rollouts controller that executes it. It takes one
+key, `argo-rollouts` (the upstream's values verbatim); the upstream chart has
+no `global`, so this one takes none.
+
+It is a chart of its own, not a dependency of `cd-kargo`, because the two
+have different lifecycles and different namespaces:
+
+- Its CRDs must exist, and must survive, independently of Kargo: deleting a
+  CRD deletes every object of its kind. An installation prunes Kargo and
+  must never prune these, so they need their own Application or release with
+  their own prune policy and sync order (CRDs first).
+- A subchart renders into its parent's release namespace and under its
+  parent's release name; installing Argo Rollouts into the `kargo` namespace
+  would move every object of an installation that already runs it elsewhere,
+  which is the opposite of a zero-diff adoption.
+- One that only needs the controller for verification can leave it out.
+
 ## Values
 
 Both charts take the two keys below. `cd-argocd` also takes the opt-in extras
 described under their own heading; every other top-level key is refused.
+`cd-argocd` and `cd-kargo` take two top-level keys and nothing else; `cd-rollouts` takes `argo-rollouts` only.
 
 | Key | Meaning |
 | --- | --- |

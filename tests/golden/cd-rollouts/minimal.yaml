@@ -1,0 +1,561 @@
+---
+# Source: cd-rollouts/charts/argo-rollouts/templates/controller/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cd-rollouts-argo-rollouts
+  namespace: "default"
+  labels:
+    app.kubernetes.io/component: rollouts-controller
+    helm.sh/chart: argo-rollouts-2.43.2
+    app.kubernetes.io/name: argo-rollouts
+    app.kubernetes.io/instance: cd-rollouts
+    app.kubernetes.io/version: "v1.10.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: argo-rollouts
+
+---
+# Source: cd-rollouts/charts/argo-rollouts/templates/controller/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argo-rollouts-config
+  namespace: "default"
+  labels:
+    app.kubernetes.io/component: rollouts-controller
+    helm.sh/chart: argo-rollouts-2.43.2
+    app.kubernetes.io/name: argo-rollouts
+    app.kubernetes.io/instance: cd-rollouts
+    app.kubernetes.io/version: "v1.10.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: argo-rollouts
+data:
+
+---
+# Source: cd-rollouts/charts/argo-rollouts/templates/controller/notifications-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argo-rollouts-notification-configmap
+  namespace: "default"
+  labels:
+    app.kubernetes.io/component: rollouts-controller
+    helm.sh/chart: argo-rollouts-2.43.2
+    app.kubernetes.io/name: argo-rollouts
+    app.kubernetes.io/instance: cd-rollouts
+    app.kubernetes.io/version: "v1.10.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: argo-rollouts
+data:
+
+---
+# CustomResourceDefinition analysisruns.argoproj.io sha256:a652f52c223d7c51ea566ec3ac59dfda4e490f669f7d01aad4490de1276c7cb2
+---
+# CustomResourceDefinition analysistemplates.argoproj.io sha256:13206115fcfd9a5e360b6afa99c553a7c5866c6076385dd8e4b4321f54b1f57f
+---
+# CustomResourceDefinition clusteranalysistemplates.argoproj.io sha256:585fe0471048ddc1c232dffe99504641d0c223d995debcefe3b26b847e6713a3
+---
+# CustomResourceDefinition experiments.argoproj.io sha256:11ae70e163d419f5aa873276235f3a9bec71f8be34fac1de5a531afd3f48e7c6
+---
+# CustomResourceDefinition rollouts.argoproj.io sha256:05e3528ff6b8249f9f34b45dbca1e3ddba7bd03fbca2fbe461692e3011a82d53
+---
+# Source: cd-rollouts/charts/argo-rollouts/templates/aggregate-roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cd-rollouts-argo-rollouts-aggregate-to-view
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+    app.kubernetes.io/component: rollouts-controller
+    helm.sh/chart: argo-rollouts-2.43.2
+    app.kubernetes.io/name: argo-rollouts
+    app.kubernetes.io/instance: cd-rollouts
+    app.kubernetes.io/version: "v1.10.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: argo-rollouts
+rules:
+- apiGroups:
+  - argoproj.io
+  resources:
+  - rollouts
+  - rollouts/scale
+  - experiments
+  - analysistemplates
+  - clusteranalysistemplates
+  - analysisruns
+  verbs:
+  - get
+  - list
+  - watch
+
+
+---
+# Source: cd-rollouts/charts/argo-rollouts/templates/aggregate-roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cd-rollouts-argo-rollouts-aggregate-to-edit
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+    app.kubernetes.io/component: rollouts-controller
+    helm.sh/chart: argo-rollouts-2.43.2
+    app.kubernetes.io/name: argo-rollouts
+    app.kubernetes.io/instance: cd-rollouts
+    app.kubernetes.io/version: "v1.10.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: argo-rollouts
+rules:
+- apiGroups:
+  - argoproj.io
+  resources:
+  - rollouts
+  - rollouts/scale
+  - rollouts/status
+  - experiments
+  - analysistemplates
+  - clusteranalysistemplates
+  - analysisruns
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+
+
+---
+# Source: cd-rollouts/charts/argo-rollouts/templates/aggregate-roles.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cd-rollouts-argo-rollouts-aggregate-to-admin
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+    app.kubernetes.io/component: rollouts-controller
+    helm.sh/chart: argo-rollouts-2.43.2
+    app.kubernetes.io/name: argo-rollouts
+    app.kubernetes.io/instance: cd-rollouts
+    app.kubernetes.io/version: "v1.10.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: argo-rollouts
+rules:
+- apiGroups:
+  - argoproj.io
+  resources:
+  - rollouts
+  - rollouts/scale
+  - rollouts/status
+  - experiments
+  - analysistemplates
+  - clusteranalysistemplates
+  - analysisruns
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+
+---
+# Source: cd-rollouts/charts/argo-rollouts/templates/controller/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cd-rollouts-argo-rollouts
+  labels:
+    app.kubernetes.io/component: rollouts-controller
+    helm.sh/chart: argo-rollouts-2.43.2
+    app.kubernetes.io/name: argo-rollouts
+    app.kubernetes.io/instance: cd-rollouts
+    app.kubernetes.io/version: "v1.10.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: argo-rollouts
+rules:
+  - apiGroups:
+    - argoproj.io
+    resources:
+    - rollouts
+    - rollouts/status
+    - rollouts/finalizers
+    verbs:
+    - get
+    - list
+    - watch
+    - update
+    - patch
+  - apiGroups:
+    - argoproj.io
+    resources:
+    - analysisruns
+    - analysisruns/finalizers
+    - experiments
+    - experiments/finalizers
+    verbs:
+    - create
+    - get
+    - list
+    - watch
+    - update
+    - patch
+    - delete
+  - apiGroups:
+    - argoproj.io
+    resources:
+    - analysistemplates
+    - clusteranalysistemplates
+    verbs:
+    - get
+    - list
+    - watch
+  # replicaset access needed for managing ReplicaSets
+  - apiGroups:
+    - apps
+    resources:
+    - replicasets
+    verbs:
+    - create
+    - get
+    - list
+    - watch
+    - update
+    - patch
+    - delete
+  # deployments and podtemplates read access needed for workload reference support
+  - apiGroups:
+    - ""
+    - apps
+    resources:
+    - deployments
+    - podtemplates
+    verbs:
+    - get
+    - list
+    - watch
+    - update
+  # services patch needed to update selector of canary/stable/active/preview services
+  # services create needed to create and delete services for experiments
+  - apiGroups:
+    - ""
+    resources:
+    - services
+    verbs:
+    - get
+    - list
+    - watch
+    - patch
+    - create
+    - delete
+  # leases create/get/update needed for leader election
+  - apiGroups:
+    - coordination.k8s.io
+    resources:
+    - leases
+    verbs:
+    - create
+    - get
+    - update
+  # secret read access to run analysis templates which reference secrets
+  - apiGroups:
+    - ""
+    resources:
+    - secrets
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - ""
+    resources:
+    - configmaps
+    verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+  # pod list/update needed for updating ephemeral data
+  - apiGroups:
+    - ""
+    resources:
+    - pods
+    verbs:
+    - list
+    - update
+    - watch
+  # pods eviction needed for restart
+  - apiGroups:
+    - ""
+    resources:
+    - pods/eviction
+    verbs:
+    - create
+  # event write needed for emitting events
+  - apiGroups:
+    - ""
+    resources:
+    - events
+    verbs:
+    - create
+    - update
+    - patch
+  # ingress patch needed for managing ingress annotations, create needed for nginx canary
+  - apiGroups:
+    - networking.k8s.io
+    - extensions
+    resources:
+    - ingresses
+    verbs:
+    - create
+    - get
+    - list
+    - watch
+    - update
+    - patch
+  # job access needed for analysis template job metrics
+  - apiGroups:
+    - batch
+    resources:
+    - jobs
+    verbs:
+    - create
+    - get
+    - list
+    - watch
+    - update
+    - patch
+    - delete
+  # virtualservice/destinationrule access needed for using the Istio provider
+  - apiGroups:
+    - networking.istio.io
+    resources:
+    - virtualservices
+    - destinationrules
+    verbs:
+    - watch
+    - get
+    - update
+    - patch
+    - list
+  # trafficsplit access needed for using the SMI provider
+  - apiGroups:
+    - split.smi-spec.io
+    resources:
+    - trafficsplits
+    verbs:
+    - create
+    - watch
+    - get
+    - update
+    - patch
+  # ambassador access needed for Ambassador provider
+  - apiGroups:
+    - getambassador.io
+    - x.getambassador.io
+    resources:
+    - mappings
+    - ambassadormappings
+    verbs:
+    - create
+    - watch
+    - get
+    - update
+    - list
+    - delete
+  # Endpoints and TargetGroupBindings needed for ALB target group verification when using AWS Load Balancer Controller
+  - apiGroups:
+    - ""
+    resources:
+    - endpoints
+    verbs:
+    - get
+  - apiGroups:
+    - elbv2.k8s.aws
+    resources:
+    - targetgroupbindings
+    verbs:
+    - list
+    - get
+  # AppMesh virtualservices/virtualrouter CRD read-only access needed for using the App Mesh provider
+  - apiGroups:
+    - appmesh.k8s.aws
+    resources:
+    - virtualservices
+    verbs:
+    - watch
+    - get
+    - list
+  # AppMesh virtualnode CRD r/w access needed for using the App Mesh provider
+  - apiGroups:
+    - appmesh.k8s.aws
+    resources:
+    - virtualnodes
+    - virtualrouters
+    verbs:
+    - watch
+    - get
+    - list
+    - update
+    - patch
+  # Traefik access needed when using the Traefik provider
+  - apiGroups:
+    - traefik.containo.us
+    - traefik.io
+    resources:
+    - traefikservices
+    verbs:
+    - watch
+    - get
+    - update
+  # Access needed when using the Apisix provider
+  - apiGroups:
+    - apisix.apache.org
+    resources:
+    - apisixroutes
+    verbs:
+    - watch
+    - get
+    - update
+    # Access needed when using the Contour provider
+  - apiGroups:
+    - projectcontour.io
+    resources:
+    - httpproxies
+    verbs:
+    - get
+    - list
+    - watch
+    - update
+    # Access needed when using the Gloo Platform provider
+  - apiGroups:
+    - networking.gloo.solo.io
+    resources:
+    - routetables
+    verbs:
+    - '*'
+    # Access needed when using the Gateway API provider
+  - apiGroups:
+    - gateway.networking.k8s.io
+    resources:
+    - httproutes
+    - tcproutes
+    - tlsroutes
+    - udproutes
+    - grpcroutes
+    verbs:
+    - get
+    - list
+    - watch
+    - update
+
+---
+# Source: cd-rollouts/charts/argo-rollouts/templates/controller/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cd-rollouts-argo-rollouts
+  labels:
+    app.kubernetes.io/component: rollouts-controller
+    helm.sh/chart: argo-rollouts-2.43.2
+    app.kubernetes.io/name: argo-rollouts
+    app.kubernetes.io/instance: cd-rollouts
+    app.kubernetes.io/version: "v1.10.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: argo-rollouts
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cd-rollouts-argo-rollouts
+subjects:
+- kind: ServiceAccount
+  name: cd-rollouts-argo-rollouts
+  namespace: "default"
+
+---
+# Source: cd-rollouts/charts/argo-rollouts/templates/controller/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cd-rollouts-argo-rollouts
+  namespace: "default"
+  labels:
+    app.kubernetes.io/component: rollouts-controller
+    helm.sh/chart: argo-rollouts-2.43.2
+    app.kubernetes.io/name: argo-rollouts
+    app.kubernetes.io/instance: cd-rollouts
+    app.kubernetes.io/version: "v1.10.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: argo-rollouts
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: rollouts-controller
+      app.kubernetes.io/name: argo-rollouts
+      app.kubernetes.io/instance: cd-rollouts
+  strategy:
+    type: RollingUpdate
+  replicas: 2
+  revisionHistoryLimit: 10
+  template:
+    metadata:
+      annotations:
+        checksum/cm: 44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a
+      labels:
+        app.kubernetes.io/name: argo-rollouts
+        app.kubernetes.io/instance: cd-rollouts
+        app.kubernetes.io/component: rollouts-controller
+    spec:
+      serviceAccountName: cd-rollouts-argo-rollouts
+      containers:
+      - image: "quay.io/argoproj/argo-rollouts:v1.10.0"
+        args:
+        - --healthzPort=8080
+        - --metricsPort=8090
+        - "--loglevel=info"
+        - "--logformat=text"
+        - "--kloglevel=0"
+        - --leader-elect
+        imagePullPolicy: IfNotPresent
+        name: argo-rollouts
+        ports:
+        - containerPort: 8090
+          name: metrics
+        - containerPort: 8080
+          name: healthz
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: healthz
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          successThreshold: 1
+          timeoutSeconds: 10
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          seccompProfile:
+            type: RuntimeDefault
+        resources:
+          {}
+        volumeMounts:
+        - name: plugin-bin
+          mountPath: /home/argo-rollouts/plugin-bin
+        - name: tmp
+          mountPath: /tmp
+      securityContext:
+        runAsNonRoot: true
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: plugin-bin
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {}

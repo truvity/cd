@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "cd-rollouts",
+  "description": "Argo Rollouts from its upstream chart. Strict at the top level: an upstream value written at the root of the file (controller: ... instead of argo-rollouts: controller: ...) is refused rather than silently ignored, because that mistake installs the defaults nobody chose. Open below: argo-rollouts is the upstream chart's own values, validated by the upstream chart.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "argo-rollouts": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "The upstream chart's own values, verbatim."
+    }
+  }
+}

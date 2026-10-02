@@ -18,6 +18,13 @@ release it wraps is named in each entry.
 - The parity gate now holds the chart's own templates out of the comparison
   and compares every object the upstream chart contributes, so switching an
   extra on is proven not to move one of them.
+- **Added:** the `cd-rollouts` chart, Argo Rollouts from the upstream
+  `argo-rollouts` chart 2.43.2 (Argo Rollouts v1.10.0), vendored and
+  exact-pinned. Values go under `argo-rollouts`; no template or default of
+  its own, and the parity gate covers it like the others. It is a separate
+  chart, not a `cd-kargo` dependency, so its CRDs keep their own lifecycle,
+  namespace and release name (`docs/reference.md#cd-rollouts`). Nothing
+  installs it unless you do; no existing chart's render moves.
 
 ## v0.1.1
 
