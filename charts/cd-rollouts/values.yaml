@@ -1,0 +1,11 @@
+# cd-rollouts: Argo Rollouts from its upstream chart, unchanged.
+#
+# Every value of the upstream chart lives under `argo-rollouts`, verbatim:
+# what the upstream documents as `controller.replicas` is
+# `argo-rollouts.controller.replicas` here. The upstream chart has no
+# `global`, so this chart takes none.
+#
+# THIS FILE SETS NOTHING. With no values the render is the upstream's, and
+# hack/parity.sh proves it for every case under tests/cases/. Nothing an
+# estate owns has a default here.
+argo-rollouts: {}

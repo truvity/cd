@@ -1,0 +1,23 @@
+apiVersion: v2
+name: cd-rollouts
+description: >-
+  Argo Rollouts, installed from the upstream argo-rollouts chart, with this
+  repository's schema, goldens and adoption gate around it. With no values it
+  renders exactly what the upstream chart renders.
+type: application
+# Stamped from the tag by the release workflow; never moved by hand.
+version: 0.0.0
+# The upstream APPLICATION version; see charts/cd-argocd/Chart.yaml.
+appVersion: v1.10.0
+keywords:
+  - argo-rollouts
+  - kargo
+  - kubernetes
+home: https://github.com/truvity/cd
+sources:
+  - https://github.com/truvity/cd
+  - https://github.com/argoproj/argo-helm/tree/main/charts/argo-rollouts
+dependencies:
+  - name: argo-rollouts
+    version: 2.43.2
+    repository: oci://ghcr.io/argoproj/argo-helm

@@ -1,0 +1,2 @@
+# expect: additional properties 'bogusKey' not allowed
+bogusKey: 1

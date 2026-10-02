@@ -45,7 +45,7 @@ normalize() {
 }
 
 # chart -> the key the upstream chart's values live under
-declare -A key=([cd-argocd]=argo-cd [cd-kargo]=kargo)
+declare -A key=([cd-argocd]=argo-cd [cd-kargo]=kargo [cd-rollouts]=argo-rollouts)
 
 for values in "$root"/tests/cases/*/*/values.yaml; do
   case_dir="$(dirname "$values")"

@@ -6,7 +6,7 @@ it names (`hack/lint-fixtures.sh`).
 
 ## Upstream values at the root of the file
 
-**Refused:** any top-level key other than `argo-cd` / `kargo` and `global`.
+**Refused:** any top-level key other than `argo-cd` / `kargo` / `argo-rollouts` and, for the first two, `global`.
 
 **The failure:** values written for the upstream chart (`server:`, `api:`)
 pasted into a values file for this one. Helm hands a subchart its own key and
@@ -16,7 +16,8 @@ mean an OIDC sign-in that is not configured and RBAC left at its defaults,
 with every check green.
 
 **Fixtures:** `tests/invalid/cd-argocd/unnested-upstream-values.yaml`,
-`tests/invalid/cd-kargo/unnested-upstream-values.yaml`, and `unknown-key.yaml`
+`tests/invalid/cd-kargo/unnested-upstream-values.yaml`,
+`tests/invalid/cd-rollouts/unnested-upstream-values.yaml`, and `unknown-key.yaml`
 for each.
 
 ## What the schema cannot say
