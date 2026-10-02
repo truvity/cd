@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema#",
   "title": "cd-argocd",
-  "description": "Argo CD from its upstream chart. Strict at the top level: an upstream value written at the root of the file (server: ... instead of argo-cd: server: ...) is refused rather than silently ignored, because that mistake installs the defaults nobody chose. Open below: argo-cd is the upstream chart's own values, validated by the upstream chart, and global is shared with it.",
+  "description": "Argo CD from its upstream chart. Strict at the top level: an upstream value written at the root of the file (server: ... instead of argo-cd: server: ...) is refused rather than silently ignored, because that mistake installs the defaults nobody chose. Open below: argo-cd is the upstream chart's own values, validated by the upstream chart, and global is shared with it. The remaining keys are this chart's opt-in extras (namespace, appProjects, networkPolicies, externalSecrets, secretStoreRef), each validated here.",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -14,6 +14,140 @@
       "type": "object",
       "additionalProperties": true,
       "description": "Shared with the upstream chart as its global."
+    },
+    "namespace": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Opt-in: render the Namespace Argo CD runs in.",
+      "properties": {
+        "create": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string",
+          "description": "Defaults to the release namespace."
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "appProjects": {
+      "type": "object",
+      "description": "Opt-in: AppProjects by name.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "spec"
+        ],
+        "properties": {
+          "labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "annotations": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "spec": {
+            "type": "object",
+            "description": "The AppProject spec, verbatim."
+          }
+        }
+      }
+    },
+    "networkPolicies": {
+      "type": "object",
+      "description": "Opt-in: NetworkPolicies by name. Nothing is allowed unless listed.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "spec"
+        ],
+        "properties": {
+          "labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "annotations": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "spec": {
+            "type": "object",
+            "description": "The NetworkPolicy spec, verbatim.",
+            "required": [
+              "podSelector"
+            ]
+          }
+        }
+      }
+    },
+    "externalSecrets": {
+      "type": "object",
+      "description": "Opt-in: ExternalSecrets by name.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "spec"
+        ],
+        "properties": {
+          "labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "annotations": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "spec": {
+            "type": "object",
+            "description": "The ExternalSecret spec, verbatim; secretStoreRef falls back to the top-level one."
+          }
+        }
+      }
+    },
+    "secretStoreRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Default store reference for externalSecrets.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "SecretStore",
+            "ClusterSecretStore"
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": []
     }
   }
 }

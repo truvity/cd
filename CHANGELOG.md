@@ -5,6 +5,20 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## Unreleased
+
+- **Added (opt-in):** `cd-argocd` can render the Namespace, AppProjects,
+  NetworkPolicies and ExternalSecrets that sit beside an Argo CD install.
+  New top-level values `namespace`, `appProjects`, `networkPolicies`,
+  `externalSecrets` and `secretStoreRef`; names, labels, annotations, peers,
+  CIDRs and the secret store reference are all yours, with no defaults. With
+  none of them set the render is byte-for-byte the previous release's (every
+  existing golden is unchanged), so this is not a Behaviour change. See
+  `docs/reference.md`.
+- The parity gate now holds the chart's own templates out of the comparison
+  and compares every object the upstream chart contributes, so switching an
+  extra on is proven not to move one of them.
+
 ## v0.1.1
 
 - **Fixed:** the release workflow could not run. `devbox.json` did not name

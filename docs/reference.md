@@ -13,15 +13,41 @@ the repository tag; it says nothing about the upstream's.
 
 ## Values
 
-Both charts take two top-level keys and nothing else.
+Both charts take the two keys below. `cd-argocd` also takes the opt-in extras
+described under their own heading; every other top-level key is refused.
 
 | Key | Meaning |
 | --- | --- |
 | `argo-cd` (`cd-argocd`) / `kargo` (`cd-kargo`) | The upstream chart's own values, verbatim. Documented by the upstream. |
 | `global` | Shared with the upstream chart as its own `global`. |
 
-There are no defaults of our own: `values.yaml` sets both keys empty. The
-upstream's defaults are the defaults.
+There are no defaults of our own: `values.yaml` sets both keys empty, and
+every extra is off or empty. The upstream's defaults are the defaults.
+
+## Opt-in extras (`cd-argocd`)
+
+Optional templates for the objects that sit beside an Argo CD install. Each
+is off until a value turns it on, takes everything from values (no name,
+label, peer, CIDR or store is built in), and adds nothing the values do not
+say: no `app.kubernetes.io/*` or `helm.sh/chart` label, no annotation. That
+is what lets an installation that already runs these objects reproduce them
+exactly. Namespaced objects land in the release namespace.
+
+| Key | Renders | Notes |
+| --- | --- | --- |
+| `namespace.create: true` | a `Namespace` | `name` defaults to the release namespace; `labels` and `annotations` are yours (Pod Security labels, `argocd.argoproj.io/sync-options: Prune=false,Delete=false`). |
+| `appProjects.<name>` | an `AppProject` | `labels`, `annotations`, and `spec` verbatim (destinations, sourceRepos, roles, ...). |
+| `networkPolicies.<name>` | a `NetworkPolicy` | `labels`, `annotations`, and `spec` verbatim; `spec.podSelector` is required. Nothing is allowed unless you list it: peers, CIDRs and ports are yours. |
+| `externalSecrets.<name>` | an `ExternalSecret` (`external-secrets.io/v1`) | `labels`, `annotations`, and `spec` verbatim. The store is named in `spec.secretStoreRef`, or once in the top-level `secretStoreRef` (`{kind, name}`), which fills in any spec that has none. A spec with neither is refused. The chart renders no `SecretStore`. |
+
+The maps are keyed by object name, so layered values files merge per object
+and a name cannot be declared twice. The objects are held out of the parity
+comparison (the upstream chart does not render them) and pinned by the
+`tests/cases/cd-argocd/extras` golden; the parity gate still proves that
+switching them on moves none of the upstream chart's objects.
+
+A sync wave, `Prune=false` or any other Argo CD annotation is yours to put in
+`annotations`; the chart does not know it runs under Argo CD.
 
 ## Notes on the upstream charts
 
@@ -43,5 +69,5 @@ upstream's defaults are the defaults.
 | --- | --- | --- |
 | Schema and refusals | `just lint` | an unknown key that renders; a fixture that does not fail for its declared reason |
 | Goldens | `just test` | any change to a render, CRDs by digest |
-| Parity | `just test` | a wrapper render that differs from the upstream chart's render for the same values |
+| Parity | `just test` | an object of the upstream chart's render that differs from the wrapper's for the same values (the wrapper's own opt-in templates are excluded and pinned by goldens) |
 | Leak canary | `just leak-canary` | an account id, internal hostname, registry host or token in a tracked file |

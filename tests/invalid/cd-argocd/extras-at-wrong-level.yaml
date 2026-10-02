@@ -1,0 +1,5 @@
+# expect: additional properties 'enabled' not allowed
+# A misspelt field under `namespace` is refused, not ignored.
+namespace:
+  create: true
+  enabled: true

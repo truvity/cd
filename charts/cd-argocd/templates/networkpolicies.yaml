@@ -1,0 +1,15 @@
+{{- /*
+Opt-in (a non-empty networkPolicies map). One NetworkPolicy per key in the
+release namespace; `spec` is the NetworkPolicy spec verbatim, so the peers,
+CIDRs and ports it allows are the caller's, and nothing is allowed by
+default. The chart ships no policy of its own.
+*/ -}}
+{{- range $name, $p := .Values.networkPolicies }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  {{- include "cd-argocd.meta" (dict "name" $name "namespace" $.Release.Namespace "item" $p) | nindent 2 }}
+spec:
+  {{- toYaml $p.spec | nindent 2 }}
+{{- end }}

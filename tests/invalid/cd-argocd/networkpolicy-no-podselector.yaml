@@ -1,0 +1,7 @@
+# expect: missing property 'podSelector'
+# A NetworkPolicy without a podSelector is invalid Kubernetes; refuse it at
+# render time, not at admission.
+networkPolicies:
+  p:
+    spec:
+      policyTypes: [Ingress]

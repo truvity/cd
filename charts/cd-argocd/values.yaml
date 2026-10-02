@@ -10,6 +10,13 @@
 #            subchart reads it as its own `global`; nesting it under
 #            `argo-cd` works too and renders the same. See docs/adoption.md.
 #
+# MORE KEYS are this chart's own (namespace, appProjects,
+# networkPolicies, externalSecrets, secretStoreRef): optional objects that
+# belong next to an Argo CD install. Every one is OFF until asked for, and
+# none carries a name, label, peer or store of its own: they render exactly
+# the objects the values describe, so a render with none of them set is the
+# upstream chart's and nothing else.
+#
 # THIS FILE SETS NOTHING. With no values the render is the upstream's, and
 # hack/parity.sh proves it for every case under tests/cases/: the same
 # values, flattened, through the upstream chart alone, must render the same
@@ -22,3 +29,23 @@
 # selector, no toleration, no registry. They are the caller's values.
 argo-cd: {}
 global: {}
+
+# Opt-in extras. All empty/false: with these unset the render is the
+# upstream chart's. See docs/reference.md for the shape of each.
+namespace:
+  # Render the Namespace Argo CD runs in. Name defaults to the release
+  # namespace; labels and annotations are the caller's.
+  create: false
+  name: ""
+  labels: {}
+  annotations: {}
+# name -> {labels, annotations, spec}; spec is an AppProject spec verbatim.
+appProjects: {}
+# name -> {labels, annotations, spec}; spec is a NetworkPolicy spec verbatim.
+networkPolicies: {}
+# name -> {labels, annotations, spec}; spec is an ExternalSecret spec verbatim.
+externalSecrets: {}
+# Default store reference for any externalSecrets entry whose spec names none
+# ({kind: ClusterSecretStore|SecretStore, name: ...}). The store itself is not
+# rendered here.
+secretStoreRef: {}
