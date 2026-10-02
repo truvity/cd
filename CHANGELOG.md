@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.4.0
+
 - **Added:** `cd-argocd` ships an opt-in health preset, `presets/health.yaml`:
   a values file (the way `nats-broker`'s presets are) with the Argo CD
   resource health customizations a GitOps install typically waits on, written
