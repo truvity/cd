@@ -5,6 +5,13 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## v0.1.1
+
+- **Fixed:** the release workflow could not run. `devbox.json` did not name
+  goreleaser, so `devbox run -- goreleaser release` failed with "command not
+  found" and the `v0.1.0` tag published nothing. goreleaser 2.17.1 is now in
+  the toolchain; the charts' content and renders are unchanged.
+
 ## v0.1.0
 
 First release: the `cd-argocd` and `cd-kargo` charts.
