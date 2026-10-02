@@ -1,0 +1,16 @@
+# The preset layered under an estate's own values: the estate keeps its own
+# copy of one check (here, an Application gate that exempts a label) and
+# adds a check for a kind the preset does not cover. Its keys win; the
+# preset's others stand.
+argo-cd:
+  configs:
+    cm:
+      resource.customizations.health.argoproj.io_Application: |
+        hs = {}
+        hs.status = "Healthy"
+        hs.message = "estate-owned gate"
+        return hs
+      resource.customizations.health.example.io_Widget: |
+        hs = {}
+        hs.status = "Healthy"
+        return hs

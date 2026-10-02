@@ -1,0 +1,8 @@
+# expect: Progressing
+# message: AWS differs
+apiVersion: iam.services.k8s.aws/v1alpha1
+kind: Role
+metadata: {name: example, generation: 2}
+status:
+  conditions:
+    - {type: ACK.ResourceSynced, status: "False", message: AWS differs}

@@ -1,0 +1,6 @@
+# expect: additional properties 'configs' not allowed
+# The preset's keys live under argo-cd:. Pasted at the root they would be
+# ignored and install the defaults, so the schema refuses them.
+configs:
+  cm:
+    resource.customizations.health.argoproj.io_Application: ""

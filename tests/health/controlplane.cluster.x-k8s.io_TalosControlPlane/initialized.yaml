@@ -1,0 +1,5 @@
+# expect: Healthy
+apiVersion: controlplane.cluster.x-k8s.io/v1alpha3
+kind: TalosControlPlane
+metadata: {name: example, generation: 2}
+status: {initialized: true, ready: false}

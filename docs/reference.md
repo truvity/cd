@@ -73,6 +73,36 @@ switching them on moves none of the upstream chart's objects.
 A sync wave, `Prune=false` or any other Argo CD annotation is yours to put in
 `annotations`; the chart does not know it runs under Argo CD.
 
+## Presets (`cd-argocd`)
+
+A preset is a **values file** shipped in the chart under `presets/`. The chart
+sets none by default; layer the ones you want before your own values:
+
+```sh
+helm template argocd oci://ghcr.io/truvity/charts/cd-argocd --version <v> \
+  -f presets/health.yaml -f my-values.yaml
+```
+
+On an Argo CD source with the chart's OCI path, list it first:
+`helm.valueFiles: [presets/health.yaml, ...]`. Maps merge, lists are replaced,
+a string is replaced whole, and your values win. Pull it without installing:
+`helm pull oci://ghcr.io/truvity/charts/cd-argocd --version <v> --untar`.
+
+| Preset | What it sets |
+| --- | --- |
+| `health.yaml` | `argocd-cm` resource health customizations (Lua) for the kinds a GitOps install waits on: `Application` sync gate, `CustomResourceDefinition`, CloudNativePG `Cluster`/`Database`, `ValkeyCluster`, Keycloak, NACK `Stream`/`Consumer`, `*.services.k8s.aws`, `external-secrets.io/*`, `operator.cluster.x-k8s.io/*`, Gateway API `Gateway`/`GatewayClass`, Cluster API `Cluster`/`MachineDeployment`, `TalosControlPlane`. |
+
+The `Application` check has no exemption rule (which Applications should
+report Healthy at once is an estate's decision): keep your own copy of the
+`resource.customizations.health.argoproj.io_Application` key. Your key replaces
+the preset's. The wildcard checks share the combined `resource.customizations`
+key (a ConfigMap key cannot carry `*`), so setting that key yourself replaces
+all of them: re-state the ones you want.
+
+Each check is run under Lua 5.1 against fixtures in `tests/health/` (`just
+health`). A preset is covered by a case under `tests/cases/cd-argocd/` that
+names it in a `presets` file, held to the same parity gate.
+
 ## Notes on the upstream charts
 
 - **Kargo requires either an admin account or OIDC when its API is
@@ -94,6 +124,7 @@ A sync wave, `Prune=false` or any other Argo CD annotation is yours to put in
 | Schema and refusals | `just lint` | an unknown key that renders; a fixture that does not fail for its declared reason |
 | Goldens | `just test` | any change to a render, CRDs by digest |
 | Parity | `just test` | an object of the upstream chart's render that differs from the wrapper's for the same values (the wrapper's own opt-in templates are excluded and pinned by goldens) |
+| Health checks | `just test` | a preset Lua check that answers differently from its fixture's declared status, a check with no fixtures, a fixture with no check |
 | Leak canary | `just leak-canary` | an account id, internal hostname, registry host or token in a tracked file |
 
 ## cd-delivery

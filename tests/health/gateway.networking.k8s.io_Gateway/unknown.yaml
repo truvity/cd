@@ -1,0 +1,8 @@
+# expect: Progressing
+# message: waiting for Programmed condition
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata: {name: example, generation: 2}
+status:
+  conditions:
+    - {type: Programmed, status: Unknown}

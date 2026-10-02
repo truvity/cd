@@ -1,0 +1,7 @@
+# expect: Healthy
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata: {name: example, generation: 2}
+status:
+  conditions:
+    - {type: Accepted, status: "True"}

@@ -1,0 +1,8 @@
+# expect: Progressing
+# message: waiting for Ready condition
+apiVersion: external-secrets.io/v1
+kind: ClusterSecretStore
+metadata: {name: example, generation: 2}
+status:
+  conditions:
+    - {type: Ready, status: Unknown}

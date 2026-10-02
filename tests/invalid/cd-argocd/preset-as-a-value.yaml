@@ -1,0 +1,6 @@
+# expect: additional properties 'presets' not allowed
+# A preset is a values FILE (presets/health.yaml, layered with -f), not a
+# value: there is no `presets:` key to switch one on.
+presets:
+  health:
+    enabled: true

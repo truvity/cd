@@ -1,0 +1,6 @@
+# expect: Progressing
+# message: waiting for cluster provisioning
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata: {name: example, generation: 2}
+spec: {}

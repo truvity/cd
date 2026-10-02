@@ -1,0 +1,8 @@
+# expect: Degraded
+# message: HasErrors
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: Keycloak
+metadata: {name: example, generation: 2}
+status:
+  conditions:
+    - {type: HasErrors, status: "True"}

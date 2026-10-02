@@ -7,6 +7,36 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Added:** `cd-argocd` ships an opt-in health preset, `presets/health.yaml`:
+  a values file (the way `nats-broker`'s presets are) with the Argo CD
+  resource health customizations a GitOps install typically waits on, written
+  to `argocd-cm` under `argo-cd.configs.cm`. Nothing changes until you layer it:
+  `helm template ... -f presets/health.yaml -f my-values.yaml`, or on an Argo
+  CD OCI source `helm.valueFiles: [presets/health.yaml, ...]` listed before
+  your own files. The checks, each a Lua script that reads the status the
+  kind's own controller writes: `Application` (the sync gate: Healthy only
+  when Synced, with no sync operation running, and Healthy itself),
+  `CustomResourceDefinition` (Degraded when its names are refused),
+  CloudNativePG `Cluster` and `Database`, `ValkeyCluster`, Keycloak,
+  NACK `Stream` and `Consumer`, any `*.services.k8s.aws` kind (ACK),
+  `external-secrets.io/*`, `operator.cluster.x-k8s.io/*`, Gateway API
+  `Gateway` and `GatewayClass`, Cluster API `Cluster` and `MachineDeployment`,
+  and `TalosControlPlane`. The `Application` check has no exemption rule:
+  an estate that wants one keeps its own copy of that one key, and its value
+  wins over the preset's.
+- **Layering:** values files merge by key and a string is replaced whole, so
+  a `resource.customizations.health.<group>_<kind>` key of your own replaces
+  that check; the wildcard checks share the one combined
+  `resource.customizations` key, and setting it yourself replaces all of them.
+- **Tests:** every check is run under Lua 5.1 (the dialect Argo CD embeds)
+  against fixtures under `tests/health/` (`just health`, part of `just
+  test`): at least one Healthy and one not-Healthy case per check, a check
+  without fixtures and fixtures without a check both fail. New cases
+  `health` and `health-layered` pin the render and prove it is the upstream
+  chart's for the same layered values (`hack/parity.sh` and `hack/golden.sh`
+  now take a case's `presets` file). Two refusals: `presets:` as a value, and
+  the preset's keys at the root. No existing render changes.
+
 ## v0.3.0
 
 - **Added:** the `cd-delivery` chart, which renders the Argo CD Applications

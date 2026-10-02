@@ -1,0 +1,7 @@
+# expect: Healthy
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyCluster
+metadata: {name: example, generation: 2}
+status:
+  conditions:
+    - {type: Ready, status: "True"}

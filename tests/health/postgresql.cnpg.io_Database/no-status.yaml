@@ -1,0 +1,6 @@
+# expect: Progressing
+# message: waiting for Database Ready
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata: {name: example, generation: 2}
+spec: {}

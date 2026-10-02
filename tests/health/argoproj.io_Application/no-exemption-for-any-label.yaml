@@ -1,0 +1,12 @@
+# expect: Progressing
+# message: waiting for sync to complete
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: example
+metadata:
+  name: example
+  labels:
+    anything: goes
+status:
+  sync: {status: OutOfSync}
