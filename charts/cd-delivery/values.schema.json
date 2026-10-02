@@ -1,0 +1,687 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "cd-delivery",
+  "description": "The Applications that deliver products to a cluster. Strict throughout: a key the chart does not read is refused rather than ignored, because a typo in a value that decides what is deployed renders cleanly and deploys the wrong thing. With no products nothing is rendered and no platform fact is required; with one, every fact the rings need is.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "clusterName": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The destination cluster's name in Argo CD, and the {cluster} token in every template below."
+        },
+        "argocdNamespace": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The namespace the Applications are created in."
+        },
+        "applicationPrefix": {
+          "type": "string",
+          "description": "Prepended to every Application's name (empty is allowed)."
+        },
+        "appProject": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The AppProject every Application runs under, with {product} and {cluster} tokens."
+        },
+        "applicationLabels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Labels on every Application; values accept the {product} and {cluster} tokens."
+        },
+        "waves": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "infra": {
+              "type": "integer"
+            },
+            "app": {
+              "type": "integer"
+            },
+            "e2e": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "infra",
+            "app",
+            "e2e"
+          ],
+          "description": "The sync-wave of each ring."
+        },
+        "chartRegistry": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Base reference the charts are published under, used for a product that names no repository of its own."
+        },
+        "tier": {
+          "type": "string",
+          "enum": [
+            "primary",
+            "test"
+          ]
+        },
+        "finalizer": {
+          "type": "boolean",
+          "description": "Add the Argo CD resources finalizer, so removing an Application removes what it deployed."
+        },
+        "sync": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "prune": {
+              "type": "boolean"
+            },
+            "selfHeal": {
+              "type": "boolean"
+            },
+            "serverSideApply": {
+              "type": "boolean"
+            },
+            "createNamespace": {
+              "type": "boolean"
+            }
+          }
+        },
+        "cloud": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "accountID": {
+              "type": "string",
+              "minLength": 1
+            },
+            "region": {
+              "type": "string",
+              "minLength": 1
+            },
+            "permissionsBoundary": {
+              "type": "string",
+              "minLength": 1
+            },
+            "iamNameTemplate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of a product's cloud role, with {cluster}, {slug} and {product} tokens. At most 64 characters once filled."
+            },
+            "bucketNameTemplate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of a product's bucket, with the same tokens."
+            }
+          },
+          "required": [
+            "accountID",
+            "region",
+            "iamNameTemplate",
+            "bucketNameTemplate"
+          ],
+          "description": "The cloud facts, needed by a product that has a bucketSlug."
+        },
+        "postgres": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "instances": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "storage": {
+              "type": "string",
+              "minLength": 1
+            },
+            "scheduling": {
+              "type": "object"
+            },
+            "labels": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Labels the database carries; values accept {product} and {cluster}."
+            }
+          },
+          "required": [
+            "instances",
+            "storage"
+          ]
+        },
+        "events": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "type": "string",
+              "minLength": 1
+            },
+            "authAudience": {
+              "type": "string",
+              "minLength": 1
+            },
+            "storage": {
+              "type": "string",
+              "minLength": 1
+            },
+            "replicas": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "maxAge": {
+              "type": "string",
+              "minLength": 1
+            },
+            "account": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The broker account of a product, with {product} and {cluster} tokens."
+            },
+            "tls": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "serverName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "caConfigMap": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "serverName",
+                "caConfigMap"
+              ],
+              "description": "Present only where the broker accepts a workload identity."
+            }
+          },
+          "required": [
+            "url",
+            "storage",
+            "replicas",
+            "maxAge",
+            "account"
+          ]
+        },
+        "database": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "rootCA": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "configMapName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "key": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "configMapName",
+                "key"
+              ]
+            }
+          },
+          "description": "The root a database client verifies the server against."
+        },
+        "identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "trustDomain": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "off",
+                "permissive",
+                "strict"
+              ]
+            },
+            "grantRequest": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "trustDomain"
+          ],
+          "description": "Needed by a product with workloadIdentity."
+        },
+        "telemetry": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "endpoint": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sampleRatio": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "e2e": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "full",
+                "tenant"
+              ]
+            },
+            "proberInterval": {
+              "type": "string",
+              "minLength": 1
+            },
+            "traces": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "tokenURL": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "client": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "audience": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "caConfigMap": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "url",
+                "tokenURL",
+                "client",
+                "audience",
+                "caConfigMap"
+              ]
+            }
+          },
+          "required": [
+            "mode"
+          ]
+        }
+      }
+    },
+    "products": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pin": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The chart version, the same for all three charts of the product."
+          },
+          "interface": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "description": "The highest delivery interface the pinned charts read (truvity/policy docs/contracts/delivery-interface.md)."
+          },
+          "repository": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Where the product's charts are published; defaults to platform.chartRegistry."
+          },
+          "hostname": {
+            "type": "string",
+            "minLength": 1
+          },
+          "parentRef": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "group": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "minLength": 1
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "namespace": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "group",
+              "kind",
+              "name",
+              "namespace"
+            ],
+            "description": "The route's parent, passed by name."
+          },
+          "surfaces": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "hostname": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "name",
+                "hostname"
+              ]
+            }
+          },
+          "bucketSlug": {
+            "type": "string",
+            "minLength": 1
+          },
+          "workloadIdentity": {
+            "type": "boolean"
+          },
+          "natsIdentity": {
+            "type": "boolean"
+          },
+          "mtls": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "strict": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "peers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "namespace": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "serviceAccount": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "namespace",
+                      "serviceAccount"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "postgres": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "serverTLS": {
+                "type": "boolean"
+              },
+              "platformOwned": {
+                "type": "boolean"
+              },
+              "backup": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "objectStoreName": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "serverName": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "objectStoreName",
+                  "serverName"
+                ]
+              }
+            }
+          },
+          "e2e": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "proberGranted": {
+                "type": "boolean"
+              },
+              "peerComponents": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "events": {
+                "type": "object"
+              }
+            }
+          },
+          "faro": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "apiKey": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sampleRate": {
+                "type": "number"
+              },
+              "route": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ruleName": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "path": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "rewritePath": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "backend": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "namespace": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "port": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "namespace",
+                      "port"
+                    ]
+                  }
+                },
+                "required": [
+                  "ruleName",
+                  "path",
+                  "rewritePath",
+                  "backend"
+                ]
+              }
+            },
+            "required": [
+              "enabled"
+            ]
+          },
+          "identityProviders": {
+            "type": "object"
+          },
+          "access": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "issuer": {
+                "type": "string",
+                "minLength": 1
+              },
+              "audience": {
+                "type": "string",
+                "minLength": 1
+              },
+              "signOutUrl": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "issuer",
+              "audience",
+              "signOutUrl"
+            ]
+          },
+          "product": {
+            "type": "object"
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "infra": {
+                "type": "object"
+              },
+              "app": {
+                "type": "object"
+              },
+              "e2e": {
+                "type": "object"
+              }
+            },
+            "description": "Merged over what the chart composed, last."
+          },
+          "ignoreDifferences": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "infra": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "app": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "e2e": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "pin",
+          "interface",
+          "hostname"
+        ]
+      }
+    },
+    "global": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Helm's own: a parent chart's global values reach every subchart. The chart reads none of it."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "products"
+        ],
+        "properties": {
+          "products": {
+            "minProperties": 1
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "platform"
+        ],
+        "properties": {
+          "platform": {
+            "required": [
+              "clusterName",
+              "argocdNamespace",
+              "applicationPrefix",
+              "appProject",
+              "waves",
+              "postgres",
+              "events"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

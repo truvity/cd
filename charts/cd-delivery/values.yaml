@@ -1,0 +1,18 @@
+# No estate fact has a default here: where charts are published, what a
+# cluster is called, which accounts, hosts and labels an installation uses are
+# inputs (docs/reference.md#cd-delivery). With no products the chart renders
+# nothing.
+platform:
+  # The kind of install a product's charts are told they are. `primary` is the
+  # deployment; the charts provision cloud objects and arm data guardrails for
+  # it, and default to `test` without it.
+  tier: primary
+  # What an Application does on removal and how it syncs. These are Argo CD
+  # mechanism, not estate facts.
+  finalizer: true
+  sync:
+    prune: true
+    selfHeal: true
+    serverSideApply: true
+    createNamespace: false
+products: {}

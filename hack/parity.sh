@@ -51,7 +51,10 @@ for values in "$root"/tests/cases/*/*/values.yaml; do
   case_dir="$(dirname "$values")"
   case_name="$(basename "$case_dir")"
   chart="$(basename "$(dirname "$case_dir")")"
-  k="${key[$chart]}"
+  k="${key[$chart]:-}"
+  # A chart with no upstream (cd-delivery) has nothing to be at parity
+  # with: its goldens and negative fixtures are its whole proof.
+  [ -n "$k" ] || continue
   ns="$(cat "$case_dir/namespace" 2>/dev/null || echo default)"
   upstream="$(ls "$root"/charts/"$chart"/charts/"$k"-*.tgz)"
   tmp="$(mktemp -d)"

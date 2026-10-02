@@ -50,3 +50,46 @@ dependency that is missing or at the wrong version, and
 `just vendor`. Helm renders whatever archive sits in `charts/`, so every
 other check passes and the golden does not move: the pin says one release
 and the cluster runs another.
+
+## An interface the chart does not know, and keys a pin cannot take
+
+**Refused (`cd-delivery`):** a product whose `interface` is above the highest
+this chart knows, below 1 or not a whole number; `postgres.platformOwned` and
+`mtls.strict` for a product whose interface is below the step that adds them;
+a cloud role name over 64 characters; any input a ring needs and the platform
+or product did not give (a bucket slug with no `platform.cloud`, a workload
+identity with no `platform.identity`, and so on).
+
+**The failure:** a product's charts have strict schemas, so a key a pinned
+chart does not know is a render Argo CD cannot make, cached as a comparison
+error, and whatever waits for that Application to become healthy (a
+promotion's verification, say) waits for something that cannot happen. The
+usual defence is one version comparison per key in the platform's own
+templates, each a copy of a fact the chart knows. The interface number is the
+one copy, and the refusals above are the cases where leaving a key out would
+deploy something other than what was asked for, which is worse than failing:
+a database the platform believes it owns, or a component the platform believes
+is strict.
+
+**Fixtures:** `tests/invalid/cd-delivery/interface-too-high.yaml`,
+`interface-zero.yaml`, `interface-not-a-number.yaml`,
+`platform-owned-below-9.yaml`, `strict-below-5.yaml`, `iam-name-too-long.yaml`,
+`bucket-without-cloud.yaml`, `workload-identity-without-identity.yaml`,
+`database-tls-without-root.yaml`, `faro-without-key.yaml`,
+`e2e-without-bucket.yaml`, `products-without-platform.yaml`.
+
+**Left out, not refused:** a key whose step the product has not reached
+(`events.tls` below 7, `database.tls` below 8, the browser telemetry below 10,
+and the whole end-to-end Application below 3) is not passed. The platform's
+fact says it has the capability; the interface says this pin cannot take it
+yet; the Application renders without it and the pin keeps working.
+
+## What the chart cannot check
+
+An input that is a free-form payload (`values`, `product`, `identityProviders`,
+`access`, `ignoreDifferences`, `e2e.events`, `postgres.scheduling`) is passed
+as written: what is under it is the product chart's own schema to judge, at
+sync time. And an empty value in `products.<name>.values` (an empty string,
+zero, false) does not override a value the chart composed, which is how Helm
+merges maps; a payload that needs to switch a composed key off says so with a
+non-empty value, or the input that composed it is changed.

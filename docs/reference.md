@@ -95,3 +95,79 @@ A sync wave, `Prune=false` or any other Argo CD annotation is yours to put in
 | Goldens | `just test` | any change to a render, CRDs by digest |
 | Parity | `just test` | an object of the upstream chart's render that differs from the wrapper's for the same values (the wrapper's own opt-in templates are excluded and pinned by goldens) |
 | Leak canary | `just leak-canary` | an account id, internal hostname, registry host or token in a tracked file |
+
+## cd-delivery
+
+The Argo CD Applications that deliver a product's charts to a cluster, and
+nothing else (no Argo CD, no Kargo objects). It has no upstream chart: its
+templates, schema, goldens and refusals are the whole of it, so `hack/parity.sh`
+does not apply to it.
+
+A product is up to three charts, and the chart renders one Application for
+each: the infrastructure ring `<product>-infra` (the objects the install
+owns: cloud objects, database, event stream), the application ring `<product>`
+and the end-to-end ring `<product>-e2e`, in that sync-wave order. The rings are
+fixed; their wave numbers are yours. Every address a ring's chart reads is
+passed by name, following the platform contract in truvity/policy
+(`docs/contracts/platform.md`, section 10): the chart builds the names of
+objects it asks for from the product's name (`<product>-infra-pg-rw`,
+`<product>_app`, `<product>-pg-runtime`, and so on), and takes every fact of
+the estate as an input.
+
+### Inputs
+
+`platform` is the facts of one cluster; `products` is a map of products. With
+no products the chart renders nothing. With one, the platform keys marked
+required below must be present, and a key the chart does not read is refused.
+
+| Key | Meaning |
+| --- | --- |
+| `platform.clusterName` (required) | The destination cluster's name in Argo CD; the `{cluster}` token. |
+| `platform.argocdNamespace`, `.applicationPrefix` (required) | Where the Applications live, and what their names start with (the prefix may be empty). |
+| `platform.appProject` (required) | The AppProject each Application runs under, with `{product}` and `{cluster}` tokens. |
+| `platform.applicationLabels` | Labels on every Application; values take the same tokens. |
+| `platform.waves` (required) | `infra`, `app` and `e2e` sync-wave numbers. |
+| `platform.chartRegistry` | The base the charts are published under; a product may name its own `repository`. |
+| `platform.tier`, `.finalizer`, `.sync` | Install kind handed to the charts (`primary`), the resources finalizer (on), and the sync policy (prune and self-heal on, server-side apply on, create-namespace off). Mechanism, not estate facts: these have defaults. |
+| `platform.cloud` | `accountID`, `region`, `permissionsBoundary`, and the `iamNameTemplate` and `bucketNameTemplate` of a product's role and bucket (tokens `{cluster}`, `{slug}`, `{product}`). Needed by a product with a `bucketSlug`. A role name over 64 characters is refused. |
+| `platform.postgres` (required) | `instances`, `storage`, and optional `scheduling` and `labels` for the databases. |
+| `platform.events` (required) | The broker: `url`, `storage`, `replicas`, `maxAge`, the `account` template, an optional `authAudience`, and `tls` where the broker accepts a workload identity. |
+| `platform.database.rootCA`, `.identity`, `.telemetry`, `.e2e` | The root a database client verifies against; the workload-identity trust domain, mode and grant; the telemetry endpoint and sampling; the end-to-end mode, prober interval and trace store. Each is needed only by a product that uses it. |
+| `products.<name>.pin`, `.interface`, `.hostname` (required) | The chart version of all three charts, the interface they read (below), and the route's hostname. |
+| `products.<name>.repository`, `.parentRef`, `.surfaces`, `.bucketSlug` | Where the charts are published, the route's parent by name, additional routes, and the slug that says the product owns cloud objects. |
+| `products.<name>.workloadIdentity`, `.natsIdentity`, `.mtls`, `.postgres`, `.e2e`, `.faro` | Per-cluster facts about the product: whether its namespace carries a workload identity and the broker accepts it, its mTLS peers and strict components, its database's server certificate, platform ownership and archive, its end-to-end run, and its browser telemetry. |
+| `products.<name>.identityProviders`, `.access`, `.product` | Passed to the application chart verbatim. |
+| `products.<name>.values.{infra,app,e2e}` | A payload per ring, merged over what the chart composed, last. An empty value (an empty string, zero, false) cannot override one the chart composed. |
+| `products.<name>.ignoreDifferences.{infra,app,e2e}` | `ignoreDifferences` entries for the ring's Application, verbatim. |
+
+### The interface
+
+A product's charts only ever added keys over time, and a key an older chart
+does not know is a hard schema refusal that Argo CD caches, so a render must
+not hand a pin a key it cannot take. `products.<name>.interface` is the
+highest delivery interface the pinned charts read: a whole number, written
+next to the pin and changed by whatever moves the pin. The chart renders the
+keys of every step up to that number, and `fail`s on a number it does not
+know (above its own highest, or below 1). It never compares a version. What
+each number means is the registry's, in truvity/policy
+(`docs/contracts/delivery-interface.md`); this chart's highest known interface
+is in `templates/_helpers.tpl` and every change to it is named in the
+CHANGELOG.
+
+A key whose step the product has not reached is left out, not refused,
+except where leaving it out would deploy something different from what was
+asked for: `postgres.platformOwned` below its step, and `mtls.strict` below
+its step, are refused. The end-to-end Application renders only from the
+step that publishes the end-to-end chart.
+
+### Using it from another chart
+
+Helm cannot pass a value from one chart's values to another's, so an
+installation whose pins live in a values file of its own composes `platform`
+and `products` in its own templates and calls the named template
+`cd-delivery.applications` with `(dict "platform" ... "products" ...)`. The
+Applications are rendered by this one place either way. Helm validates only a
+chart's own values against `values.schema.json`, so the named template refuses
+an unknown top-level key of `platform` or of a product itself, and the
+required inputs by name; the schema remains the full check for the chart
+installed on its own.

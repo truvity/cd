@@ -1,0 +1,1 @@
+{{- include "cd-delivery.applications" (dict "platform" .Values.platform "products" .Values.products) }}

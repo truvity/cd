@@ -1,0 +1,6 @@
+# expect: missing properties 'clusterName'
+products:
+  shop:
+    pin: 1.0.0
+    interface: 1
+    hostname: shop.example.com

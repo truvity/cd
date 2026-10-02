@@ -1,0 +1,26 @@
+# expect: platform.identity is required
+platform:
+  clusterName: east
+  argocdNamespace: argocd
+  applicationPrefix: east-
+  appProject: "{product}-{cluster}"
+  waves:
+    infra: 10
+    app: 20
+    e2e: 30
+  chartRegistry: oci://registry.example.com/charts
+  postgres:
+    instances: 1
+    storage: 2Gi
+  events:
+    url: nats://broker.example:4222
+    storage: file
+    replicas: 1
+    maxAge: 24h
+    account: "{product}"
+products:
+  shop:
+    pin: 1.0.0
+    interface: 1
+    hostname: shop.example.com
+    workloadIdentity: true

@@ -10,6 +10,9 @@ fail=0
 
 for chart_dir in "$root"/charts/*/; do
   chart="$(basename "$chart_dir")"
+  # A chart with no vendored upstream (cd-delivery) records no upstream
+  # release in appVersion.
+  ls "$chart_dir"charts/*.tgz >/dev/null 2>&1 || continue
   want="$(yq '.appVersion' "$chart_dir/Chart.yaml")"
   archive="$(ls "$chart_dir"charts/*.tgz)"
   # The archive's own top-level Chart.yaml, not a subchart's (argo-cd
