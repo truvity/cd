@@ -202,3 +202,94 @@ chart's own values against `values.schema.json`, so the named template refuses
 an unknown top-level key of `platform` or of a product itself, and the
 required inputs by name; the schema remains the full check for the chart
 installed on its own.
+
+## cd-pipeline
+
+The Kargo delivery pipeline of one or more projects, and nothing else (no
+Kargo, no Argo CD). It has no upstream chart, so `hack/parity.sh` does not
+apply to it; its goldens and negative fixtures are its proof. Everything it
+renders is named by its values: a project's name, its namespace, its
+Warehouse and every Stage are exactly what you write, because renaming a
+Kargo Project, Warehouse or Stage deletes it with the Freight history it holds.
+The chart adds no label, annotation or field of its own: `labels` is empty
+unless you set it.
+
+A project is a chart delivered through a list of Stages. Per project the chart
+renders:
+
+- a `Project`, and a `Warehouse` subscribed to the project's chart (or to
+  `warehouse.subscriptions`, verbatim);
+- the `ExternalSecret` that produces the git credentials a promotion writes
+  back with, in the project's namespace, when `git.credentials` is set;
+- the `ProjectConfig` that names the Stages that promote on their own;
+- per `access.subjects` entry a `ServiceAccount` carrying the OIDC claims that
+  map a token to it, a `Role` (read, promote the named Stages, and optionally
+  approve Freight) and a `RoleBinding`; and, with `viewer` set, a
+  `RoleBinding` to the shared read-only ServiceAccount;
+- per Stage a `Stage`: where it takes Freight from, its verification and its
+  promotion template; and what the verification needs.
+
+### Inputs
+
+With no projects nothing renders. Required, once there is a project: `git.repoURL`,
+and per project `name`, `stages` and, unless `warehouse.subscriptions` is given,
+`chart.repoURL` and `chart.semver`.
+
+| Key | Meaning |
+| --- | --- |
+| `git.repoURL` | The repository a promotion writes the new pin to. |
+| `git.credentials` | `secretStoreRef`, `remoteKey` and `properties` (`appID`, `installationID`, `privateKey`) of a GitHub App; renders an `ExternalSecret` per project namespace, `secretName` (default `kargo-git-writeback`), `refreshInterval` (default `1h`). |
+| `promotion.*` | What a promotion writes: `branch`, `pinFile` and `pinKey` (tokens `{stage}`, `{project}`, `{slug}`, `{pinKey}`), `commitMessage` (also `{version}`), `prTitle`, `prLabels`, `provider`, and the `retry` and `gate` budgets. All have neutral defaults. |
+| `waves` | The Argo CD sync-wave of each kind of object: `project`, `warehouse`, `credentials`, `config`, `stage` (0 to 4). |
+| `argocd.namespace` | Where the Stages' Applications live (`argocd`). |
+| `jobs`, `promotedVersion` | What the verification Jobs run as (`runAsUser`, `runAsGroup`, TTL, headroom) and the built-in check's `image`, `jqImage`, `waitSeconds`, `pollSeconds` and optional replacement `script`. |
+| `viewer` | `namespace`, `serviceAccount`, `role` and `bindingName` of the shared read-only ServiceAccount each project binds; `global.claims` also renders its namespace and ServiceAccount. |
+| `labels` | Labels on every object. None by default. |
+| `projects[].name`, `.slug`, `.pinKey` | The Project and namespace; the short name used in check names and tokens (default the name); the key the version is written under. |
+| `projects[].chart` | `repoURL`, `name` (index repositories), `semver`, `versionPrefix` (repositories whose tags carry one), `discoveryLimit`. |
+| `projects[].warehouse` | `name` (default the project's), `interval` (`5m0s`), `freightCreationPolicy` (`Automatic`), `subscriptions`. |
+| `projects[].access.subjects[]` | `name`, `claims`, `stages`, `approve`. |
+| `projects[].stages[]` | `name`, `from` (the upstream Stage; none means Freight straight from the Warehouse), `autoPromote`, `applications`, `mode` (`pr` after the first Stage, `direct` for it), `verification`, `promotionTemplate`. |
+
+Durations are written the way the API server stores them (`10m0s`, not `10m`):
+Argo CD compares the manifest with the stored object and a Stage whose
+duration differs only in spelling is OutOfSync forever.
+
+### The graph is values
+
+`from` is explicit. The chart has no rule that makes a Stage depend on
+another by its name: a project whose Stages fan out, join or run in a line
+says so, per Stage. Promotion by pull request is the default for any Stage that
+has an upstream, and for the first it is a push to the branch.
+
+### Promotion
+
+Unless a Stage sets `promotionTemplate`, its promotion is: for a Stage with
+upstream Applications, `argocd-wait` on the upstream Stage's `applications`
+(the version being promoted must already be Healthy and Synced there; a Stage
+never waits on the Applications it is about to update); then `git-clone`,
+`yaml-update` of `pinFile` at `pinKey`, `git-commit`; then either `git-push`
+to the branch, or `git-push` to a generated branch, `git-open-pr` and
+`git-wait-for-pr`, the last three only when the commit changed something.
+
+### Verification
+
+`verification.promotedVersion: true` adds a built-in check run after the
+Promotion succeeds: a Job reads the Stage's `applications` and fails unless
+every one has the promoted chart version in its spec and in its last
+comparison and is Synced, Healthy and not mid-operation, polling for
+`promotedVersion.waitSeconds`. It needs a ServiceAccount and a Role in the
+Argo CD namespace that allows `get` on exactly those Applications; the chart
+renders both. The script is shipped in the chart (`files/`); `promotedVersion.script`
+replaces it.
+
+`verification.checks[]` are Job checks of your own: an AnalysisTemplate with one
+measurement, run once, decided by the Job's exit code, under the `restricted` Pod
+Security profile. `script` becomes a ConfigMap mounted at `/scripts`; `env`,
+`volumes` and `volumeMounts` are verbatim. `verification.analysisTemplates`
+names templates that exist already.
+
+Names derived by the chart, from the project's `name` and `slug` and the Stage's
+`name`: `kargo-verify-<stage>` (ServiceAccount), `kargo-verify-<project>-<stage>`
+(Role and RoleBinding in the Argo CD namespace), `<slug>-<stage>-verify-promoted-version`
+(ConfigMap) and `<slug>-<stage>-promoted-version` (AnalysisTemplate).

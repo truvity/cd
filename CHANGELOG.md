@@ -7,6 +7,19 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Added:** the `cd-pipeline` chart, which renders the Kargo delivery
+  pipeline of one or more projects: per project a Project, a Warehouse, the
+  ExternalSecret of the git credentials a promotion writes back with, a
+  ProjectConfig, a ServiceAccount, Role and RoleBinding per access subject, the
+  read-only RoleBinding, and per Stage a Stage with its promotion template
+  (`argocd-wait` gate, clone, pin update, commit, then a push or a pull request
+  that must merge) and its verification (a built-in promoted-version check and
+  Job checks of your own, each an AnalysisTemplate with its ServiceAccount and
+  ConfigMap). Every name is a value: a Project, Warehouse or Stage is exactly
+  what you write, and the chart adds no label, annotation or field of its own.
+  The graph is explicit (`from` per Stage). Nothing installs it unless you do
+  and no existing chart's render moves. Needs `git.repoURL` and, per project,
+  `name`, `stages`, `chart`. See `docs/reference.md#cd-pipeline`.
 ## v0.4.0
 
 - **Added:** `cd-argocd` ships an opt-in health preset, `presets/health.yaml`:

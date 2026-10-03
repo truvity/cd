@@ -1,0 +1,141 @@
+# Every input the chart reads, on one project that fans out from its first
+# stage to two more and then joins: dev -> {test, stage} -> prod, with a pull
+# request on every hop, the promoted-version check on every stage and a Job
+# check of the project's own on stage.
+labels:
+  team: delivery
+waves:
+  project: 0
+  warehouse: 1
+  credentials: 2
+  config: 3
+  stage: 4
+argocd:
+  namespace: argocd
+git:
+  repoURL: https://git.example.com/acme/environments.git
+  credentials:
+    secretName: pipeline-git
+    refreshInterval: 30m
+    secretStoreRef:
+      kind: ClusterSecretStore
+      name: secrets
+    remoteKey: pipeline/github-app
+    properties:
+      appID: app-id
+      installationID: installation-id
+      privateKey: private-key
+promotion:
+  branch: main
+  pinFile: "clusters/{stage}/pins.yaml"
+  pinKey: "pins.{pinKey}"
+  commitMessage: "chore(pins): {slug} {version} to {stage}"
+  prTitle: "chore(pins): {slug} to {stage}"
+  prLabels: [promotion]
+  provider: github
+  retry:
+    errorThreshold: 3
+    timeout: 5m0s
+  gate:
+    timeout: 10m0s
+jobs:
+  ttlSecondsAfterFinished: 21600
+  headroomSeconds: 120
+  runAsUser: 1000
+  runAsGroup: 1000
+promotedVersion:
+  image: registry.example.com/tools/curl:8
+  jqImage: registry.example.com/tools/jq:1
+  waitSeconds: 900
+  pollSeconds: 10
+viewer:
+  namespace: kargo-users
+  serviceAccount: viewer
+  role: kargo-viewer
+  bindingName: viewer
+  global:
+    claims:
+      iss: [https://issuer.example.com]
+projects:
+  - name: platform-gateway
+    slug: gateway
+    pinKey: gateway
+    chart:
+      repoURL: https://charts.example.com/
+      name: gateway
+      semver: ">=2.0.0 <3.0.0"
+      versionPrefix: v
+      discoveryLimit: 10
+    warehouse:
+      interval: 10m0s
+    access:
+      subjects:
+        - name: admin
+          claims:
+            groups: [platform:admin]
+          stages: [dev, test, stage, prod]
+          approve: true
+    stages:
+      - name: dev
+        autoPromote: true
+        applications: [dev-gateway]
+        verification:
+          promotedVersion: true
+      - name: test
+        from: dev
+        applications: [test-gateway, test-gateway-extras]
+        verification:
+          promotedVersion: true
+      - name: stage
+        from: dev
+        autoPromote: true
+        applications: [stage-gateway]
+        verification:
+          promotedVersion: true
+          analysisTemplates: [shared-smoke]
+          checks:
+            - name: gateway-stage-smoke
+              metric: smoke
+              serviceAccount: smoke
+              image: registry.example.com/tools/curl:8
+              script:
+                configMap: gateway-stage-smoke
+                file: smoke.sh
+                content: |
+                  #!/bin/sh
+                  curl -fsS "$TARGET/healthz"
+              env:
+                - name: TARGET
+                  value: https://gateway.example.com
+                - name: VERSION
+                  value: "{{args.chart-version}}"
+              deadlineSeconds: 600
+      - name: prod
+        from: stage
+        applications: [prod-gateway]
+        verification:
+          promotedVersion: true
+  - name: shop
+    pinKey: shopChart
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    access:
+      subjects:
+        - name: approver-prod
+          claims:
+            groups: ["prod:shop:approver"]
+          stages: [dev, prod]
+          approve: true
+    stages:
+      - name: dev
+        autoPromote: true
+        mode: direct
+        applications: [dev-shop]
+        verification:
+          promotedVersion: true
+      - name: prod
+        from: dev
+        applications: [prod-shop]
+        verification:
+          promotedVersion: true

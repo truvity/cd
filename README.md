@@ -15,9 +15,9 @@ way.
 | `cd-kargo` — Kargo, from the upstream `kargo` chart 1.11.6 | `oci://ghcr.io/truvity/charts/cd-kargo` |
 | `cd-rollouts` — Argo Rollouts, from the upstream `argo-rollouts` chart 2.43.2 | `oci://ghcr.io/truvity/charts/cd-rollouts` |
 | `cd-delivery` — the Argo CD Applications that deliver a product's charts to a cluster; no upstream | `oci://ghcr.io/truvity/charts/cd-delivery` |
+| `cd-pipeline` — the Kargo delivery pipeline of a project: Project, Warehouse, Stages, promotion, verification, access; no upstream | `oci://ghcr.io/truvity/charts/cd-pipeline` |
 
-The Kargo half of delivery (projects, warehouses and stages), the
-`cluster-registration` chart and the gate binary are not here yet; they
+The `cluster-registration` chart and the gate binary are not here yet; they
 arrive one reviewed change at a time and are listed in the
 [CHANGELOG](CHANGELOG.md).
 

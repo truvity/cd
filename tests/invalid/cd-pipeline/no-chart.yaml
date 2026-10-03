@@ -1,0 +1,7 @@
+# expect: projects.shop.chart.repoURL is required
+git:
+  repoURL: https://git.example.com/acme/environments.git
+projects:
+  - name: shop
+    stages:
+      - name: dev
