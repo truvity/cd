@@ -462,6 +462,10 @@
               "platformOwned": {
                 "type": "boolean"
               },
+              "runtimeRole": {
+                "type": "boolean",
+                "description": "Defaults to true: the infra chart is handed postgres.runtimeRole, runtimePasswordSecret and runtimePassword.generate. Set false for an infra chart whose postgres schema does not have them; none of the three is sent."
+              },
               "backup": {
                 "type": "object",
                 "additionalProperties": false,
