@@ -211,8 +211,8 @@ apply to it; its goldens and negative fixtures are its proof. Everything it
 renders is named by its values: a project's name, its namespace, its
 Warehouse and every Stage are exactly what you write, because renaming a
 Kargo Project, Warehouse or Stage deletes it with the Freight history it holds.
-The chart adds no label, annotation or field of its own: `labels` is empty
-unless you set it.
+The chart adds no label, annotation (beyond the sync-wave) or field of its
+own: `labels` and `annotations` are empty unless you set them.
 
 A project is a chart delivered through a list of Stages. Per project the chart
 renders:
@@ -244,7 +244,7 @@ and per project `name`, `stages` and, unless `warehouse.subscriptions` is given,
 | `argocd.namespace` | Where the Stages' Applications live (`argocd`). |
 | `jobs`, `promotedVersion` | What the verification Jobs run as (`runAsUser`, `runAsGroup`, TTL, headroom) and the built-in check's `image`, `jqImage`, `waitSeconds`, `pollSeconds` and optional replacement `script`. |
 | `viewer` | `namespace`, `serviceAccount`, `role` and `bindingName` of the shared read-only ServiceAccount each project binds; `global.claims` also renders its namespace and ServiceAccount. |
-| `labels` | Labels on every object. None by default. |
+| `labels`, `annotations` | Labels and annotations on every object, beside the sync-wave. None by default; a consumer adopting objects that already exist sets Argo CD's `argocd.argoproj.io/sync-options: Prune=false,Delete=false` here to guard them. |
 | `projects[].name`, `.slug`, `.pinKey` | The Project and namespace; the short name used in check names and tokens (default the name); the key the version is written under. |
 | `projects[].chart` | `repoURL`, `name` (index repositories), `semver`, `versionPrefix` (repositories whose tags carry one), `discoveryLimit`. |
 | `projects[].warehouse` | `name` (default the project's), `interval` (`5m0s`), `freightCreationPolicy` (`Automatic`), `subscriptions`. |
