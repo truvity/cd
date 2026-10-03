@@ -61,6 +61,8 @@ viewer:
 projects:
   - name: platform-gateway
     slug: gateway
+    annotations:
+      kargo.akuity.io/keep-namespace: "true"
     pinKey: gateway
     chart:
       repoURL: https://charts.example.com/
