@@ -16,7 +16,7 @@ release it wraps is named in each entry.
   that must merge) and its verification (a built-in promoted-version check and
   Job checks of your own, each an AnalysisTemplate with its ServiceAccount and
   ConfigMap). Every name is a value: a Project, Warehouse or Stage is exactly
-  what you write, and the chart adds no label, annotation or field of its own.
+  what you write, and the chart adds no label, annotation (beyond the sync-wave) or field of its own; `labels` and `annotations` set them on every object.
   The graph is explicit (`from` per Stage). Nothing installs it unless you do
   and no existing chart's render moves. Needs `git.repoURL` and, per project,
   `name`, `stages`, `chart`. See `docs/reference.md#cd-pipeline`.

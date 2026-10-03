@@ -4,6 +4,8 @@
 # check of the project's own on stage.
 labels:
   team: delivery
+annotations:
+  argocd.argoproj.io/sync-options: Prune=false,Delete=false
 waves:
   project: 0
   warehouse: 1

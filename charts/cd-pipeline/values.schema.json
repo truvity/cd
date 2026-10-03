@@ -12,6 +12,13 @@
       },
       "description": "Labels on every object. None by default: the chart adds nothing the values do not say."
     },
+    "annotations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Annotations on every object, beside the sync-wave. None by default."
+    },
     "waves": {
       "type": "object",
       "additionalProperties": false,

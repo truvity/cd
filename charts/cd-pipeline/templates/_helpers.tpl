@@ -11,14 +11,15 @@ Replace the {token}s of a string. Call with (dict "s" <string> "tokens" <map>).
 
 {{/*
 The metadata of one object, as YAML for `fromYaml`: name, namespace when the
-object has one, the sync-wave annotation, any further annotations and the
-chart-wide labels. Call with (dict "root" . "name" .. "ns" .. "wave" .. "annotations" ..).
+object has one, the sync-wave annotation, the chart-wide annotations, any further
+annotations of the object and the chart-wide labels. Call with (dict "root" . "name" .. "ns" .. "wave" .. "annotations" ..).
 */}}
 {{- define "cd-pipeline.meta" -}}
 {{- $meta := dict "name" .name -}}
 {{- if .ns -}}{{- $_ := set $meta "namespace" .ns -}}{{- end -}}
 {{- $ann := dict -}}
 {{- if not (kindIs "invalid" .wave) -}}{{- $_ := set $ann "argocd.argoproj.io/sync-wave" (toString (int .wave)) -}}{{- end -}}
+{{- range $k, $v := (.root.Values.annotations | default dict) -}}{{- $_ := set $ann $k (toString $v) -}}{{- end -}}
 {{- range $k, $v := (.annotations | default dict) -}}{{- $_ := set $ann $k $v -}}{{- end -}}
 {{- if $ann -}}{{- $_ := set $meta "annotations" $ann -}}{{- end -}}
 {{- with .root.Values.labels -}}{{- $_ := set $meta "labels" . -}}{{- end -}}

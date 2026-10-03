@@ -3,6 +3,12 @@
 # run, what a project and its stages are called. They are inputs
 # (docs/reference.md#cd-pipeline). With no projects the chart renders nothing.
 
+# Labels and annotations on every object. None: the chart adds nothing the
+# values do not say. A consumer adopting objects that already exist sets, for
+# instance, Argo CD's `argocd.argoproj.io/sync-options` here to guard them.
+labels: {}
+annotations: {}
+
 # Sync-wave of each kind of object, as an Argo CD annotation. The numbers are
 # mechanism: a Project before its Warehouse, credentials and configuration
 # before the Stages that use them.

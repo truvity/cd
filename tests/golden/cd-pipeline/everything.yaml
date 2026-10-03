@@ -4,6 +4,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "0"
   labels:
     team: delivery
@@ -15,6 +16,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "1"
     rbac.kargo.akuity.io/claims: '{"iss":["https://issuer.example.com"]}'
   labels:
@@ -28,6 +30,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
     rbac.kargo.akuity.io/claims: '{"groups":["platform:admin"]}'
   labels:
@@ -41,6 +44,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -53,6 +57,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -65,6 +70,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -77,6 +83,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -89,6 +96,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -101,6 +109,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
     rbac.kargo.akuity.io/claims: '{"groups":["prod:shop:approver"]}'
   labels:
@@ -114,6 +123,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -126,6 +136,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -196,6 +207,7 @@ data:
 kind: ConfigMap
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -266,6 +278,7 @@ data:
 kind: ConfigMap
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -336,6 +349,7 @@ data:
 kind: ConfigMap
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -352,6 +366,7 @@ data:
 kind: ConfigMap
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -422,6 +437,7 @@ data:
 kind: ConfigMap
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -492,6 +508,7 @@ data:
 kind: ConfigMap
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -562,6 +579,7 @@ data:
 kind: ConfigMap
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -574,6 +592,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -622,6 +641,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -643,6 +663,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -665,6 +686,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -686,6 +708,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -707,6 +730,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -753,6 +777,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -774,6 +799,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -795,6 +821,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -815,6 +842,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -835,6 +863,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -855,6 +884,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -875,6 +905,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -895,6 +926,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -915,6 +947,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -935,6 +968,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -955,6 +989,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -975,6 +1010,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -995,6 +1031,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -1072,6 +1109,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -1149,6 +1187,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -1226,6 +1265,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -1286,6 +1326,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -1363,6 +1404,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -1440,6 +1482,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -1517,6 +1560,7 @@ apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "2"
   labels:
     team: delivery
@@ -1571,6 +1615,7 @@ apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "2"
   labels:
     team: delivery
@@ -1625,6 +1670,7 @@ apiVersion: kargo.akuity.io/v1alpha1
 kind: Project
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "0"
   labels:
     team: delivery
@@ -1636,6 +1682,7 @@ apiVersion: kargo.akuity.io/v1alpha1
 kind: Project
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "0"
   labels:
     team: delivery
@@ -1647,6 +1694,7 @@ apiVersion: kargo.akuity.io/v1alpha1
 kind: ProjectConfig
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -1665,6 +1713,7 @@ apiVersion: kargo.akuity.io/v1alpha1
 kind: ProjectConfig
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "3"
   labels:
     team: delivery
@@ -1681,6 +1730,7 @@ apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "4"
   labels:
     team: delivery
@@ -1747,6 +1797,7 @@ apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "4"
   labels:
     team: delivery
@@ -1850,6 +1901,7 @@ apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "4"
   labels:
     team: delivery
@@ -1955,6 +2007,7 @@ apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "4"
   labels:
     team: delivery
@@ -2058,6 +2111,7 @@ apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "4"
   labels:
     team: delivery
@@ -2124,6 +2178,7 @@ apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "4"
   labels:
     team: delivery
@@ -2228,6 +2283,7 @@ apiVersion: kargo.akuity.io/v1alpha1
 kind: Warehouse
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "1"
   labels:
     team: delivery
@@ -2249,6 +2305,7 @@ apiVersion: kargo.akuity.io/v1alpha1
 kind: Warehouse
 metadata:
   annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "1"
   labels:
     team: delivery
