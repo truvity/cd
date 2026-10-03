@@ -5,7 +5,7 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
-## Unreleased
+## v0.5.0
 
 - **Added:** the `cd-pipeline` chart, which renders the Kargo delivery
   pipeline of one or more projects: per project a Project, a Warehouse, the
