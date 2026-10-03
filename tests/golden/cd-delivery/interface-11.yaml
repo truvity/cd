@@ -1,0 +1,397 @@
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  labels:
+    example.com/layer: delivery
+    example.com/product: atlas
+    example.com/sync-gating: "false"
+  name: east-atlas-infra
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: atlas
+  project: atlas-east
+  sources:
+  - helm:
+      releaseName: atlas-infra
+      valuesObject:
+        events:
+          account: atlas
+          maxAge: 24h
+          replicas: 3
+          storage: file
+        installName: atlas
+        postgres:
+          instances: 2
+          labels:
+            example.com/product: atlas
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: atlas-pg-runtime
+          runtimeRole: atlas_app
+          scheduling:
+            nodeSelector:
+              example.com/pool: durable
+            tolerations:
+            - effect: NoSchedule
+              key: durable
+              operator: Equal
+              value: "true"
+          storage: 20Gi
+        tier: primary
+    path: .
+    repoURL: oci://other.example.com/charts/atlas-infra
+    targetRevision: 0.9.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  labels:
+    example.com/layer: delivery
+    example.com/product: atlas
+    example.com/sync-gating: "false"
+  name: east-atlas
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: atlas
+  project: atlas-east
+  sources:
+  - helm:
+      releaseName: atlas
+      valuesObject:
+        database:
+          app:
+            passwordSecret: atlas-pg-runtime
+            role: atlas_app
+          host: atlas-infra-pg-rw
+          owner:
+            passwordSecret: atlas-infra-pg-app
+        events:
+          auth:
+            audience: broker
+          url: nats://broker.example:4222
+        identityProviders:
+          workforce:
+            client_id_list:
+            - atlas:east
+            issuer_url: https://issuer.example
+        installName: atlas
+        otel:
+          endpoint: http://collector.example:4318
+          sampleRatio: "1.0"
+        route:
+          enabled: true
+          hostname: atlas.example.com
+        serviceAccount:
+          app:
+            name: atlas
+    path: .
+    repoURL: oci://other.example.com/charts/atlas
+    targetRevision: 0.9.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  labels:
+    example.com/layer: delivery
+    example.com/product: shop
+    example.com/sync-gating: "false"
+  name: east-shop-infra
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shop
+  project: shop-east
+  sources:
+  - helm:
+      releaseName: shop-infra
+      valuesObject:
+        cloud:
+          accountID: example-account
+          bucket: example-east-sh-shop
+          clusterName: east
+          iamName: east-sh-shop
+          permissionsBoundary: example-boundary
+          region: example-region-1
+          serviceAccount: shop
+        events:
+          account: shop
+          maxAge: 24h
+          replicas: 3
+          storage: file
+        installName: shop
+        postgres:
+          backup:
+            objectStoreName: shop-objectstore
+            serverName: shop-pg-g2
+          instances: 2
+          labels:
+            example.com/product: shop
+          platformOwned: true
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: shop-pg-runtime
+          runtimeRole: shop_app
+          scheduling:
+            nodeSelector:
+              example.com/pool: durable
+            tolerations:
+            - effect: NoSchedule
+              key: durable
+              operator: Equal
+              value: "true"
+          serverTLS:
+            caSecretName: shop-infra-pg-server-ca
+            secretName: shop-infra-pg-server-tls
+          storage: 20Gi
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/shop-infra
+    targetRevision: 2.4.1
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  labels:
+    example.com/layer: delivery
+    example.com/product: shop
+    example.com/sync-gating: "false"
+  name: east-shop
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shop
+  ignoreDifferences:
+  - group: example.com
+    jqPathExpressions:
+    - .spec.groups[]?.rules[]?.record
+    kind: Rule
+  project: shop-east
+  sources:
+  - helm:
+      releaseName: shop
+      valuesObject:
+        access:
+          audience: shop-east
+          issuer: https://issuer.example
+          signOutUrl: /oauth2/sign_out
+        archive:
+          bucket:
+            name: example-east-sh-shop
+            region: example-region-1
+        database:
+          app:
+            passwordSecret: shop-pg-runtime
+            role: shop_app
+          host: shop-infra-pg-rw
+          owner:
+            passwordSecret: shop-infra-pg-app
+          tls:
+            mode: verify-full
+            rootCA:
+              configMapName: private-ca
+              key: ca-certificates.crt
+        events:
+          auth:
+            audience: broker
+          tls:
+            caConfigMap: private-ca
+            enabled: true
+            serverName: broker.east.example
+          url: nats://broker.example:4222
+        installName: shop
+        otel:
+          endpoint: http://collector.example:4318
+          sampleRatio: "1.0"
+        product:
+          mode: demo
+        replicas: 2
+        route:
+          annotations:
+            example.com/note: merged-last
+          enabled: true
+          faro:
+            backend:
+              name: faro-receiver
+              namespace: rum
+              port: 12347
+            enabled: true
+            path: /faro/collect
+            requestBufferLimit: 256Ki
+            rewritePath: /collect
+            ruleName: faro
+          hostname: shop.example.com
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: ListenerSet
+            name: shop
+            namespace: gateways
+          surfaces:
+          - hostname: admin.shop.example.com
+            name: admin
+            parentRef:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: shop
+              namespace: gateways
+        serviceAccount:
+          app:
+            name: shop
+        tls:
+          components:
+            api:
+              mode: strict
+          grantRequest: false
+          mode: permissive
+          peers:
+            api:
+            - namespace: shop
+              serviceAccount: shop-e2e-prober
+          trustDomain: east.example
+        web:
+          faro:
+            apiKey: example-public-key
+            enabled: true
+            environment: east
+            sampleRate: 1
+    path: .
+    repoURL: oci://registry.example.com/charts/shop
+    targetRevision: 2.4.1
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "30"
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  labels:
+    example.com/layer: delivery
+    example.com/product: shop
+    example.com/sync-gating: "false"
+  name: east-shop-e2e
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shop
+  project: shop-east
+  sources:
+  - helm:
+      releaseName: shop-e2e
+      valuesObject:
+        appRelease: shop
+        archive:
+          bucket: example-east-sh-shop
+          region: example-region-1
+        database:
+          app:
+            passwordSecret: shop-pg-runtime
+            role: shop_app
+          host: shop-infra-pg-rw
+          name: shop
+          owner:
+            role: shop_owner
+        events:
+          requestSubject: shop-shop.request
+          stream: shop-shop-events
+        job:
+          annotations:
+            argocd.argoproj.io/sync-options: Force=true,Replace=true
+        mode: full
+        otel:
+          endpoint: http://collector.example:4318
+          sampleRatio: "1.0"
+        prober:
+          enabled: true
+          interval: 30s
+          serviceAccount:
+            name: shop-e2e-prober
+        serviceAccount:
+          create: true
+          name: shop-e2e
+        tls:
+          grantRequest: false
+          mode: permissive
+          peers:
+          - namespace: shop
+            serviceAccount: shop-api
+          - namespace: shop
+            serviceAccount: shop-web
+          trustDomain: east.example
+        traces:
+          caConfigMap: private-ca
+          tokenExchange:
+            audience: issuer
+            client: trace-reader
+            tokenURL: https://issuer.example/token
+          url: https://traces.example/select/jaeger
+    path: .
+    repoURL: oci://registry.example.com/charts/shop-e2e
+    targetRevision: 2.4.1
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false

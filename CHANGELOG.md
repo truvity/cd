@@ -5,6 +5,15 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## Unreleased
+
+- **Added:** `cd-delivery` knows delivery interface 11. From it, a product's
+  `faro.route.requestBufferLimit` (a quantity such as `256Ki`) is handed to the
+  application chart as `route.faro.requestBufferLimit`, which renders the
+  gateway's request-body limit on the telemetry rule. Below 11 the key is left
+  out, not refused. The highest known interface is now 11; nothing changes for
+  a product that stays on 10 or lower.
+
 ## v0.5.0
 
 - **Added:** the `cd-pipeline` chart, which renders the Kargo delivery
