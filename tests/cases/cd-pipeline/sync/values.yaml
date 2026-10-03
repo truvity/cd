@@ -1,0 +1,30 @@
+# `stages[].sync`: the Applications a promotion syncs and waits on once the pin
+# is on the branch: an app-of-apps parent first, then the Stage's own. One
+# direct hop and one pull-request hop; a Stage with no `sync` ends at the push.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+promotion:
+  sync:
+    timeout: 12m0s
+projects:
+  - name: shop
+    pinKey: shop
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    stages:
+      - name: dev
+        autoPromote: true
+        applications: [dev-shop]
+        sync:
+          - name: dev-root
+            timeout: 20m0s
+          - name: dev-shop
+      - name: prod
+        from: dev
+        applications: [prod-shop]
+        sync:
+          - name: prod-root
+          - name: prod-shop
+      - name: canary
+        from: dev

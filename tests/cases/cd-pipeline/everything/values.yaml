@@ -40,8 +40,6 @@ promotion:
     timeout: 5m0s
   gate:
     timeout: 10m0s
-  sync:
-    timeout: 12m0s
 jobs:
   ttlSecondsAfterFinished: 21600
   headroomSeconds: 120
@@ -85,10 +83,6 @@ projects:
       - name: dev
         autoPromote: true
         applications: [dev-gateway]
-        sync:
-          - name: dev-root
-            timeout: 20m0s
-          - name: dev-gateway
         verification:
           promotedVersion: true
       - name: test
@@ -100,9 +94,6 @@ projects:
         from: dev
         autoPromote: true
         applications: [stage-gateway]
-        sync:
-          - name: stage-root
-          - name: stage-gateway
         verification:
           promotedVersion: true
           analysisTemplates: [shared-smoke]
