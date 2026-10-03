@@ -168,6 +168,7 @@ required below must be present, and a key the chart does not read is refused.
 | `products.<name>.repository`, `.parentRef`, `.surfaces`, `.bucketSlug` | Where the charts are published, the route's parent by name, additional routes, and the slug that says the product owns cloud objects. |
 | `products.<name>.workloadIdentity`, `.natsIdentity`, `.mtls`, `.postgres`, `.e2e`, `.faro` | Per-cluster facts about the product: whether its namespace carries a workload identity and the broker accepts it, its mTLS peers and strict components, its database's server certificate, platform ownership and archive, its end-to-end run, and its browser telemetry. |
 | `products.<name>.identityProviders`, `.access`, `.product` | Passed to the application chart verbatim. |
+| `products.<name>.alerts` | The product's alert values (`enabled`, `remote`, `ruleLabels`, `alertLabels`, thresholds), passed to the application chart verbatim from interface 12; below it, left out. |
 | `products.<name>.values.{infra,app,e2e}` | A payload per ring, merged over what the chart composed, last. An empty value (an empty string, zero, false) cannot override one the chart composed. |
 | `products.<name>.ignoreDifferences.{infra,app,e2e}` | `ignoreDifferences` entries for the ring's Application, verbatim. |
 

@@ -212,6 +212,12 @@ route:
 identityProviders:
   {{- toYaml . | nindent 2 }}
 {{- end }}
+{{- if ge $i 12 }}
+{{- with $p.alerts }}
+alerts:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- end }}
 {{- with $p.access }}
 access:
   {{- toYaml . | nindent 2 }}
