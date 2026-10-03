@@ -42,6 +42,11 @@ promotion:
     timeout: 5m0s
   gate:
     timeout: 10m0s
+  # How long each `stages[].sync` Application may take to sync, unless the entry
+  # sets its own `timeout`. Written canonically (Kargo stores durations in Go's
+  # form, and a `10m` would differ from what the server keeps).
+  sync:
+    timeout: 10m0s
 
 # What every verification Job is run as. Mechanism, not estate facts.
 jobs:

@@ -197,6 +197,16 @@
               "minLength": 1
             }
           }
+        },
+        "sync": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "timeout": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
         }
       }
     },
@@ -588,6 +598,29 @@
                 "promotionTemplate": {
                   "type": "object",
                   "description": "The Stage's promotion template, verbatim; replaces the built-in git promotion."
+                },
+                "sync": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "The Argo CD Application to sync; it must carry `kargo.akuity.io/authorized-stage: <project>:<stage>`."
+                      },
+                      "timeout": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "How long to wait for it (default `promotion.sync.timeout`)."
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ]
+                  },
+                  "description": "Argo CD Applications to sync, in order, once the pin is on the branch (after the merge on a `pr` hop); the promotion waits for each to finish its sync. List an app-of-apps parent before the Applications it renders. Absent: the promotion ends at the push and Argo CD catches up in its own time."
                 }
               },
               "required": [

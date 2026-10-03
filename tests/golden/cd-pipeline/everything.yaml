@@ -1772,6 +1772,22 @@ spec:
           errorThreshold: 3
           timeout: 5m0s
         uses: git-push
+      - config:
+          apps:
+          - name: dev-root
+            namespace: argocd
+        retry:
+          errorThreshold: 3
+          timeout: 20m0s
+        uses: argocd-update
+      - config:
+          apps:
+          - name: dev-gateway
+            namespace: argocd
+        retry:
+          errorThreshold: 3
+          timeout: 12m0s
+        uses: argocd-update
       vars:
       - name: gitRepo
         value: https://git.example.com/acme/environments.git
@@ -1979,6 +1995,22 @@ spec:
         retry:
           errorThreshold: 3
         uses: git-wait-for-pr
+      - config:
+          apps:
+          - name: stage-root
+            namespace: argocd
+        retry:
+          errorThreshold: 3
+          timeout: 12m0s
+        uses: argocd-update
+      - config:
+          apps:
+          - name: stage-gateway
+            namespace: argocd
+        retry:
+          errorThreshold: 3
+          timeout: 12m0s
+        uses: argocd-update
       vars:
       - name: gitRepo
         value: https://git.example.com/acme/environments.git

@@ -5,6 +5,13 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## Unreleased
+
+- **Added:** `cd-pipeline` `projects[].stages[].sync` (and `promotion.sync.timeout`):
+  Argo CD Applications to sync, in order, after the pin is on the branch, each as an
+  `argocd-update` step that waits for it. Absent, the render does not move.
+  The Applications must carry `kargo.akuity.io/authorized-stage`.
+
 ## v0.5.0
 
 - **Added:** the `cd-pipeline` chart, which renders the Kargo delivery

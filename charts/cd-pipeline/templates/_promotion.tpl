@@ -49,6 +49,11 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- else -}}
 {{- $steps = append $steps (dict "uses" "git-push" "retry" $retry "config" (dict "path" "./repo" "targetBranch" $pr.branch)) -}}
 {{- end -}}
+{{- /* Sync and wait: after the pin is on the branch, sync the Stage's `sync` Applications one after another and wait for each to finish, so the promotion (and with it the Stage's health and verification) ends only once the change has reached the cluster. List an app-of-apps parent before the Applications it renders: a pin that lives in a repository file the parent reads reaches the child only through the parent. An Application it names must carry `kargo.akuity.io/authorized-stage: <project>:<stage>`. */ -}}
+{{- range $a := ($s.sync | default list) -}}
+{{- $timeout := $a.timeout | default $pr.sync.timeout -}}
+{{- $steps = append $steps (dict "uses" "argocd-update" "retry" (dict "errorThreshold" $pr.retry.errorThreshold "timeout" $timeout) "config" (dict "apps" (list (dict "name" $a.name "namespace" $v.argocd.namespace)))) -}}
+{{- end -}}
 {{- $vars := list (dict "name" "gitRepo" "value" $repo) (dict "name" "chartRepo" "value" ($chart.repoURL | default "")) (dict "name" "chartName" "value" $chartName) -}}
 {{- toYaml (dict "vars" $vars "steps" $steps) -}}
 {{- end -}}

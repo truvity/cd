@@ -239,7 +239,7 @@ and per project `name`, `stages` and, unless `warehouse.subscriptions` is given,
 | --- | --- |
 | `git.repoURL` | The repository a promotion writes the new pin to. |
 | `git.credentials` | `secretStoreRef`, `remoteKey` and `properties` (`appID`, `installationID`, `privateKey`) of a GitHub App; renders an `ExternalSecret` per project namespace, `secretName` (default `kargo-git-writeback`), `refreshInterval` (default `1h`). |
-| `promotion.*` | What a promotion writes: `branch`, `pinFile` and `pinKey` (tokens `{stage}`, `{project}`, `{slug}`, `{pinKey}`), `commitMessage` (also `{version}`), `prTitle`, `prLabels`, `provider`, and the `retry` and `gate` budgets. All have neutral defaults. |
+| `promotion.*` | What a promotion writes: `branch`, `pinFile` and `pinKey` (tokens `{stage}`, `{project}`, `{slug}`, `{pinKey}`), `commitMessage` (also `{version}`), `prTitle`, `prLabels`, `provider`, and the `retry`, `gate` and `sync` budgets. All have neutral defaults. |
 | `waves` | The Argo CD sync-wave of each kind of object: `project`, `warehouse`, `credentials`, `config`, `stage` (0 to 4). |
 | `argocd.namespace` | Where the Stages' Applications live (`argocd`). |
 | `jobs`, `promotedVersion` | What the verification Jobs run as (`runAsUser`, `runAsGroup`, TTL, headroom) and the built-in check's `image`, `jqImage`, `waitSeconds`, `pollSeconds` and optional replacement `script`. |
@@ -250,7 +250,8 @@ and per project `name`, `stages` and, unless `warehouse.subscriptions` is given,
 | `projects[].chart` | `repoURL`, `name` (index repositories), `semver`, `versionPrefix` (repositories whose tags carry one), `discoveryLimit`. |
 | `projects[].warehouse` | `name` (default the project's), `interval` (`5m0s`), `freightCreationPolicy` (`Automatic`), `subscriptions`. |
 | `projects[].access.subjects[]` | `name`, `claims`, `stages`, `approve`. |
-| `projects[].stages[]` | `name`, `from` (the upstream Stage; none means Freight straight from the Warehouse), `autoPromote`, `applications`, `mode` (`pr` after the first Stage, `direct` for it), `verification`, `promotionTemplate`. |
+| `projects[].stages[]` | `name`, `from` (the upstream Stage; none means Freight straight from the Warehouse), `autoPromote`, `applications`, `mode` (`pr` after the first Stage, `direct` for it), `sync`, `verification`, `promotionTemplate`. |
+| `projects[].stages[].sync[]` | `name` and `timeout` (default `promotion.sync.timeout`): Argo CD Applications to sync, in order, once the pin is on the branch (after the merge on a `pr` hop). Each is an `argocd-update` step, so the promotion waits for it, and the Stage is Healthy only when it is. Nothing is edited in the Application: no source is named, so it syncs the revision it already tracks. Put an app-of-apps parent first when the pin lives in a file the parent reads: the child only learns of the pin through it. Every Application named needs `kargo.akuity.io/authorized-stage: <project>:<stage>` (several: comma-separated), or the step fails. Absent: the promotion ends at the push. |
 
 Durations are written the way the API server stores them (`10m0s`, not `10m`):
 Argo CD compares the manifest with the stored object and a Stage whose
