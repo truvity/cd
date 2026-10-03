@@ -595,6 +595,13 @@
               ]
             },
             "minItems": 1
+          },
+          "annotations": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Annotations on the Project object alone, beside the chart-wide ones (for instance Kargo's `kargo.akuity.io/keep-namespace: \"true\"`, which makes deleting a Project leave its namespace and the Freight in it)."
           }
         },
         "required": [

@@ -16,7 +16,7 @@ Stages, as YAML documents. Call with (dict "root" . "p" <project map>).
 {{- $whName := $wh.name | default $name -}}
 
 {{- /* Project. */ -}}
-{{- include "cd-pipeline.doc" (dict "apiVersion" "kargo.akuity.io/v1alpha1" "kind" "Project" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $name "wave" $w.project) | fromYaml)) -}}
+{{- include "cd-pipeline.doc" (dict "apiVersion" "kargo.akuity.io/v1alpha1" "kind" "Project" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $name "wave" $w.project "annotations" $p.annotations) | fromYaml)) -}}
 
 {{- /* Warehouse: one chart subscription unless the project lists its own. */ -}}
 {{- $subs := $wh.subscriptions -}}

@@ -245,6 +245,7 @@ and per project `name`, `stages` and, unless `warehouse.subscriptions` is given,
 | `jobs`, `promotedVersion` | What the verification Jobs run as (`runAsUser`, `runAsGroup`, TTL, headroom) and the built-in check's `image`, `jqImage`, `waitSeconds`, `pollSeconds` and optional replacement `script`. |
 | `viewer` | `namespace`, `serviceAccount`, `role` and `bindingName` of the shared read-only ServiceAccount each project binds; `global.claims` also renders its namespace and ServiceAccount. |
 | `labels`, `annotations` | Labels and annotations on every object, beside the sync-wave. None by default; a consumer adopting objects that already exist sets Argo CD's `argocd.argoproj.io/sync-options: Prune=false,Delete=false` here to guard them. |
+| `projects[].annotations` | Annotations on the Project object alone, for instance Kargo's `kargo.akuity.io/keep-namespace: "true"`: deleting a Project then leaves its namespace, and the Freight in it. |
 | `projects[].name`, `.slug`, `.pinKey` | The Project and namespace; the short name used in check names and tokens (default the name); the key the version is written under. |
 | `projects[].chart` | `repoURL`, `name` (index repositories), `semver`, `versionPrefix` (repositories whose tags carry one), `discoveryLimit`. |
 | `projects[].warehouse` | `name` (default the project's), `interval` (`5m0s`), `freightCreationPolicy` (`Automatic`), `subscriptions`. |

@@ -1672,6 +1672,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-options: Prune=false,Delete=false
     argocd.argoproj.io/sync-wave: "0"
+    kargo.akuity.io/keep-namespace: "true"
   labels:
     team: delivery
   name: platform-gateway
