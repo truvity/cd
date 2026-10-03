@@ -5,6 +5,18 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## Unreleased
+
+- **Added:** `products.<name>.postgres.runtimeRole`, default `true`. Set to
+  `false`, `cd-delivery` leaves `postgres.runtimeRole`,
+  `postgres.runtimePasswordSecret` and `postgres.runtimePassword.generate` out
+  of the product's infra values, for an infra chart whose strict `postgres`
+  schema does not have them (it refused the render with "additional properties
+  not allowed"). Not breaking: unset, the three keys are sent as before and
+  every existing render is byte-identical. It is a product value, not a
+  delivery-interface step, since products at one interface differ in having a
+  runtime role.
+
 ## v0.7.0
 
 - **Added:** `cd-delivery` knows delivery interface 12. From it, a product's

@@ -54,10 +54,12 @@ postgres:
   {{- end }}
   instances: {{ $pg.instances }}
   storage: {{ $pg.storage | quote }}
+  {{- if (hasKey $pgp "runtimeRole") | ternary $pgp.runtimeRole true }}
   runtimeRole: {{ printf "%s_app" (replace "-" "_" $name) | quote }}
   runtimePasswordSecret: {{ printf "%s-pg-runtime" $name | quote }}
   runtimePassword:
     generate: true
+  {{- end }}
   {{- with $pg.labels }}
   labels:
     {{- range $k, $v := . }}
