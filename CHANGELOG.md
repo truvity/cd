@@ -5,6 +5,16 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## v0.7.0
+
+- **Added:** `cd-delivery` knows delivery interface 12. From it, a product's
+  `alerts` values (`enabled`, `remote`, `ruleLabels`, `alertLabels` and one
+  block of thresholds per rule) are handed to the application chart verbatim,
+  so a product chart can render its own alerting rules, locally or as a
+  remote rule set evaluated elsewhere. Below 12 the key is left out, not
+  refused. The highest known interface is now 12; nothing changes for a
+  product that stays on 11 or lower.
+
 ## v0.6.0
 
 - **Added:** `cd-delivery` knows delivery interface 11. From it, a product's
