@@ -5,7 +5,7 @@ rendered short. The numbers and what each adds are the registry's
 (truvity/policy docs/contracts/delivery-interface.md); this one moves when a
 step is added to it, and the entry in CHANGELOG.md says which.
 */}}
-{{- define "cd-delivery.maxInterface" -}}10{{- end -}}
+{{- define "cd-delivery.maxInterface" -}}11{{- end -}}
 
 {{/*
 Replace the {product}, {cluster} and {slug} tokens in a string.

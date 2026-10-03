@@ -189,6 +189,9 @@ route:
       name: {{ $fr.backend.name | quote }}
       namespace: {{ $fr.backend.namespace | quote }}
       port: {{ $fr.backend.port }}
+    {{- if and (ge $i 11) $fr.requestBufferLimit }}
+    requestBufferLimit: {{ $fr.requestBufferLimit | quote }}
+    {{- end }}
   {{- end }}
   {{- with $p.parentRef }}
   parentRef:
