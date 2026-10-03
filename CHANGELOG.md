@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.8.0
+
 - **Added:** `products.<name>.postgres.runtimeRole`, default `true`. Set to
   `false`, `cd-delivery` leaves `postgres.runtimeRole`,
   `postgres.runtimePasswordSecret` and `postgres.runtimePassword.generate` out
