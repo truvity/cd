@@ -1,0 +1,7 @@
+{{- with .Values.viewer.global }}
+{{- include "cd-pipeline.doc" (dict "apiVersion" "v1" "kind" "Namespace" "metadata" (include "cd-pipeline.meta" (dict "root" $ "name" $.Values.viewer.namespace "wave" $.Values.waves.project) | fromYaml)) }}
+{{- include "cd-pipeline.doc" (dict "apiVersion" "v1" "kind" "ServiceAccount" "metadata" (include "cd-pipeline.meta" (dict "root" $ "name" $.Values.viewer.serviceAccount "ns" $.Values.viewer.namespace "wave" $.Values.waves.warehouse "annotations" (dict "rbac.kargo.akuity.io/claims" (toJson .claims))) | fromYaml)) }}
+{{- end }}
+{{- range $p := .Values.projects }}
+{{- include "cd-pipeline.project" (dict "root" $ "p" $p) }}
+{{- end }}

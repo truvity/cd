@@ -1,0 +1,14 @@
+# The smallest input that renders: one project with one stage that promotes by
+# writing straight to the branch. Every fact the render needs is given; none
+# has a default.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+projects:
+  - name: shop
+    pinKey: shop
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    stages:
+      - name: dev
+        autoPromote: true

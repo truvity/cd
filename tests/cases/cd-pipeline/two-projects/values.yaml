@@ -1,0 +1,31 @@
+# Two projects with no credentials, no access rules and no verification: the
+# Warehouse's own subscription, replaced; a Stage with its promotion template
+# written out by hand.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+projects:
+  - name: images
+    stages:
+      - name: only
+        autoPromote: true
+        promotionTemplate:
+          steps:
+            - uses: git-clone
+              config:
+                repoURL: https://git.example.com/acme/environments.git
+                checkout:
+                  - branch: main
+                    path: ./repo
+    warehouse:
+      name: images-source
+      subscriptions:
+        - image:
+            repoURL: registry.example.com/apps/web
+            constraint: ^1.0.0
+  - name: docs
+    chart:
+      repoURL: oci://registry.example.com/charts/docs
+      semver: ">=0.1.0"
+    stages:
+      - name: only
+        autoPromote: true

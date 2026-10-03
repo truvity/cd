@@ -1,0 +1,600 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "cd-pipeline",
+  "description": "A Kargo delivery pipeline per project. Strict throughout: a key the chart does not read is refused rather than ignored, because a typo in a value that decides what is promoted renders cleanly and promotes the wrong thing. With no projects nothing is rendered.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "labels": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Labels on every object. None by default: the chart adds nothing the values do not say."
+    },
+    "waves": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "project": {
+          "type": "integer"
+        },
+        "warehouse": {
+          "type": "integer"
+        },
+        "credentials": {
+          "type": "integer"
+        },
+        "config": {
+          "type": "integer"
+        },
+        "stage": {
+          "type": "integer"
+        }
+      },
+      "description": "The Argo CD sync-wave of each kind of object."
+    },
+    "argocd": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "namespace": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Where the Argo CD Applications of the Stages live."
+        }
+      }
+    },
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "repoURL": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The repository a promotion writes the pin to."
+        },
+        "credentials": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "secretName": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The Secret each project namespace gets (default `kargo-git-writeback`)."
+            },
+            "refreshInterval": {
+              "type": "string",
+              "minLength": 1
+            },
+            "secretStoreRef": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "SecretStore",
+                    "ClusterSecretStore"
+                  ]
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "kind",
+                "name"
+              ]
+            },
+            "remoteKey": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The key in the store that holds the GitHub App's credentials."
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "appID": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "installationID": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "privateKey": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "appID",
+                "installationID",
+                "privateKey"
+              ],
+              "description": "The property of that key each credential is read from."
+            }
+          },
+          "required": [
+            "secretStoreRef",
+            "remoteKey",
+            "properties"
+          ],
+          "description": "An ExternalSecret in each project namespace that produces the git credentials Kargo writes back with (a GitHub App)."
+        }
+      },
+      "description": "Where promotions write."
+    },
+    "promotion": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pinFile": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The file the pin is written to, relative to the repository; tokens {stage}, {project}, {slug}, {pinKey}."
+        },
+        "pinKey": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The key written in it; the same tokens."
+        },
+        "commitMessage": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The same tokens and {version}, the Kargo expression for the promoted version."
+        },
+        "prTitle": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The same tokens."
+        },
+        "prLabels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "provider": {
+          "type": "string",
+          "minLength": 1
+        },
+        "retry": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "errorThreshold": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "timeout": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "gate": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "timeout": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "jobs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ttlSecondsAfterFinished": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "headroomSeconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "runAsUser": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "runAsGroup": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "description": "What every verification Job is run as."
+    },
+    "promotedVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "image": {
+          "type": "string",
+          "minLength": 1,
+          "description": "An image with a shell and curl."
+        },
+        "jqImage": {
+          "type": "string",
+          "minLength": 1,
+          "description": "An image holding /jq, mounted as an image volume."
+        },
+        "waitSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pollSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "script": {
+          "type": "string",
+          "description": "Replaces the script the chart ships."
+        }
+      },
+      "description": "The built-in promoted-version check."
+    },
+    "viewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "namespace": {
+          "type": "string",
+          "minLength": 1
+        },
+        "serviceAccount": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bindingName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "global": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "claims": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "claims"
+          ],
+          "description": "Also render the namespace and the ServiceAccount that carries these claims."
+        }
+      },
+      "description": "Read access for every user the ServiceAccount's claims match: a RoleBinding in each project."
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The Project, its namespace and, unless `warehouse.name` says otherwise, its Warehouse. Renaming one deletes it and the Freight history it holds."
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Names the checks and fills {slug}; default the project's name."
+          },
+          "pinKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Fills {pinKey}: the key the promoted version is written under."
+          },
+          "chart": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "repoURL": {
+                "type": "string",
+                "minLength": 1
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The chart's name in an index repository; none for an OCI one."
+              },
+              "semver": {
+                "type": "string",
+                "minLength": 1
+              },
+              "versionPrefix": {
+                "type": "string",
+                "description": "Written in front of the version in the pin, for a repository whose tags carry one."
+              },
+              "discoveryLimit": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "repoURL",
+              "semver"
+            ],
+            "description": "The chart this project delivers; the Warehouse subscribes to it."
+          },
+          "warehouse": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "interval": {
+                "type": "string",
+                "minLength": 1
+              },
+              "freightCreationPolicy": {
+                "type": "string",
+                "enum": [
+                  "Automatic",
+                  "Manual"
+                ]
+              },
+              "subscriptions": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                },
+                "description": "Replaces the chart subscription, verbatim."
+              }
+            }
+          },
+          "access": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "subjects": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "claims": {
+                      "type": "object",
+                      "description": "The OIDC claims a token must carry; Kargo maps a matching token to this ServiceAccount."
+                    },
+                    "stages": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "approve": {
+                      "type": "boolean",
+                      "description": "May also approve Freight, which Kargo scopes to the whole project."
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "claims",
+                    "stages"
+                  ]
+                }
+              }
+            }
+          },
+          "stages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "The Stage's name, and the name the access rules and `from` refer to it by."
+                },
+                "from": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "The Stage whose verified Freight this Stage promotes. Absent: the Stage takes Freight straight from the Warehouse (the project's first)."
+                },
+                "autoPromote": {
+                  "type": "boolean",
+                  "description": "Promote new Freight without waiting for a person."
+                },
+                "applications": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": "The Argo CD Applications this Stage deploys, by name. A Stage that promotes from this one waits for them to be Healthy and Synced; its own promoted-version check reads them."
+                },
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "pr",
+                    "direct"
+                  ],
+                  "description": "How the pin reaches the repository: a pull request that must merge (default when the Stage has an upstream) or a push to the branch (default for the first Stage)."
+                },
+                "verification": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "promotedVersion": {
+                      "type": "boolean",
+                      "description": "Verify that the Stage's Applications render the promoted chart version (needs `applications` and `promotedVersion.image`, `.jqImage`)."
+                    },
+                    "checks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Name of the AnalysisTemplate."
+                          },
+                          "metric": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Name of the one metric the template measures (default `check`)."
+                          },
+                          "args": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "description": "The AnalysisTemplate's argument names; default `[chart-version]`, the version the Stage's Freight promoted."
+                          },
+                          "serviceAccount": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "The ServiceAccount the Job runs as."
+                          },
+                          "createServiceAccount": {
+                            "type": "boolean",
+                            "description": "Render the ServiceAccount (default true); false when it exists elsewhere."
+                          },
+                          "image": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "The image the check runs."
+                          },
+                          "command": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
+                          "script": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "configMap": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "Name of the ConfigMap that holds the script."
+                              },
+                              "file": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "Key and file name of the script (default `verify.sh`)."
+                              },
+                              "content": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "configMap",
+                              "content"
+                            ],
+                            "description": "A script mounted read-only at /scripts. With no `command`, it is run with /bin/sh."
+                          },
+                          "env": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "value": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "name",
+                                "value"
+                              ]
+                            },
+                            "description": "Values are strings. Argo Rollouts substitutes `{{args.<name>}}` in them."
+                          },
+                          "volumes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object"
+                            },
+                            "description": "Pod volumes, verbatim, after the script's."
+                          },
+                          "volumeMounts": {
+                            "type": "array",
+                            "items": {
+                              "type": "object"
+                            },
+                            "description": "Container mounts, verbatim, after the script's."
+                          },
+                          "deadlineSeconds": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "The Job's activeDeadlineSeconds."
+                          },
+                          "ttlSecondsAfterFinished": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "serviceAccount",
+                          "image",
+                          "deadlineSeconds"
+                        ],
+                        "description": "A Job check: an AnalysisTemplate whose measurement is one Job, run once, decided by its exit code."
+                      }
+                    },
+                    "analysisTemplates": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Names of AnalysisTemplates that exist already, run beside the rest."
+                    }
+                  }
+                },
+                "promotionTemplate": {
+                  "type": "object",
+                  "description": "The Stage's promotion template, verbatim; replaces the built-in git promotion."
+                }
+              },
+              "required": [
+                "name"
+              ]
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "name",
+          "stages"
+        ]
+      }
+    }
+  }
+}

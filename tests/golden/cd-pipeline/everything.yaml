@@ -1,0 +1,2264 @@
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    team: delivery
+  name: kargo-users
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    rbac.kargo.akuity.io/claims: '{"iss":["https://issuer.example.com"]}'
+  labels:
+    team: delivery
+  name: viewer
+  namespace: kargo-users
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["platform:admin"]}'
+  labels:
+    team: delivery
+  name: admin
+  namespace: platform-gateway
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: kargo-verify-dev
+  namespace: platform-gateway
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: kargo-verify-test
+  namespace: platform-gateway
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: kargo-verify-stage
+  namespace: platform-gateway
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: smoke
+  namespace: platform-gateway
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: kargo-verify-prod
+  namespace: platform-gateway
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["prod:shop:approver"]}'
+  labels:
+    team: delivery
+  name: approver-prod
+  namespace: shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: kargo-verify-dev
+  namespace: shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: kargo-verify-prod
+  namespace: shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+data:
+  verify-promoted-version.sh: "#!/bin/sh\n#\n# The promoted-version check of a Kargo
+    Stage: the question a Promotion cannot\n# ask for itself. Kargo's argocd-wait
+    step compares an Application's STATE and\n# has no revision field, and a Stage's
+    own health never consults Argo CD, so\n# after the pin is pushed nothing asks
+    whether the target Application renders\n# the promoted chart at all. A parent
+    Application that is still mid-sync leaves\n# the child on the previous version,
+    Synced and Healthy.\n#\n# Run as a Kargo verification, i.e. after the Promotion
+    succeeded and before the\n# Freight counts as verified in this Stage, it holds
+    until every target\n# Application (a) has the promoted chart version in its spec,
+    (b) has been\n# COMPARED at that version (status.sync.comparedTo), and (c) is
+    Synced, Healthy\n# and not mid-operation.\n#\n# Reads the Applications with the
+    pod's own ServiceAccount through the\n# in-cluster API (curl and jq); the Role
+    the chart renders allows `get` on\n# exactly the Applications the Stage names.\n#\n#
+    Env: APPS (space separated Application names), CHART_REPO, CHART_NAME\n# (empty
+    for OCI repos), EXPECTED (the targetRevision, prefix included),\n# ARGOCD_NAMESPACE
+    (default argocd), WAIT_SECONDS, POLL_SECONDS, JQ.\nset -u\n\nJQ=\"${JQ:-jq}\"\nAPI=\"https://kubernetes.default.svc\"\nSA=/var/run/secrets/kubernetes.io/serviceaccount\nstarted=$(date
+    +%s)\nlast=\"\"\n\n# One line per Application: \"<verdict> <message>\".\n# verdict:
+    skip (renders none of this chart), ok, wait.\njudge() {\n\t\"$JQ\" -r --arg repo
+    \"$CHART_REPO\" --arg chart \"$CHART_NAME\" --arg exp \"$EXPECTED\" '\n\t  # Identity
+    of a chart source: repo without scheme or trailing slash,\n\t  # plus /chart where
+    the source names one. Infra Applications say\n\t  # repoURL registry/charts +
+    chart X, others the whole\n\t  # oci://.../X path, and Kargo the latter for both.\n\t
+    \ def ident($r; $c): ($r | sub(\"^oci://\"; \"\") | sub(\"/+$\"; \"\")) + (if
+    ($c // \"\") != \"\" then \"/\" + $c else \"\" end);\n\t  def mine: map(select(.
+    != null and ident(.repoURL; .chart) == ident($repo; $chart)));\n\t  def revs:
+    map(.targetRevision // \"\");\n\t  ((.spec.sources // [.spec.source]) | mine)
+    as $spec\n\t  | ((.status.sync.comparedTo.sources // [.status.sync.comparedTo.source])
+    | mine) as $cmp\n\t  | if ($spec | length) == 0 then \"skip renders no source
+    from \\($repo)\"\n\t    elif ($spec | revs | all(. == $exp) | not) then\n\t      \"wait
+    spec still targets \\($spec | revs | join(\",\")), want \\($exp) (parent app-of-apps
+    not synced?)\"\n\t    elif (($cmp | length) == 0) or ($cmp | revs | all(. == $exp)
+    | not) then\n\t      \"wait spec is at \\($exp) but last comparison was at \\($cmp
+    | revs | join(\",\") | if . == \"\" then \"nothing\" else . end)\"\n\t    elif
+    (.status.operationState.phase // \"\") == \"Running\" then \"wait a sync operation
+    is still Running\"\n\t    elif (.status.sync.status // \"\") != \"Synced\" then
+    \"wait sync status \\(.status.sync.status // \"unknown\")\"\n\t    elif (.status.health.status
+    // \"\") != \"Healthy\" then \"wait health \\(.status.health.status // \"unknown\")\"\n\t
+    \   else \"ok at \\($exp)\" end'\n}\n\nwhile :; do\n\tpending=\"\"\n\tmatched=0\n\treport=\"\"\n\tfor
+    app in $APPS; do\n\t\tbody=$(curl -sS --max-time 20 --cacert \"$SA/ca.crt\" \\\n\t\t\t-H
+    \"Authorization: Bearer $(cat \"$SA/token\")\" \\\n\t\t\t-w '\\n%{http_code}'
+    \\\n\t\t\t\"$API/apis/argoproj.io/v1alpha1/namespaces/${ARGOCD_NAMESPACE:-argocd}/applications/$app\"
+    2>&1)\n\t\tcode=$(printf '%s' \"$body\" | tail -n 1)\n\t\tbody=$(printf '%s' \"$body\"
+    | sed '$d')\n\t\tif [ \"$code\" != \"200\" ]; then\n\t\t\tline=\"wait cannot read
+    Application (HTTP $code)\"\n\t\telse\n\t\t\tline=$(printf '%s' \"$body\" | judge)\n\t\tfi\n\t\tverdict=${line%%
+    *}\n\t\tmsg=${line#* }\n\t\treport=\"$report\n  $app: $msg\"\n\t\tcase \"$verdict\"
+    in\n\t\tskip) ;;\n\t\tok) matched=$((matched + 1)) ;;\n\t\t*) matched=$((matched
+    + 1)); pending=\"$pending $app\" ;;\n\t\tesac\n\tdone\n\n\tif [ -z \"$pending\"
+    ] && [ \"$matched\" -gt 0 ]; then\n\t\techo \"promoted version $EXPECTED is rendered
+    and Synced/Healthy:$report\"\n\t\texit 0\n\tfi\n\n\tif [ \"$matched\" -eq 0 ];
+    then\n\t\techo \"FAIL: none of the Applications ($APPS) renders a source from
+    $CHART_REPO -- check the Stage's applications:$report\"\n\t\texit 1\n\tfi\n\n\tnow=$(date
+    +%s)\n\tif [ $((now - started)) -ge \"$WAIT_SECONDS\" ]; then\n\t\techo \"FAIL:
+    after ${WAIT_SECONDS}s the promoted version $EXPECTED is not live. Not ready:$report\"\n\t\techo
+    \"If an Application still targets the previous version, the parent that renders
+    its pin has not synced: look for a sync operation still Running on it.\"\n\t\texit
+    1\n\tfi\n\n\tif [ \"$report\" != \"$last\" ]; then\n\t\techo \"waiting ($((now
+    - started))s of ${WAIT_SECONDS}s):$report\"\n\t\tlast=$report\n\tfi\n\tsleep \"$POLL_SECONDS\"\ndone\n"
+kind: ConfigMap
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: gateway-dev-verify-promoted-version
+  namespace: platform-gateway
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+data:
+  verify-promoted-version.sh: "#!/bin/sh\n#\n# The promoted-version check of a Kargo
+    Stage: the question a Promotion cannot\n# ask for itself. Kargo's argocd-wait
+    step compares an Application's STATE and\n# has no revision field, and a Stage's
+    own health never consults Argo CD, so\n# after the pin is pushed nothing asks
+    whether the target Application renders\n# the promoted chart at all. A parent
+    Application that is still mid-sync leaves\n# the child on the previous version,
+    Synced and Healthy.\n#\n# Run as a Kargo verification, i.e. after the Promotion
+    succeeded and before the\n# Freight counts as verified in this Stage, it holds
+    until every target\n# Application (a) has the promoted chart version in its spec,
+    (b) has been\n# COMPARED at that version (status.sync.comparedTo), and (c) is
+    Synced, Healthy\n# and not mid-operation.\n#\n# Reads the Applications with the
+    pod's own ServiceAccount through the\n# in-cluster API (curl and jq); the Role
+    the chart renders allows `get` on\n# exactly the Applications the Stage names.\n#\n#
+    Env: APPS (space separated Application names), CHART_REPO, CHART_NAME\n# (empty
+    for OCI repos), EXPECTED (the targetRevision, prefix included),\n# ARGOCD_NAMESPACE
+    (default argocd), WAIT_SECONDS, POLL_SECONDS, JQ.\nset -u\n\nJQ=\"${JQ:-jq}\"\nAPI=\"https://kubernetes.default.svc\"\nSA=/var/run/secrets/kubernetes.io/serviceaccount\nstarted=$(date
+    +%s)\nlast=\"\"\n\n# One line per Application: \"<verdict> <message>\".\n# verdict:
+    skip (renders none of this chart), ok, wait.\njudge() {\n\t\"$JQ\" -r --arg repo
+    \"$CHART_REPO\" --arg chart \"$CHART_NAME\" --arg exp \"$EXPECTED\" '\n\t  # Identity
+    of a chart source: repo without scheme or trailing slash,\n\t  # plus /chart where
+    the source names one. Infra Applications say\n\t  # repoURL registry/charts +
+    chart X, others the whole\n\t  # oci://.../X path, and Kargo the latter for both.\n\t
+    \ def ident($r; $c): ($r | sub(\"^oci://\"; \"\") | sub(\"/+$\"; \"\")) + (if
+    ($c // \"\") != \"\" then \"/\" + $c else \"\" end);\n\t  def mine: map(select(.
+    != null and ident(.repoURL; .chart) == ident($repo; $chart)));\n\t  def revs:
+    map(.targetRevision // \"\");\n\t  ((.spec.sources // [.spec.source]) | mine)
+    as $spec\n\t  | ((.status.sync.comparedTo.sources // [.status.sync.comparedTo.source])
+    | mine) as $cmp\n\t  | if ($spec | length) == 0 then \"skip renders no source
+    from \\($repo)\"\n\t    elif ($spec | revs | all(. == $exp) | not) then\n\t      \"wait
+    spec still targets \\($spec | revs | join(\",\")), want \\($exp) (parent app-of-apps
+    not synced?)\"\n\t    elif (($cmp | length) == 0) or ($cmp | revs | all(. == $exp)
+    | not) then\n\t      \"wait spec is at \\($exp) but last comparison was at \\($cmp
+    | revs | join(\",\") | if . == \"\" then \"nothing\" else . end)\"\n\t    elif
+    (.status.operationState.phase // \"\") == \"Running\" then \"wait a sync operation
+    is still Running\"\n\t    elif (.status.sync.status // \"\") != \"Synced\" then
+    \"wait sync status \\(.status.sync.status // \"unknown\")\"\n\t    elif (.status.health.status
+    // \"\") != \"Healthy\" then \"wait health \\(.status.health.status // \"unknown\")\"\n\t
+    \   else \"ok at \\($exp)\" end'\n}\n\nwhile :; do\n\tpending=\"\"\n\tmatched=0\n\treport=\"\"\n\tfor
+    app in $APPS; do\n\t\tbody=$(curl -sS --max-time 20 --cacert \"$SA/ca.crt\" \\\n\t\t\t-H
+    \"Authorization: Bearer $(cat \"$SA/token\")\" \\\n\t\t\t-w '\\n%{http_code}'
+    \\\n\t\t\t\"$API/apis/argoproj.io/v1alpha1/namespaces/${ARGOCD_NAMESPACE:-argocd}/applications/$app\"
+    2>&1)\n\t\tcode=$(printf '%s' \"$body\" | tail -n 1)\n\t\tbody=$(printf '%s' \"$body\"
+    | sed '$d')\n\t\tif [ \"$code\" != \"200\" ]; then\n\t\t\tline=\"wait cannot read
+    Application (HTTP $code)\"\n\t\telse\n\t\t\tline=$(printf '%s' \"$body\" | judge)\n\t\tfi\n\t\tverdict=${line%%
+    *}\n\t\tmsg=${line#* }\n\t\treport=\"$report\n  $app: $msg\"\n\t\tcase \"$verdict\"
+    in\n\t\tskip) ;;\n\t\tok) matched=$((matched + 1)) ;;\n\t\t*) matched=$((matched
+    + 1)); pending=\"$pending $app\" ;;\n\t\tesac\n\tdone\n\n\tif [ -z \"$pending\"
+    ] && [ \"$matched\" -gt 0 ]; then\n\t\techo \"promoted version $EXPECTED is rendered
+    and Synced/Healthy:$report\"\n\t\texit 0\n\tfi\n\n\tif [ \"$matched\" -eq 0 ];
+    then\n\t\techo \"FAIL: none of the Applications ($APPS) renders a source from
+    $CHART_REPO -- check the Stage's applications:$report\"\n\t\texit 1\n\tfi\n\n\tnow=$(date
+    +%s)\n\tif [ $((now - started)) -ge \"$WAIT_SECONDS\" ]; then\n\t\techo \"FAIL:
+    after ${WAIT_SECONDS}s the promoted version $EXPECTED is not live. Not ready:$report\"\n\t\techo
+    \"If an Application still targets the previous version, the parent that renders
+    its pin has not synced: look for a sync operation still Running on it.\"\n\t\texit
+    1\n\tfi\n\n\tif [ \"$report\" != \"$last\" ]; then\n\t\techo \"waiting ($((now
+    - started))s of ${WAIT_SECONDS}s):$report\"\n\t\tlast=$report\n\tfi\n\tsleep \"$POLL_SECONDS\"\ndone\n"
+kind: ConfigMap
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: gateway-test-verify-promoted-version
+  namespace: platform-gateway
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+data:
+  verify-promoted-version.sh: "#!/bin/sh\n#\n# The promoted-version check of a Kargo
+    Stage: the question a Promotion cannot\n# ask for itself. Kargo's argocd-wait
+    step compares an Application's STATE and\n# has no revision field, and a Stage's
+    own health never consults Argo CD, so\n# after the pin is pushed nothing asks
+    whether the target Application renders\n# the promoted chart at all. A parent
+    Application that is still mid-sync leaves\n# the child on the previous version,
+    Synced and Healthy.\n#\n# Run as a Kargo verification, i.e. after the Promotion
+    succeeded and before the\n# Freight counts as verified in this Stage, it holds
+    until every target\n# Application (a) has the promoted chart version in its spec,
+    (b) has been\n# COMPARED at that version (status.sync.comparedTo), and (c) is
+    Synced, Healthy\n# and not mid-operation.\n#\n# Reads the Applications with the
+    pod's own ServiceAccount through the\n# in-cluster API (curl and jq); the Role
+    the chart renders allows `get` on\n# exactly the Applications the Stage names.\n#\n#
+    Env: APPS (space separated Application names), CHART_REPO, CHART_NAME\n# (empty
+    for OCI repos), EXPECTED (the targetRevision, prefix included),\n# ARGOCD_NAMESPACE
+    (default argocd), WAIT_SECONDS, POLL_SECONDS, JQ.\nset -u\n\nJQ=\"${JQ:-jq}\"\nAPI=\"https://kubernetes.default.svc\"\nSA=/var/run/secrets/kubernetes.io/serviceaccount\nstarted=$(date
+    +%s)\nlast=\"\"\n\n# One line per Application: \"<verdict> <message>\".\n# verdict:
+    skip (renders none of this chart), ok, wait.\njudge() {\n\t\"$JQ\" -r --arg repo
+    \"$CHART_REPO\" --arg chart \"$CHART_NAME\" --arg exp \"$EXPECTED\" '\n\t  # Identity
+    of a chart source: repo without scheme or trailing slash,\n\t  # plus /chart where
+    the source names one. Infra Applications say\n\t  # repoURL registry/charts +
+    chart X, others the whole\n\t  # oci://.../X path, and Kargo the latter for both.\n\t
+    \ def ident($r; $c): ($r | sub(\"^oci://\"; \"\") | sub(\"/+$\"; \"\")) + (if
+    ($c // \"\") != \"\" then \"/\" + $c else \"\" end);\n\t  def mine: map(select(.
+    != null and ident(.repoURL; .chart) == ident($repo; $chart)));\n\t  def revs:
+    map(.targetRevision // \"\");\n\t  ((.spec.sources // [.spec.source]) | mine)
+    as $spec\n\t  | ((.status.sync.comparedTo.sources // [.status.sync.comparedTo.source])
+    | mine) as $cmp\n\t  | if ($spec | length) == 0 then \"skip renders no source
+    from \\($repo)\"\n\t    elif ($spec | revs | all(. == $exp) | not) then\n\t      \"wait
+    spec still targets \\($spec | revs | join(\",\")), want \\($exp) (parent app-of-apps
+    not synced?)\"\n\t    elif (($cmp | length) == 0) or ($cmp | revs | all(. == $exp)
+    | not) then\n\t      \"wait spec is at \\($exp) but last comparison was at \\($cmp
+    | revs | join(\",\") | if . == \"\" then \"nothing\" else . end)\"\n\t    elif
+    (.status.operationState.phase // \"\") == \"Running\" then \"wait a sync operation
+    is still Running\"\n\t    elif (.status.sync.status // \"\") != \"Synced\" then
+    \"wait sync status \\(.status.sync.status // \"unknown\")\"\n\t    elif (.status.health.status
+    // \"\") != \"Healthy\" then \"wait health \\(.status.health.status // \"unknown\")\"\n\t
+    \   else \"ok at \\($exp)\" end'\n}\n\nwhile :; do\n\tpending=\"\"\n\tmatched=0\n\treport=\"\"\n\tfor
+    app in $APPS; do\n\t\tbody=$(curl -sS --max-time 20 --cacert \"$SA/ca.crt\" \\\n\t\t\t-H
+    \"Authorization: Bearer $(cat \"$SA/token\")\" \\\n\t\t\t-w '\\n%{http_code}'
+    \\\n\t\t\t\"$API/apis/argoproj.io/v1alpha1/namespaces/${ARGOCD_NAMESPACE:-argocd}/applications/$app\"
+    2>&1)\n\t\tcode=$(printf '%s' \"$body\" | tail -n 1)\n\t\tbody=$(printf '%s' \"$body\"
+    | sed '$d')\n\t\tif [ \"$code\" != \"200\" ]; then\n\t\t\tline=\"wait cannot read
+    Application (HTTP $code)\"\n\t\telse\n\t\t\tline=$(printf '%s' \"$body\" | judge)\n\t\tfi\n\t\tverdict=${line%%
+    *}\n\t\tmsg=${line#* }\n\t\treport=\"$report\n  $app: $msg\"\n\t\tcase \"$verdict\"
+    in\n\t\tskip) ;;\n\t\tok) matched=$((matched + 1)) ;;\n\t\t*) matched=$((matched
+    + 1)); pending=\"$pending $app\" ;;\n\t\tesac\n\tdone\n\n\tif [ -z \"$pending\"
+    ] && [ \"$matched\" -gt 0 ]; then\n\t\techo \"promoted version $EXPECTED is rendered
+    and Synced/Healthy:$report\"\n\t\texit 0\n\tfi\n\n\tif [ \"$matched\" -eq 0 ];
+    then\n\t\techo \"FAIL: none of the Applications ($APPS) renders a source from
+    $CHART_REPO -- check the Stage's applications:$report\"\n\t\texit 1\n\tfi\n\n\tnow=$(date
+    +%s)\n\tif [ $((now - started)) -ge \"$WAIT_SECONDS\" ]; then\n\t\techo \"FAIL:
+    after ${WAIT_SECONDS}s the promoted version $EXPECTED is not live. Not ready:$report\"\n\t\techo
+    \"If an Application still targets the previous version, the parent that renders
+    its pin has not synced: look for a sync operation still Running on it.\"\n\t\texit
+    1\n\tfi\n\n\tif [ \"$report\" != \"$last\" ]; then\n\t\techo \"waiting ($((now
+    - started))s of ${WAIT_SECONDS}s):$report\"\n\t\tlast=$report\n\tfi\n\tsleep \"$POLL_SECONDS\"\ndone\n"
+kind: ConfigMap
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: gateway-stage-verify-promoted-version
+  namespace: platform-gateway
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+data:
+  smoke.sh: |
+    #!/bin/sh
+    curl -fsS "$TARGET/healthz"
+kind: ConfigMap
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: gateway-stage-smoke
+  namespace: platform-gateway
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+data:
+  verify-promoted-version.sh: "#!/bin/sh\n#\n# The promoted-version check of a Kargo
+    Stage: the question a Promotion cannot\n# ask for itself. Kargo's argocd-wait
+    step compares an Application's STATE and\n# has no revision field, and a Stage's
+    own health never consults Argo CD, so\n# after the pin is pushed nothing asks
+    whether the target Application renders\n# the promoted chart at all. A parent
+    Application that is still mid-sync leaves\n# the child on the previous version,
+    Synced and Healthy.\n#\n# Run as a Kargo verification, i.e. after the Promotion
+    succeeded and before the\n# Freight counts as verified in this Stage, it holds
+    until every target\n# Application (a) has the promoted chart version in its spec,
+    (b) has been\n# COMPARED at that version (status.sync.comparedTo), and (c) is
+    Synced, Healthy\n# and not mid-operation.\n#\n# Reads the Applications with the
+    pod's own ServiceAccount through the\n# in-cluster API (curl and jq); the Role
+    the chart renders allows `get` on\n# exactly the Applications the Stage names.\n#\n#
+    Env: APPS (space separated Application names), CHART_REPO, CHART_NAME\n# (empty
+    for OCI repos), EXPECTED (the targetRevision, prefix included),\n# ARGOCD_NAMESPACE
+    (default argocd), WAIT_SECONDS, POLL_SECONDS, JQ.\nset -u\n\nJQ=\"${JQ:-jq}\"\nAPI=\"https://kubernetes.default.svc\"\nSA=/var/run/secrets/kubernetes.io/serviceaccount\nstarted=$(date
+    +%s)\nlast=\"\"\n\n# One line per Application: \"<verdict> <message>\".\n# verdict:
+    skip (renders none of this chart), ok, wait.\njudge() {\n\t\"$JQ\" -r --arg repo
+    \"$CHART_REPO\" --arg chart \"$CHART_NAME\" --arg exp \"$EXPECTED\" '\n\t  # Identity
+    of a chart source: repo without scheme or trailing slash,\n\t  # plus /chart where
+    the source names one. Infra Applications say\n\t  # repoURL registry/charts +
+    chart X, others the whole\n\t  # oci://.../X path, and Kargo the latter for both.\n\t
+    \ def ident($r; $c): ($r | sub(\"^oci://\"; \"\") | sub(\"/+$\"; \"\")) + (if
+    ($c // \"\") != \"\" then \"/\" + $c else \"\" end);\n\t  def mine: map(select(.
+    != null and ident(.repoURL; .chart) == ident($repo; $chart)));\n\t  def revs:
+    map(.targetRevision // \"\");\n\t  ((.spec.sources // [.spec.source]) | mine)
+    as $spec\n\t  | ((.status.sync.comparedTo.sources // [.status.sync.comparedTo.source])
+    | mine) as $cmp\n\t  | if ($spec | length) == 0 then \"skip renders no source
+    from \\($repo)\"\n\t    elif ($spec | revs | all(. == $exp) | not) then\n\t      \"wait
+    spec still targets \\($spec | revs | join(\",\")), want \\($exp) (parent app-of-apps
+    not synced?)\"\n\t    elif (($cmp | length) == 0) or ($cmp | revs | all(. == $exp)
+    | not) then\n\t      \"wait spec is at \\($exp) but last comparison was at \\($cmp
+    | revs | join(\",\") | if . == \"\" then \"nothing\" else . end)\"\n\t    elif
+    (.status.operationState.phase // \"\") == \"Running\" then \"wait a sync operation
+    is still Running\"\n\t    elif (.status.sync.status // \"\") != \"Synced\" then
+    \"wait sync status \\(.status.sync.status // \"unknown\")\"\n\t    elif (.status.health.status
+    // \"\") != \"Healthy\" then \"wait health \\(.status.health.status // \"unknown\")\"\n\t
+    \   else \"ok at \\($exp)\" end'\n}\n\nwhile :; do\n\tpending=\"\"\n\tmatched=0\n\treport=\"\"\n\tfor
+    app in $APPS; do\n\t\tbody=$(curl -sS --max-time 20 --cacert \"$SA/ca.crt\" \\\n\t\t\t-H
+    \"Authorization: Bearer $(cat \"$SA/token\")\" \\\n\t\t\t-w '\\n%{http_code}'
+    \\\n\t\t\t\"$API/apis/argoproj.io/v1alpha1/namespaces/${ARGOCD_NAMESPACE:-argocd}/applications/$app\"
+    2>&1)\n\t\tcode=$(printf '%s' \"$body\" | tail -n 1)\n\t\tbody=$(printf '%s' \"$body\"
+    | sed '$d')\n\t\tif [ \"$code\" != \"200\" ]; then\n\t\t\tline=\"wait cannot read
+    Application (HTTP $code)\"\n\t\telse\n\t\t\tline=$(printf '%s' \"$body\" | judge)\n\t\tfi\n\t\tverdict=${line%%
+    *}\n\t\tmsg=${line#* }\n\t\treport=\"$report\n  $app: $msg\"\n\t\tcase \"$verdict\"
+    in\n\t\tskip) ;;\n\t\tok) matched=$((matched + 1)) ;;\n\t\t*) matched=$((matched
+    + 1)); pending=\"$pending $app\" ;;\n\t\tesac\n\tdone\n\n\tif [ -z \"$pending\"
+    ] && [ \"$matched\" -gt 0 ]; then\n\t\techo \"promoted version $EXPECTED is rendered
+    and Synced/Healthy:$report\"\n\t\texit 0\n\tfi\n\n\tif [ \"$matched\" -eq 0 ];
+    then\n\t\techo \"FAIL: none of the Applications ($APPS) renders a source from
+    $CHART_REPO -- check the Stage's applications:$report\"\n\t\texit 1\n\tfi\n\n\tnow=$(date
+    +%s)\n\tif [ $((now - started)) -ge \"$WAIT_SECONDS\" ]; then\n\t\techo \"FAIL:
+    after ${WAIT_SECONDS}s the promoted version $EXPECTED is not live. Not ready:$report\"\n\t\techo
+    \"If an Application still targets the previous version, the parent that renders
+    its pin has not synced: look for a sync operation still Running on it.\"\n\t\texit
+    1\n\tfi\n\n\tif [ \"$report\" != \"$last\" ]; then\n\t\techo \"waiting ($((now
+    - started))s of ${WAIT_SECONDS}s):$report\"\n\t\tlast=$report\n\tfi\n\tsleep \"$POLL_SECONDS\"\ndone\n"
+kind: ConfigMap
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: gateway-prod-verify-promoted-version
+  namespace: platform-gateway
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+data:
+  verify-promoted-version.sh: "#!/bin/sh\n#\n# The promoted-version check of a Kargo
+    Stage: the question a Promotion cannot\n# ask for itself. Kargo's argocd-wait
+    step compares an Application's STATE and\n# has no revision field, and a Stage's
+    own health never consults Argo CD, so\n# after the pin is pushed nothing asks
+    whether the target Application renders\n# the promoted chart at all. A parent
+    Application that is still mid-sync leaves\n# the child on the previous version,
+    Synced and Healthy.\n#\n# Run as a Kargo verification, i.e. after the Promotion
+    succeeded and before the\n# Freight counts as verified in this Stage, it holds
+    until every target\n# Application (a) has the promoted chart version in its spec,
+    (b) has been\n# COMPARED at that version (status.sync.comparedTo), and (c) is
+    Synced, Healthy\n# and not mid-operation.\n#\n# Reads the Applications with the
+    pod's own ServiceAccount through the\n# in-cluster API (curl and jq); the Role
+    the chart renders allows `get` on\n# exactly the Applications the Stage names.\n#\n#
+    Env: APPS (space separated Application names), CHART_REPO, CHART_NAME\n# (empty
+    for OCI repos), EXPECTED (the targetRevision, prefix included),\n# ARGOCD_NAMESPACE
+    (default argocd), WAIT_SECONDS, POLL_SECONDS, JQ.\nset -u\n\nJQ=\"${JQ:-jq}\"\nAPI=\"https://kubernetes.default.svc\"\nSA=/var/run/secrets/kubernetes.io/serviceaccount\nstarted=$(date
+    +%s)\nlast=\"\"\n\n# One line per Application: \"<verdict> <message>\".\n# verdict:
+    skip (renders none of this chart), ok, wait.\njudge() {\n\t\"$JQ\" -r --arg repo
+    \"$CHART_REPO\" --arg chart \"$CHART_NAME\" --arg exp \"$EXPECTED\" '\n\t  # Identity
+    of a chart source: repo without scheme or trailing slash,\n\t  # plus /chart where
+    the source names one. Infra Applications say\n\t  # repoURL registry/charts +
+    chart X, others the whole\n\t  # oci://.../X path, and Kargo the latter for both.\n\t
+    \ def ident($r; $c): ($r | sub(\"^oci://\"; \"\") | sub(\"/+$\"; \"\")) + (if
+    ($c // \"\") != \"\" then \"/\" + $c else \"\" end);\n\t  def mine: map(select(.
+    != null and ident(.repoURL; .chart) == ident($repo; $chart)));\n\t  def revs:
+    map(.targetRevision // \"\");\n\t  ((.spec.sources // [.spec.source]) | mine)
+    as $spec\n\t  | ((.status.sync.comparedTo.sources // [.status.sync.comparedTo.source])
+    | mine) as $cmp\n\t  | if ($spec | length) == 0 then \"skip renders no source
+    from \\($repo)\"\n\t    elif ($spec | revs | all(. == $exp) | not) then\n\t      \"wait
+    spec still targets \\($spec | revs | join(\",\")), want \\($exp) (parent app-of-apps
+    not synced?)\"\n\t    elif (($cmp | length) == 0) or ($cmp | revs | all(. == $exp)
+    | not) then\n\t      \"wait spec is at \\($exp) but last comparison was at \\($cmp
+    | revs | join(\",\") | if . == \"\" then \"nothing\" else . end)\"\n\t    elif
+    (.status.operationState.phase // \"\") == \"Running\" then \"wait a sync operation
+    is still Running\"\n\t    elif (.status.sync.status // \"\") != \"Synced\" then
+    \"wait sync status \\(.status.sync.status // \"unknown\")\"\n\t    elif (.status.health.status
+    // \"\") != \"Healthy\" then \"wait health \\(.status.health.status // \"unknown\")\"\n\t
+    \   else \"ok at \\($exp)\" end'\n}\n\nwhile :; do\n\tpending=\"\"\n\tmatched=0\n\treport=\"\"\n\tfor
+    app in $APPS; do\n\t\tbody=$(curl -sS --max-time 20 --cacert \"$SA/ca.crt\" \\\n\t\t\t-H
+    \"Authorization: Bearer $(cat \"$SA/token\")\" \\\n\t\t\t-w '\\n%{http_code}'
+    \\\n\t\t\t\"$API/apis/argoproj.io/v1alpha1/namespaces/${ARGOCD_NAMESPACE:-argocd}/applications/$app\"
+    2>&1)\n\t\tcode=$(printf '%s' \"$body\" | tail -n 1)\n\t\tbody=$(printf '%s' \"$body\"
+    | sed '$d')\n\t\tif [ \"$code\" != \"200\" ]; then\n\t\t\tline=\"wait cannot read
+    Application (HTTP $code)\"\n\t\telse\n\t\t\tline=$(printf '%s' \"$body\" | judge)\n\t\tfi\n\t\tverdict=${line%%
+    *}\n\t\tmsg=${line#* }\n\t\treport=\"$report\n  $app: $msg\"\n\t\tcase \"$verdict\"
+    in\n\t\tskip) ;;\n\t\tok) matched=$((matched + 1)) ;;\n\t\t*) matched=$((matched
+    + 1)); pending=\"$pending $app\" ;;\n\t\tesac\n\tdone\n\n\tif [ -z \"$pending\"
+    ] && [ \"$matched\" -gt 0 ]; then\n\t\techo \"promoted version $EXPECTED is rendered
+    and Synced/Healthy:$report\"\n\t\texit 0\n\tfi\n\n\tif [ \"$matched\" -eq 0 ];
+    then\n\t\techo \"FAIL: none of the Applications ($APPS) renders a source from
+    $CHART_REPO -- check the Stage's applications:$report\"\n\t\texit 1\n\tfi\n\n\tnow=$(date
+    +%s)\n\tif [ $((now - started)) -ge \"$WAIT_SECONDS\" ]; then\n\t\techo \"FAIL:
+    after ${WAIT_SECONDS}s the promoted version $EXPECTED is not live. Not ready:$report\"\n\t\techo
+    \"If an Application still targets the previous version, the parent that renders
+    its pin has not synced: look for a sync operation still Running on it.\"\n\t\texit
+    1\n\tfi\n\n\tif [ \"$report\" != \"$last\" ]; then\n\t\techo \"waiting ($((now
+    - started))s of ${WAIT_SECONDS}s):$report\"\n\t\tlast=$report\n\tfi\n\tsleep \"$POLL_SECONDS\"\ndone\n"
+kind: ConfigMap
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: shop-dev-verify-promoted-version
+  namespace: shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+data:
+  verify-promoted-version.sh: "#!/bin/sh\n#\n# The promoted-version check of a Kargo
+    Stage: the question a Promotion cannot\n# ask for itself. Kargo's argocd-wait
+    step compares an Application's STATE and\n# has no revision field, and a Stage's
+    own health never consults Argo CD, so\n# after the pin is pushed nothing asks
+    whether the target Application renders\n# the promoted chart at all. A parent
+    Application that is still mid-sync leaves\n# the child on the previous version,
+    Synced and Healthy.\n#\n# Run as a Kargo verification, i.e. after the Promotion
+    succeeded and before the\n# Freight counts as verified in this Stage, it holds
+    until every target\n# Application (a) has the promoted chart version in its spec,
+    (b) has been\n# COMPARED at that version (status.sync.comparedTo), and (c) is
+    Synced, Healthy\n# and not mid-operation.\n#\n# Reads the Applications with the
+    pod's own ServiceAccount through the\n# in-cluster API (curl and jq); the Role
+    the chart renders allows `get` on\n# exactly the Applications the Stage names.\n#\n#
+    Env: APPS (space separated Application names), CHART_REPO, CHART_NAME\n# (empty
+    for OCI repos), EXPECTED (the targetRevision, prefix included),\n# ARGOCD_NAMESPACE
+    (default argocd), WAIT_SECONDS, POLL_SECONDS, JQ.\nset -u\n\nJQ=\"${JQ:-jq}\"\nAPI=\"https://kubernetes.default.svc\"\nSA=/var/run/secrets/kubernetes.io/serviceaccount\nstarted=$(date
+    +%s)\nlast=\"\"\n\n# One line per Application: \"<verdict> <message>\".\n# verdict:
+    skip (renders none of this chart), ok, wait.\njudge() {\n\t\"$JQ\" -r --arg repo
+    \"$CHART_REPO\" --arg chart \"$CHART_NAME\" --arg exp \"$EXPECTED\" '\n\t  # Identity
+    of a chart source: repo without scheme or trailing slash,\n\t  # plus /chart where
+    the source names one. Infra Applications say\n\t  # repoURL registry/charts +
+    chart X, others the whole\n\t  # oci://.../X path, and Kargo the latter for both.\n\t
+    \ def ident($r; $c): ($r | sub(\"^oci://\"; \"\") | sub(\"/+$\"; \"\")) + (if
+    ($c // \"\") != \"\" then \"/\" + $c else \"\" end);\n\t  def mine: map(select(.
+    != null and ident(.repoURL; .chart) == ident($repo; $chart)));\n\t  def revs:
+    map(.targetRevision // \"\");\n\t  ((.spec.sources // [.spec.source]) | mine)
+    as $spec\n\t  | ((.status.sync.comparedTo.sources // [.status.sync.comparedTo.source])
+    | mine) as $cmp\n\t  | if ($spec | length) == 0 then \"skip renders no source
+    from \\($repo)\"\n\t    elif ($spec | revs | all(. == $exp) | not) then\n\t      \"wait
+    spec still targets \\($spec | revs | join(\",\")), want \\($exp) (parent app-of-apps
+    not synced?)\"\n\t    elif (($cmp | length) == 0) or ($cmp | revs | all(. == $exp)
+    | not) then\n\t      \"wait spec is at \\($exp) but last comparison was at \\($cmp
+    | revs | join(\",\") | if . == \"\" then \"nothing\" else . end)\"\n\t    elif
+    (.status.operationState.phase // \"\") == \"Running\" then \"wait a sync operation
+    is still Running\"\n\t    elif (.status.sync.status // \"\") != \"Synced\" then
+    \"wait sync status \\(.status.sync.status // \"unknown\")\"\n\t    elif (.status.health.status
+    // \"\") != \"Healthy\" then \"wait health \\(.status.health.status // \"unknown\")\"\n\t
+    \   else \"ok at \\($exp)\" end'\n}\n\nwhile :; do\n\tpending=\"\"\n\tmatched=0\n\treport=\"\"\n\tfor
+    app in $APPS; do\n\t\tbody=$(curl -sS --max-time 20 --cacert \"$SA/ca.crt\" \\\n\t\t\t-H
+    \"Authorization: Bearer $(cat \"$SA/token\")\" \\\n\t\t\t-w '\\n%{http_code}'
+    \\\n\t\t\t\"$API/apis/argoproj.io/v1alpha1/namespaces/${ARGOCD_NAMESPACE:-argocd}/applications/$app\"
+    2>&1)\n\t\tcode=$(printf '%s' \"$body\" | tail -n 1)\n\t\tbody=$(printf '%s' \"$body\"
+    | sed '$d')\n\t\tif [ \"$code\" != \"200\" ]; then\n\t\t\tline=\"wait cannot read
+    Application (HTTP $code)\"\n\t\telse\n\t\t\tline=$(printf '%s' \"$body\" | judge)\n\t\tfi\n\t\tverdict=${line%%
+    *}\n\t\tmsg=${line#* }\n\t\treport=\"$report\n  $app: $msg\"\n\t\tcase \"$verdict\"
+    in\n\t\tskip) ;;\n\t\tok) matched=$((matched + 1)) ;;\n\t\t*) matched=$((matched
+    + 1)); pending=\"$pending $app\" ;;\n\t\tesac\n\tdone\n\n\tif [ -z \"$pending\"
+    ] && [ \"$matched\" -gt 0 ]; then\n\t\techo \"promoted version $EXPECTED is rendered
+    and Synced/Healthy:$report\"\n\t\texit 0\n\tfi\n\n\tif [ \"$matched\" -eq 0 ];
+    then\n\t\techo \"FAIL: none of the Applications ($APPS) renders a source from
+    $CHART_REPO -- check the Stage's applications:$report\"\n\t\texit 1\n\tfi\n\n\tnow=$(date
+    +%s)\n\tif [ $((now - started)) -ge \"$WAIT_SECONDS\" ]; then\n\t\techo \"FAIL:
+    after ${WAIT_SECONDS}s the promoted version $EXPECTED is not live. Not ready:$report\"\n\t\techo
+    \"If an Application still targets the previous version, the parent that renders
+    its pin has not synced: look for a sync operation still Running on it.\"\n\t\texit
+    1\n\tfi\n\n\tif [ \"$report\" != \"$last\" ]; then\n\t\techo \"waiting ($((now
+    - started))s of ${WAIT_SECONDS}s):$report\"\n\t\tlast=$report\n\tfi\n\tsleep \"$POLL_SECONDS\"\ndone\n"
+kind: ConfigMap
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: shop-prod-verify-promoted-version
+  namespace: shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: admin
+  namespace: platform-gateway
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - dev
+  - test
+  - stage
+  - prod
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights/status
+  verbs:
+  - patch
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: kargo-verify-platform-gateway-dev
+  namespace: argocd
+rules:
+- apiGroups:
+  - argoproj.io
+  resourceNames:
+  - dev-gateway
+  resources:
+  - applications
+  verbs:
+  - get
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: kargo-verify-platform-gateway-test
+  namespace: argocd
+rules:
+- apiGroups:
+  - argoproj.io
+  resourceNames:
+  - test-gateway
+  - test-gateway-extras
+  resources:
+  - applications
+  verbs:
+  - get
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: kargo-verify-platform-gateway-stage
+  namespace: argocd
+rules:
+- apiGroups:
+  - argoproj.io
+  resourceNames:
+  - stage-gateway
+  resources:
+  - applications
+  verbs:
+  - get
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: kargo-verify-platform-gateway-prod
+  namespace: argocd
+rules:
+- apiGroups:
+  - argoproj.io
+  resourceNames:
+  - prod-gateway
+  resources:
+  - applications
+  verbs:
+  - get
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: approver-prod
+  namespace: shop
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - dev
+  - prod
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights/status
+  verbs:
+  - patch
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: kargo-verify-shop-dev
+  namespace: argocd
+rules:
+- apiGroups:
+  - argoproj.io
+  resourceNames:
+  - dev-shop
+  resources:
+  - applications
+  verbs:
+  - get
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: kargo-verify-shop-prod
+  namespace: argocd
+rules:
+- apiGroups:
+  - argoproj.io
+  resourceNames:
+  - prod-shop
+  resources:
+  - applications
+  verbs:
+  - get
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: admin
+  namespace: platform-gateway
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: admin
+subjects:
+- kind: ServiceAccount
+  name: admin
+  namespace: platform-gateway
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: viewer
+  namespace: platform-gateway
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-viewer
+subjects:
+- kind: ServiceAccount
+  name: viewer
+  namespace: kargo-users
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: kargo-verify-platform-gateway-dev
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-verify-platform-gateway-dev
+subjects:
+- kind: ServiceAccount
+  name: kargo-verify-dev
+  namespace: platform-gateway
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: kargo-verify-platform-gateway-test
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-verify-platform-gateway-test
+subjects:
+- kind: ServiceAccount
+  name: kargo-verify-test
+  namespace: platform-gateway
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: kargo-verify-platform-gateway-stage
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-verify-platform-gateway-stage
+subjects:
+- kind: ServiceAccount
+  name: kargo-verify-stage
+  namespace: platform-gateway
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: kargo-verify-platform-gateway-prod
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-verify-platform-gateway-prod
+subjects:
+- kind: ServiceAccount
+  name: kargo-verify-prod
+  namespace: platform-gateway
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: approver-prod
+  namespace: shop
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-prod
+subjects:
+- kind: ServiceAccount
+  name: approver-prod
+  namespace: shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: viewer
+  namespace: shop
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-viewer
+subjects:
+- kind: ServiceAccount
+  name: viewer
+  namespace: kargo-users
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: kargo-verify-shop-dev
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-verify-shop-dev
+subjects:
+- kind: ServiceAccount
+  name: kargo-verify-dev
+  namespace: shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: kargo-verify-shop-prod
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-verify-shop-prod
+subjects:
+- kind: ServiceAccount
+  name: kargo-verify-prod
+  namespace: shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: gateway-dev-promoted-version
+  namespace: platform-gateway
+spec:
+  args:
+  - name: chart-version
+  metrics:
+  - count: 1
+    failureLimit: 0
+    name: promoted-version
+    provider:
+      job:
+        spec:
+          activeDeadlineSeconds: 1020
+          backoffLimit: 0
+          template:
+            spec:
+              containers:
+              - command:
+                - /bin/sh
+                - /scripts/verify-promoted-version.sh
+                env:
+                - name: APPS
+                  value: dev-gateway
+                - name: CHART_REPO
+                  value: https://charts.example.com/
+                - name: CHART_NAME
+                  value: gateway
+                - name: EXPECTED
+                  value: v{{args.chart-version}}
+                - name: WAIT_SECONDS
+                  value: "900"
+                - name: POLL_SECONDS
+                  value: "10"
+                - name: JQ
+                  value: /opt/jq/jq
+                image: registry.example.com/tools/curl:8
+                name: check
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+                volumeMounts:
+                - mountPath: /scripts
+                  name: script
+                  readOnly: true
+                - mountPath: /opt/jq
+                  name: jq-tool
+                  readOnly: true
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 1000
+                runAsNonRoot: true
+                runAsUser: 1000
+                seccompProfile:
+                  type: RuntimeDefault
+              serviceAccountName: kargo-verify-dev
+              volumes:
+              - configMap:
+                  defaultMode: 365
+                  name: gateway-dev-verify-promoted-version
+                name: script
+              - image:
+                  pullPolicy: IfNotPresent
+                  reference: registry.example.com/tools/jq:1
+                name: jq-tool
+          ttlSecondsAfterFinished: 21600
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: gateway-test-promoted-version
+  namespace: platform-gateway
+spec:
+  args:
+  - name: chart-version
+  metrics:
+  - count: 1
+    failureLimit: 0
+    name: promoted-version
+    provider:
+      job:
+        spec:
+          activeDeadlineSeconds: 1020
+          backoffLimit: 0
+          template:
+            spec:
+              containers:
+              - command:
+                - /bin/sh
+                - /scripts/verify-promoted-version.sh
+                env:
+                - name: APPS
+                  value: test-gateway test-gateway-extras
+                - name: CHART_REPO
+                  value: https://charts.example.com/
+                - name: CHART_NAME
+                  value: gateway
+                - name: EXPECTED
+                  value: v{{args.chart-version}}
+                - name: WAIT_SECONDS
+                  value: "900"
+                - name: POLL_SECONDS
+                  value: "10"
+                - name: JQ
+                  value: /opt/jq/jq
+                image: registry.example.com/tools/curl:8
+                name: check
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+                volumeMounts:
+                - mountPath: /scripts
+                  name: script
+                  readOnly: true
+                - mountPath: /opt/jq
+                  name: jq-tool
+                  readOnly: true
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 1000
+                runAsNonRoot: true
+                runAsUser: 1000
+                seccompProfile:
+                  type: RuntimeDefault
+              serviceAccountName: kargo-verify-test
+              volumes:
+              - configMap:
+                  defaultMode: 365
+                  name: gateway-test-verify-promoted-version
+                name: script
+              - image:
+                  pullPolicy: IfNotPresent
+                  reference: registry.example.com/tools/jq:1
+                name: jq-tool
+          ttlSecondsAfterFinished: 21600
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: gateway-stage-promoted-version
+  namespace: platform-gateway
+spec:
+  args:
+  - name: chart-version
+  metrics:
+  - count: 1
+    failureLimit: 0
+    name: promoted-version
+    provider:
+      job:
+        spec:
+          activeDeadlineSeconds: 1020
+          backoffLimit: 0
+          template:
+            spec:
+              containers:
+              - command:
+                - /bin/sh
+                - /scripts/verify-promoted-version.sh
+                env:
+                - name: APPS
+                  value: stage-gateway
+                - name: CHART_REPO
+                  value: https://charts.example.com/
+                - name: CHART_NAME
+                  value: gateway
+                - name: EXPECTED
+                  value: v{{args.chart-version}}
+                - name: WAIT_SECONDS
+                  value: "900"
+                - name: POLL_SECONDS
+                  value: "10"
+                - name: JQ
+                  value: /opt/jq/jq
+                image: registry.example.com/tools/curl:8
+                name: check
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+                volumeMounts:
+                - mountPath: /scripts
+                  name: script
+                  readOnly: true
+                - mountPath: /opt/jq
+                  name: jq-tool
+                  readOnly: true
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 1000
+                runAsNonRoot: true
+                runAsUser: 1000
+                seccompProfile:
+                  type: RuntimeDefault
+              serviceAccountName: kargo-verify-stage
+              volumes:
+              - configMap:
+                  defaultMode: 365
+                  name: gateway-stage-verify-promoted-version
+                name: script
+              - image:
+                  pullPolicy: IfNotPresent
+                  reference: registry.example.com/tools/jq:1
+                name: jq-tool
+          ttlSecondsAfterFinished: 21600
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: gateway-stage-smoke
+  namespace: platform-gateway
+spec:
+  args:
+  - name: chart-version
+  metrics:
+  - count: 1
+    failureLimit: 0
+    name: smoke
+    provider:
+      job:
+        spec:
+          activeDeadlineSeconds: 600
+          backoffLimit: 0
+          template:
+            spec:
+              containers:
+              - command:
+                - /bin/sh
+                - /scripts/smoke.sh
+                env:
+                - name: TARGET
+                  value: https://gateway.example.com
+                - name: VERSION
+                  value: '{{args.chart-version}}'
+                image: registry.example.com/tools/curl:8
+                name: check
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+                volumeMounts:
+                - mountPath: /scripts
+                  name: script
+                  readOnly: true
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 1000
+                runAsNonRoot: true
+                runAsUser: 1000
+                seccompProfile:
+                  type: RuntimeDefault
+              serviceAccountName: smoke
+              volumes:
+              - configMap:
+                  defaultMode: 365
+                  name: gateway-stage-smoke
+                name: script
+          ttlSecondsAfterFinished: 21600
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: gateway-prod-promoted-version
+  namespace: platform-gateway
+spec:
+  args:
+  - name: chart-version
+  metrics:
+  - count: 1
+    failureLimit: 0
+    name: promoted-version
+    provider:
+      job:
+        spec:
+          activeDeadlineSeconds: 1020
+          backoffLimit: 0
+          template:
+            spec:
+              containers:
+              - command:
+                - /bin/sh
+                - /scripts/verify-promoted-version.sh
+                env:
+                - name: APPS
+                  value: prod-gateway
+                - name: CHART_REPO
+                  value: https://charts.example.com/
+                - name: CHART_NAME
+                  value: gateway
+                - name: EXPECTED
+                  value: v{{args.chart-version}}
+                - name: WAIT_SECONDS
+                  value: "900"
+                - name: POLL_SECONDS
+                  value: "10"
+                - name: JQ
+                  value: /opt/jq/jq
+                image: registry.example.com/tools/curl:8
+                name: check
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+                volumeMounts:
+                - mountPath: /scripts
+                  name: script
+                  readOnly: true
+                - mountPath: /opt/jq
+                  name: jq-tool
+                  readOnly: true
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 1000
+                runAsNonRoot: true
+                runAsUser: 1000
+                seccompProfile:
+                  type: RuntimeDefault
+              serviceAccountName: kargo-verify-prod
+              volumes:
+              - configMap:
+                  defaultMode: 365
+                  name: gateway-prod-verify-promoted-version
+                name: script
+              - image:
+                  pullPolicy: IfNotPresent
+                  reference: registry.example.com/tools/jq:1
+                name: jq-tool
+          ttlSecondsAfterFinished: 21600
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: shop-dev-promoted-version
+  namespace: shop
+spec:
+  args:
+  - name: chart-version
+  metrics:
+  - count: 1
+    failureLimit: 0
+    name: promoted-version
+    provider:
+      job:
+        spec:
+          activeDeadlineSeconds: 1020
+          backoffLimit: 0
+          template:
+            spec:
+              containers:
+              - command:
+                - /bin/sh
+                - /scripts/verify-promoted-version.sh
+                env:
+                - name: APPS
+                  value: dev-shop
+                - name: CHART_REPO
+                  value: oci://registry.example.com/charts/shop
+                - name: CHART_NAME
+                  value: ""
+                - name: EXPECTED
+                  value: '{{args.chart-version}}'
+                - name: WAIT_SECONDS
+                  value: "900"
+                - name: POLL_SECONDS
+                  value: "10"
+                - name: JQ
+                  value: /opt/jq/jq
+                image: registry.example.com/tools/curl:8
+                name: check
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+                volumeMounts:
+                - mountPath: /scripts
+                  name: script
+                  readOnly: true
+                - mountPath: /opt/jq
+                  name: jq-tool
+                  readOnly: true
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 1000
+                runAsNonRoot: true
+                runAsUser: 1000
+                seccompProfile:
+                  type: RuntimeDefault
+              serviceAccountName: kargo-verify-dev
+              volumes:
+              - configMap:
+                  defaultMode: 365
+                  name: shop-dev-verify-promoted-version
+                name: script
+              - image:
+                  pullPolicy: IfNotPresent
+                  reference: registry.example.com/tools/jq:1
+                name: jq-tool
+          ttlSecondsAfterFinished: 21600
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: shop-prod-promoted-version
+  namespace: shop
+spec:
+  args:
+  - name: chart-version
+  metrics:
+  - count: 1
+    failureLimit: 0
+    name: promoted-version
+    provider:
+      job:
+        spec:
+          activeDeadlineSeconds: 1020
+          backoffLimit: 0
+          template:
+            spec:
+              containers:
+              - command:
+                - /bin/sh
+                - /scripts/verify-promoted-version.sh
+                env:
+                - name: APPS
+                  value: prod-shop
+                - name: CHART_REPO
+                  value: oci://registry.example.com/charts/shop
+                - name: CHART_NAME
+                  value: ""
+                - name: EXPECTED
+                  value: '{{args.chart-version}}'
+                - name: WAIT_SECONDS
+                  value: "900"
+                - name: POLL_SECONDS
+                  value: "10"
+                - name: JQ
+                  value: /opt/jq/jq
+                image: registry.example.com/tools/curl:8
+                name: check
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+                volumeMounts:
+                - mountPath: /scripts
+                  name: script
+                  readOnly: true
+                - mountPath: /opt/jq
+                  name: jq-tool
+                  readOnly: true
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 1000
+                runAsNonRoot: true
+                runAsUser: 1000
+                seccompProfile:
+                  type: RuntimeDefault
+              serviceAccountName: kargo-verify-prod
+              volumes:
+              - configMap:
+                  defaultMode: 365
+                  name: shop-prod-verify-promoted-version
+                name: script
+              - image:
+                  pullPolicy: IfNotPresent
+                  reference: registry.example.com/tools/jq:1
+                name: jq-tool
+          ttlSecondsAfterFinished: 21600
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  labels:
+    team: delivery
+  name: pipeline-git
+  namespace: platform-gateway
+spec:
+  data:
+  - remoteRef:
+      conversionStrategy: Default
+      decodingStrategy: None
+      key: pipeline/github-app
+      metadataPolicy: None
+      nullBytePolicy: Ignore
+      property: app-id
+    secretKey: githubAppID
+  - remoteRef:
+      conversionStrategy: Default
+      decodingStrategy: None
+      key: pipeline/github-app
+      metadataPolicy: None
+      nullBytePolicy: Ignore
+      property: installation-id
+    secretKey: githubInstallationID
+  - remoteRef:
+      conversionStrategy: Default
+      decodingStrategy: None
+      key: pipeline/github-app
+      metadataPolicy: None
+      nullBytePolicy: Ignore
+      property: private-key
+    secretKey: githubPrivateKey
+  refreshInterval: 30m
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: secrets
+  target:
+    creationPolicy: Owner
+    name: pipeline-git
+    template:
+      data:
+        githubAppID: '{{ .githubAppID }}'
+        githubAppInstallationID: '{{ .githubInstallationID }}'
+        githubAppPrivateKey: '{{ .githubPrivateKey }}'
+        repoURL: https://git.example.com/acme/environments.git
+      metadata:
+        labels:
+          kargo.akuity.io/cred-type: git
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  labels:
+    team: delivery
+  name: pipeline-git
+  namespace: shop
+spec:
+  data:
+  - remoteRef:
+      conversionStrategy: Default
+      decodingStrategy: None
+      key: pipeline/github-app
+      metadataPolicy: None
+      nullBytePolicy: Ignore
+      property: app-id
+    secretKey: githubAppID
+  - remoteRef:
+      conversionStrategy: Default
+      decodingStrategy: None
+      key: pipeline/github-app
+      metadataPolicy: None
+      nullBytePolicy: Ignore
+      property: installation-id
+    secretKey: githubInstallationID
+  - remoteRef:
+      conversionStrategy: Default
+      decodingStrategy: None
+      key: pipeline/github-app
+      metadataPolicy: None
+      nullBytePolicy: Ignore
+      property: private-key
+    secretKey: githubPrivateKey
+  refreshInterval: 30m
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: secrets
+  target:
+    creationPolicy: Owner
+    name: pipeline-git
+    template:
+      data:
+        githubAppID: '{{ .githubAppID }}'
+        githubAppInstallationID: '{{ .githubInstallationID }}'
+        githubAppPrivateKey: '{{ .githubPrivateKey }}'
+        repoURL: https://git.example.com/acme/environments.git
+      metadata:
+        labels:
+          kargo.akuity.io/cred-type: git
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    team: delivery
+  name: platform-gateway
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    team: delivery
+  name: shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: platform-gateway
+  namespace: platform-gateway
+spec:
+  promotionPolicies:
+  - autoPromotionEnabled: true
+    stage: dev
+  - autoPromotionEnabled: true
+    stage: stage
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    team: delivery
+  name: shop
+  namespace: shop
+spec:
+  promotionPolicies:
+  - autoPromotionEnabled: true
+    stage: dev
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  labels:
+    team: delivery
+  name: dev
+  namespace: platform-gateway
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/clusters/dev/pins.yaml
+          updates:
+          - key: pins.gateway
+            value: v${{ chartFrom(vars.chartRepo, vars.chartName).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(pins): gateway ${{ chartFrom(vars.chartRepo, vars.chartName).Version
+            }} to dev'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: https://charts.example.com/
+      - name: chartName
+        value: gateway
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: platform-gateway
+    sources:
+      direct: true
+  verification:
+    analysisTemplates:
+    - name: gateway-dev-promoted-version
+    args:
+    - name: chart-version
+      value: ${{ chartFrom("https://charts.example.com/", "gateway").Version }}
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  labels:
+    team: delivery
+  name: test
+  namespace: platform-gateway
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: dev-gateway
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/clusters/test/pins.yaml
+          updates:
+          - key: pins.gateway
+            value: v${{ chartFrom(vars.chartRepo, vars.chartName).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(pins): gateway ${{ chartFrom(vars.chartRepo, vars.chartName).Version
+            }} to test'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          labels:
+          - promotion
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(pins): gateway to test'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: https://charts.example.com/
+      - name: chartName
+        value: gateway
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: platform-gateway
+    sources:
+      stages:
+      - dev
+  verification:
+    analysisTemplates:
+    - name: gateway-test-promoted-version
+    args:
+    - name: chart-version
+      value: ${{ chartFrom("https://charts.example.com/", "gateway").Version }}
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  labels:
+    team: delivery
+  name: stage
+  namespace: platform-gateway
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: dev-gateway
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/clusters/stage/pins.yaml
+          updates:
+          - key: pins.gateway
+            value: v${{ chartFrom(vars.chartRepo, vars.chartName).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(pins): gateway ${{ chartFrom(vars.chartRepo, vars.chartName).Version
+            }} to stage'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          labels:
+          - promotion
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(pins): gateway to stage'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: https://charts.example.com/
+      - name: chartName
+        value: gateway
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: platform-gateway
+    sources:
+      stages:
+      - dev
+  verification:
+    analysisTemplates:
+    - name: gateway-stage-promoted-version
+    - name: gateway-stage-smoke
+    - name: shared-smoke
+    args:
+    - name: chart-version
+      value: ${{ chartFrom("https://charts.example.com/", "gateway").Version }}
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  labels:
+    team: delivery
+  name: prod
+  namespace: platform-gateway
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: stage-gateway
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/clusters/prod/pins.yaml
+          updates:
+          - key: pins.gateway
+            value: v${{ chartFrom(vars.chartRepo, vars.chartName).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(pins): gateway ${{ chartFrom(vars.chartRepo, vars.chartName).Version
+            }} to prod'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          labels:
+          - promotion
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(pins): gateway to prod'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: https://charts.example.com/
+      - name: chartName
+        value: gateway
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: platform-gateway
+    sources:
+      stages:
+      - stage
+  verification:
+    analysisTemplates:
+    - name: gateway-prod-promoted-version
+    args:
+    - name: chart-version
+      value: ${{ chartFrom("https://charts.example.com/", "gateway").Version }}
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  labels:
+    team: delivery
+  name: dev
+  namespace: shop
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/clusters/dev/pins.yaml
+          updates:
+          - key: pins.shopChart
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(pins): shop ${{ chartFrom(vars.chartRepo).Version }} to
+            dev'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/shop
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: shop
+    sources:
+      direct: true
+  verification:
+    analysisTemplates:
+    - name: shop-dev-promoted-version
+    args:
+    - name: chart-version
+      value: ${{ chartFrom("oci://registry.example.com/charts/shop").Version }}
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  labels:
+    team: delivery
+  name: prod
+  namespace: shop
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: dev-shop
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/clusters/prod/pins.yaml
+          updates:
+          - key: pins.shopChart
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(pins): shop ${{ chartFrom(vars.chartRepo).Version }} to
+            prod'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          labels:
+          - promotion
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(pins): shop to prod'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/shop
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: shop
+    sources:
+      stages:
+      - dev
+  verification:
+    analysisTemplates:
+    - name: shop-prod-promoted-version
+    args:
+    - name: chart-version
+      value: ${{ chartFrom("oci://registry.example.com/charts/shop").Version }}
+
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    team: delivery
+  name: platform-gateway
+  namespace: platform-gateway
+spec:
+  freightCreationPolicy: Automatic
+  interval: 10m0s
+  subscriptions:
+  - chart:
+      discoveryLimit: 10
+      name: gateway
+      repoURL: https://charts.example.com/
+      semverConstraint: '>=2.0.0 <3.0.0'
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    team: delivery
+  name: shop
+  namespace: shop
+spec:
+  freightCreationPolicy: Automatic
+  interval: 5m0s
+  subscriptions:
+  - chart:
+      discoveryLimit: 20
+      repoURL: oci://registry.example.com/charts/shop
+      semverConstraint: '>=1.0.0 <2.0.0'

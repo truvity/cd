@@ -1,0 +1,58 @@
+# No estate fact has a default here: the repository a promotion writes to, the
+# secret store its credentials come from, the images the verification jobs
+# run, what a project and its stages are called. They are inputs
+# (docs/reference.md#cd-pipeline). With no projects the chart renders nothing.
+
+# Sync-wave of each kind of object, as an Argo CD annotation. The numbers are
+# mechanism: a Project before its Warehouse, credentials and configuration
+# before the Stages that use them.
+waves:
+  project: 0
+  warehouse: 1
+  credentials: 2
+  config: 3
+  stage: 4
+
+# Where the Argo CD Applications a Stage watches live.
+argocd:
+  namespace: argocd
+
+# The repository a promotion writes the new pin to, and the credentials it
+# does that with. Required once there is a project.
+git: {}
+
+# What a promotion writes, and how it retries. Wording and paths are yours to
+# set; every value has a neutral default.
+promotion:
+  branch: main
+  pinFile: "versions/{stage}.yaml"
+  pinKey: "{pinKey}"
+  commitMessage: "chore: promote {slug} {version} to {stage}"
+  prTitle: "chore: promote {slug} to {stage}"
+  prLabels: []
+  provider: github
+  retry:
+    errorThreshold: 3
+    timeout: 5m0s
+  gate:
+    timeout: 10m0s
+
+# What every verification Job is run as. Mechanism, not estate facts.
+jobs:
+  ttlSecondsAfterFinished: 21600
+  headroomSeconds: 120
+  runAsUser: 65532
+  runAsGroup: 65532
+
+# The built-in promoted-version check (see `stages[].verification.promotedVersion`).
+# `image` (a shell with curl) and `jqImage` (an image holding /jq) are required
+# by a stage that turns the check on.
+promotedVersion:
+  waitSeconds: 1500
+  pollSeconds: 15
+
+# The read-only access every signed-in user has: a RoleBinding in each project
+# to a ServiceAccount that lives in one shared namespace. Empty renders none.
+viewer: {}
+
+projects: []

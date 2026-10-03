@@ -1,0 +1,18 @@
+apiVersion: v2
+name: cd-pipeline
+description: >-
+  A Kargo delivery pipeline as objects: per project a Project, a Warehouse,
+  its stages with their promotion steps and verification, the access to
+  promote them and the credentials they write back with. Renders Kargo
+  objects (and the few Kubernetes and Argo Rollouts objects beside them) and
+  nothing else.
+type: application
+# Stamped from the tag by the release workflow; never moved by hand.
+version: 0.0.0
+keywords:
+  - kargo
+  - gitops
+  - delivery
+home: https://github.com/truvity/cd
+sources:
+  - https://github.com/truvity/cd

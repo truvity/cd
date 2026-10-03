@@ -1,0 +1,8 @@
+# expect: additional properties 'chartz' not allowed
+git:
+  repoURL: https://git.example.com/acme/environments.git
+projects:
+  - name: shop
+    chartz: {}
+    stages:
+      - name: dev

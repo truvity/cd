@@ -1,0 +1,8 @@
+# expect: value must be one of 'pr', 'direct'
+git:
+  repoURL: https://git.example.com/acme/environments.git
+projects:
+  - name: shop
+    stages:
+      - name: dev
+        mode: merge

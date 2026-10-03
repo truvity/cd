@@ -1,0 +1,99 @@
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  name: shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: shop
+  namespace: shop
+spec:
+  promotionPolicies:
+  - autoPromotionEnabled: true
+    stage: dev
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: dev
+  namespace: shop
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/versions/dev.yaml
+          updates:
+          - key: shop
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore: promote shop ${{ chartFrom(vars.chartRepo).Version }} to
+            dev'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/shop
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: shop
+    sources:
+      direct: true
+
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  name: shop
+  namespace: shop
+spec:
+  freightCreationPolicy: Automatic
+  interval: 5m0s
+  subscriptions:
+  - chart:
+      discoveryLimit: 20
+      repoURL: oci://registry.example.com/charts/shop
+      semverConstraint: '>=1.0.0 <2.0.0'

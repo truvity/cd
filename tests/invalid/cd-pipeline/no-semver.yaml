@@ -1,0 +1,9 @@
+# expect: missing property 'semver'
+git:
+  repoURL: https://git.example.com/acme/environments.git
+projects:
+  - name: shop
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+    stages:
+      - name: dev
