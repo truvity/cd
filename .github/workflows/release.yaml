@@ -29,9 +29,9 @@ jobs:
       packages: write
     uses: truvity/ci-workflows/.github/workflows/release-public.yaml@30b989fdd77b99af4be1a4b04e6353aa58aa3923 # v3.21.0
     with:
-      charts: '["cd-argocd", "cd-kargo", "cd-rollouts", "cd-delivery"]'
+      charts: '["cd-argocd", "cd-kargo", "cd-rollouts", "cd-delivery", "cd-pipeline"]'
       # Three of these charts package software we do not build: appVersion
       # keeps recording the upstream release (hack/check-app-version.sh holds
-      # it to the vendored archive), while version is the tag. cd-delivery
-      # has no upstream and no appVersion.
+      # it to the vendored archive), while version is the tag. cd-delivery and
+      # cd-pipeline have no upstream and no appVersion.
       chart-app-version: chart
