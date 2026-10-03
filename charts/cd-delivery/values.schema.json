@@ -343,7 +343,7 @@
           "interface": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 11,
+            "maximum": 12,
             "description": "The highest delivery interface the pinned charts read (truvity/policy docs/contracts/delivery-interface.md)."
           },
           "repository": {
@@ -575,6 +575,10 @@
           },
           "identityProviders": {
             "type": "object"
+          },
+          "alerts": {
+            "type": "object",
+            "description": "The product's alert values (enabled, remote, ruleLabels, alertLabels, one block of thresholds per rule), passed to the application chart verbatim from interface 12."
           },
           "access": {
             "type": "object",
