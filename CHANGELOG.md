@@ -5,7 +5,7 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
-## Unreleased
+## v0.6.0
 
 - **Added:** `cd-delivery` knows delivery interface 11. From it, a product's
   `faro.route.requestBufferLimit` (a quantity such as `256Ki`) is handed to the
