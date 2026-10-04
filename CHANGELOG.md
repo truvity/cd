@@ -7,13 +7,14 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
-- **Added:** every Application `cd-delivery` generates carries
+- **Behaviour change:** every Application `cd-delivery` generates carries
   `syncPolicy.retry` with `limit: -1`, `refresh: true` and a backoff of 15s
   doubling to 5m. With Argo CD 3.2 or later, `refresh` makes each retry resolve
   the latest revision, so a merged fix is picked up instead of the failed
   revision being parked; no limit, because retries are how a ring converges
   once steady-state wave gating is gone. `platform.syncRetry` overrides any of
-  it. Changes every render: each Application gains the `retry` block.
+  it, and `platform.syncRetry: {limit: 0}` is the closest to the old
+  no-retry output (Argo CD treats 0 as no retry).
 
 ## v0.8.0
 
