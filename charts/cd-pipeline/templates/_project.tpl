@@ -120,6 +120,30 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- include "cd-pipeline.jobCheck" (dict "root" $r "name" $at "ns" $name "metric" "promoted-version" "args" (list "chart-version") "sa" $sa "image" (required "cd-pipeline: promotedVersion.image is required" $pv.image) "command" (list "/bin/sh" "/scripts/verify-promoted-version.sh") "env" $env "mounts" $mounts "volumes" $vols "deadline" (add (int $pv.waitSeconds) $v.jobs.headroomSeconds)) -}}
 {{- end -}}
 
+{{- /* The end-to-end operation check: that the Promotion's sync of the end-to-end Application ran the suite hook for the promoted version and it succeeded. */ -}}
+{{- if $s.e2eApplication -}}
+{{- $pv := $v.promotedVersion -}}
+{{- $app := $s.e2eApplication -}}
+{{- $sa := printf "kargo-verify-%s" $s.name -}}
+{{- $role := printf "kargo-verify-%s-%s-e2e" $name $s.name -}}
+{{- $cm := printf "%s-%s-verify-e2e-operation" $slug $s.name -}}
+{{- $at := printf "%s-%s-e2e-operation" $slug $s.name -}}
+{{- $ns := $v.argocd.namespace -}}
+{{- $templates = append $templates $at -}}
+{{- /* The promoted-version check renders this ServiceAccount when it is on. */ -}}
+{{- if not $verif.promotedVersion -}}
+{{- include "cd-pipeline.doc" (dict "apiVersion" "v1" "kind" "ServiceAccount" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $sa "ns" $name "wave" $w.config) | fromYaml)) -}}
+{{- end -}}
+{{- include "cd-pipeline.doc" (dict "apiVersion" "rbac.authorization.k8s.io/v1" "kind" "Role" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $role "ns" $ns "wave" $w.config) | fromYaml) "rules" (list (dict "apiGroups" (list "argoproj.io") "resources" (list "applications") "resourceNames" (list $app) "verbs" (list "get")))) -}}
+{{- include "cd-pipeline.doc" (dict "apiVersion" "rbac.authorization.k8s.io/v1" "kind" "RoleBinding" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $role "ns" $ns "wave" $w.config) | fromYaml) "roleRef" (dict "apiGroup" "rbac.authorization.k8s.io" "kind" "Role" "name" $role) "subjects" (list (dict "kind" "ServiceAccount" "name" $sa "namespace" $name))) -}}
+{{- include "cd-pipeline.doc" (dict "apiVersion" "v1" "kind" "ConfigMap" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $cm "ns" $name "wave" $w.config) | fromYaml) "data" (dict "verify-e2e-operation.sh" ($r.Files.Get "files/verify-e2e-operation.sh"))) -}}
+{{- $env := list (dict "name" "APP" "value" $app) (dict "name" "EXPECTED" "value" (printf "%s%s" $prefix "{{args.chart-version}}")) (dict "name" "WAIT_SECONDS" "value" (toString (int $pv.waitSeconds))) (dict "name" "POLL_SECONDS" "value" (toString (int $pv.pollSeconds))) (dict "name" "JQ" "value" "/opt/jq/jq") -}}
+{{- if ne $ns "argocd" -}}{{- $env = append $env (dict "name" "ARGOCD_NAMESPACE" "value" $ns) -}}{{- end -}}
+{{- $mounts := list (dict "name" "script" "mountPath" "/scripts" "readOnly" true) (dict "name" "jq-tool" "mountPath" "/opt/jq" "readOnly" true) -}}
+{{- $vols := list (include "cd-pipeline.scriptVolume" (dict "configMap" $cm) | fromYaml) (dict "name" "jq-tool" "image" (dict "reference" (required "cd-pipeline: promotedVersion.jqImage is required" $pv.jqImage) "pullPolicy" "IfNotPresent")) -}}
+{{- include "cd-pipeline.jobCheck" (dict "root" $r "name" $at "ns" $name "metric" "e2e-operation" "args" (list "chart-version") "sa" $sa "image" (required "cd-pipeline: promotedVersion.image is required" $pv.image) "command" (list "/bin/sh" "/scripts/verify-e2e-operation.sh") "env" $env "mounts" $mounts "volumes" $vols "deadline" (add (int $pv.waitSeconds) $v.jobs.headroomSeconds)) -}}
+{{- end -}}
+
 {{- /* Job checks of the project's own. */ -}}
 {{- range $c := $verif.checks -}}
 {{- $templates = append $templates $c.name -}}

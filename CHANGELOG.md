@@ -7,6 +7,18 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Added:** the end-to-end ring can run as a sync hook that a Kargo Stage
+  triggers. Everything is off by default and no existing render changes.
+  `cd-delivery`: `products.<name>.e2e.kargoStage` renders the
+  `kargo.akuity.io/authorized-stage` annotation on the `-e2e` Application only;
+  `e2e.sync: manual` renders it without `syncPolicy.automated`; `e2e.hook: true`
+  renders the suite's Job as a Sync hook (BeforeHookCreation, sync-wave 1) with
+  `e2e.ttlSecondsAfterFinished` (default 86400) in place of Force and Replace.
+  `cd-pipeline`: `stages[].e2eApplication` ends the Stage's promotion with an
+  `argocd-update` step on that Application (25m timeout), lets the Stage's
+  verification ServiceAccount read it, and adds a check that its operation
+  Succeeded at the promoted version with the hook Job Succeeded. Turn the
+  annotation on first, then the step, then `sync` and `hook`.
 - **Behaviour change:** every Application `cd-delivery` generates carries
   `syncPolicy.retry` with `limit: -1`, `refresh: true` and a backoff of 15s
   doubling to 5m. With Argo CD 3.2 or later, `refresh` makes each retry resolve
