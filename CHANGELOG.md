@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.9.1
+
 - **Behaviour change (opt-in only):** the `e2e-operation` check of `stages[].e2eApplication` compared
   the Application's synced revision to the chart version, which never matches
   an OCI chart (Argo CD records a digest), so it waited until its deadline. It
