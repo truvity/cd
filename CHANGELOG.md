@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.9.0
+
 - **Added:** `cd-delivery` knows delivery interface 13, the identity
   ServiceAccount living in the `-infra` chart (after its PodIdentityAssociation,
   on the primary tier, with a permanent never-delete guard; the product chart
