@@ -15,4 +15,14 @@ platform:
     selfHeal: true
     serverSideApply: true
     createNamespace: false
+  # A failed sync retries, and each retry resolves the latest revision
+  # (`refresh`, Argo CD 3.2 and later), so a merged fix is picked up. Set any
+  # of limit, refresh, backoff to override.
+  syncRetry:
+    limit: -1
+    refresh: true
+    backoff:
+      duration: 15s
+      factor: 2
+      maxDuration: 5m
 products: {}

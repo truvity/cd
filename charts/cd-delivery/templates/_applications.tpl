@@ -18,7 +18,7 @@ that passes its own dict gets the same refusal of an unknown key from
 {{- $products := .products | default dict -}}
 {{- $docs := list -}}
 {{- if $products -}}
-{{- include "cd-delivery.assertKeys" (dict "what" "platform" "got" $plat "allowed" (list "tier" "finalizer" "sync" "clusterName" "argocdNamespace" "applicationPrefix" "appProject" "applicationLabels" "waves" "chartRegistry" "cloud" "postgres" "events" "database" "identity" "telemetry" "e2e")) -}}
+{{- include "cd-delivery.assertKeys" (dict "what" "platform" "got" $plat "allowed" (list "tier" "finalizer" "sync" "syncRetry" "clusterName" "argocdNamespace" "applicationPrefix" "appProject" "applicationLabels" "waves" "chartRegistry" "cloud" "postgres" "events" "database" "identity" "telemetry" "e2e")) -}}
 {{- range $name := (keys $products | sortAlpha) -}}
 {{- $p := get $products $name -}}
 {{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s" $name) "got" $p "allowed" (list "pin" "interface" "repository" "hostname" "parentRef" "surfaces" "bucketSlug" "workloadIdentity" "natsIdentity" "mtls" "postgres" "e2e" "faro" "alerts" "identityProviders" "access" "product" "values" "ignoreDifferences")) -}}
@@ -81,12 +81,19 @@ ring composed. Call with (dict "ctx" <product ctx> "ring" infra|app|e2e
 {{- $self := hasKey $sync "selfHeal" | ternary $sync.selfHeal true -}}
 {{- $ssa := hasKey $sync "serverSideApply" | ternary $sync.serverSideApply true -}}
 {{- $cns := hasKey $sync "createNamespace" | ternary $sync.createNamespace false -}}
+{{- /* A failed sync retries, and `refresh: true` (Argo CD 3.2 and later) makes
+       each retry resolve the latest revision, so a fix that merged meanwhile
+       is picked up instead of the failed revision being parked. No limit:
+       steady-state wave gating is going away, and the retry is how a ring
+       converges once what it waited for exists. platform.syncRetry overrides
+       any of it. */ -}}
+{{- $retry := mustMergeOverwrite (dict "limit" -1 "refresh" true "backoff" (dict "duration" "15s" "factor" 2 "maxDuration" "5m")) (deepCopy ($plat.syncRetry | default dict)) -}}
 {{- $repo := required (printf "cd-delivery: products.%s.repository or platform.chartRegistry is required" $name) ($p.repository | default $plat.chartRegistry) -}}
 {{- /* Merged last, so a product's own payload wins. A value that is empty (an
        empty string, zero, false) cannot override one the chart composed. */ -}}
 {{- $values := mustMergeOverwrite (deepCopy .values) (deepCopy (dig "values" $ring (dict) $p)) -}}
 {{- $source := dict "repoURL" (printf "%s/%s%s" $repo $name $suffix) "path" "." "targetRevision" (toString $p.pin) "helm" (dict "releaseName" (printf "%s%s" $name $suffix) "valuesObject" $values) -}}
-{{- $spec := dict "project" (include "cd-delivery.fill" (dict "s" (required "cd-delivery: platform.appProject is required" $plat.appProject) "product" $name "cluster" $cluster)) "sources" (list $source) "destination" (dict "name" $cluster "namespace" $name) "syncPolicy" (dict "automated" (dict "prune" $prune "selfHeal" $self) "syncOptions" (list (printf "ServerSideApply=%t" $ssa) (printf "CreateNamespace=%t" $cns))) -}}
+{{- $spec := dict "project" (include "cd-delivery.fill" (dict "s" (required "cd-delivery: platform.appProject is required" $plat.appProject) "product" $name "cluster" $cluster)) "sources" (list $source) "destination" (dict "name" $cluster "namespace" $name) "syncPolicy" (dict "automated" (dict "prune" $prune "selfHeal" $self) "retry" $retry "syncOptions" (list (printf "ServerSideApply=%t" $ssa) (printf "CreateNamespace=%t" $cns))) -}}
 {{- with (dig "ignoreDifferences" $ring (list) $p) -}}{{- $_ := set $spec "ignoreDifferences" . -}}{{- end -}}
 {{- $app := dict "apiVersion" "argoproj.io/v1alpha1" "kind" "Application" "metadata" $meta "spec" $spec -}}
 {{- print "---\n" (toYaml $app) -}}

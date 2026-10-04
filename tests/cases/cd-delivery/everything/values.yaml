@@ -22,6 +22,10 @@ platform:
     selfHeal: true
     serverSideApply: true
     createNamespace: false
+  syncRetry:
+    limit: 5
+    backoff:
+      duration: 30s
   cloud:
     accountID: example-account
     region: example-region-1
