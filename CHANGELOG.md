@@ -15,6 +15,9 @@ release it wraps is named in each entry.
   once steady-state wave gating is gone. `platform.syncRetry` overrides any of
   it, and `platform.syncRetry: {limit: 0}` is the closest to the old
   no-retry output (Argo CD treats 0 as no retry).
+  The end-to-end Application is the exception: it renders no `retry` at all,
+  whatever `platform.syncRetry` says, because a failed suite is a result to
+  report and must not rerun until it passes.
 
 ## v0.8.0
 

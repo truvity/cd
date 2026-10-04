@@ -17,7 +17,8 @@ platform:
     createNamespace: false
   # A failed sync retries, and each retry resolves the latest revision
   # (`refresh`, Argo CD 3.2 and later), so a merged fix is picked up. Set any
-  # of limit, refresh, backoff to override.
+  # of limit, refresh, backoff to override. The end-to-end Application never
+  # retries.
   syncRetry:
     limit: -1
     refresh: true
