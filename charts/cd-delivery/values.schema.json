@@ -93,7 +93,7 @@
         "syncRetry": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Retry policy of every generated Application. Defaults: no limit, refresh on each retry so it resolves the latest revision, backoff 15s doubling to 5m.",
+          "description": "Retry policy of every generated Application except the end-to-end one, which never retries. Defaults: no limit, refresh on each retry so it resolves the latest revision, backoff 15s doubling to 5m.",
           "properties": {
             "limit": {
               "type": "integer"
