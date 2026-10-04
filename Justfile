@@ -45,6 +45,7 @@ test:
     hack/golden.sh
     hack/parity.sh
     hack/health.sh
+    hack/e2e-operation.sh
 
 # The Lua health checks of presets/health.yaml, each run against its fixtures.
 health:

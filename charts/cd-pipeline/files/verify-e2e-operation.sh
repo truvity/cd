@@ -1,15 +1,25 @@
 #!/bin/sh
 #
 # The end-to-end check of a Kargo Stage whose promotion ran the product's
-# end-to-end suite as an Argo CD sync hook. The Promotion's `argocd-update`
-# step wrote a sync operation on the end-to-end Application and waited for it;
-# this check asks the Application what that operation did, so a Freight is
-# verified only when the suite ran for the version it promoted.
+# end-to-end suite through the `argocd-update` step on the end-to-end
+# Application. The step wrote a sync operation on the Application and waited
+# for it; this check asks the Application what that operation did, so a Freight
+# is verified only when the suite ran for the version it promoted.
 #
-# It holds until the Application's last operation (a) has phase Succeeded,
-# (b) synced the promoted revision, not the one a stale parent render still
-# pinned, and (c) ran at least one Sync-hook Job, every one of them Succeeded.
-# A Failed or Errored operation, or a hook that did not succeed, fails at once.
+# It holds until (a) the Application's spec pins the promoted version (its
+# targetRevision is EXPECTED, so a stale parent render is waited out), (b) the
+# last operation has phase Succeeded, (c) that operation synced the revision the
+# spec currently resolves to (syncResult revisions equal status.sync revisions;
+# for an OCI chart both are digests, never the version string), and (d) the
+# suite's Job for EXPECTED succeeded: either a Sync-hook Job of the operation
+# with hookPhase Succeeded, or, while the Job is still a tracked resource (no
+# hook), a Job of that version Healthy in the Application's resources. The Job
+# is named `<project>-e2e-<version with dashes>`. A Failed or Errored
+# operation, or a Job that did not succeed, fails at once.
+#
+# Not checked: that the operation finished after the Promotion started. The
+# check does not know the Promotion; (a) and (c) tie the operation to the
+# promoted revision instead.
 #
 # Reads the Application with the pod's own ServiceAccount through the
 # in-cluster API (curl and jq); the Role the chart renders allows `get` on
@@ -26,23 +36,48 @@ SA=/var/run/secrets/kubernetes.io/serviceaccount
 started=$(date +%s)
 last=""
 
-# One line: "<verdict> <message>". verdict: ok, wait, fail.
+# One line: "<verdict> <message>". verdict: ok, wait, fail. Reads the
+# Application on stdin.
 judge() {
 	"$JQ" -r --arg exp "$EXPECTED" '
+	  def revs: ([.revision] + (.revisions // [])) | map(select(. != null and . != ""));
 	  (.status.operationState // null) as $op
-	  | (($op.syncResult // {}) | ([.revision] + (.revisions // [])) | map(select(. != null and . != ""))) as $revs
-	  | [($op.syncResult.resources // [])[] | select(.hookType == "Sync" and .kind == "Job")] as $jobs
-	  | if $op == null then "wait the Application has no operation yet"
+	  | ($exp | sub("^[^0-9]*"; "") | gsub("\\."; "-")) as $dashed
+	  | ((.spec.sources // [.spec.source // {}]) | map(.targetRevision // "")) as $pins
+	  | (($op.syncResult // {}) | revs) as $synced
+	  | ((.status.sync // {}) | revs) as $resolved
+	  | [($op.syncResult.resources // [])[]
+	      | select(.hookType == "Sync" and .kind == "Job" and (.name | endswith("-e2e-" + $dashed)))] as $hooks
+	  | [(.status.resources // [])[]
+	      | select(.kind == "Job" and (.name | endswith("-e2e-" + $dashed)))] as $tracked
+	  | if ($pins | index($exp)) == null then
+	      "wait the Application pins \($pins | join(",") | if . == "" then "no revision" else . end), want \($exp)"
+	    elif $op == null then "wait the Application has no operation yet"
 	    elif ($op.phase == "Failed" or $op.phase == "Error") then
 	      "fail the last operation \($op.phase): \($op.message // "no message")"
 	    elif $op.phase != "Succeeded" then "wait the last operation is \($op.phase // "unknown")"
-	    elif ($revs | length) == 0 or ($revs | all(. == $exp) | not) then
-	      "wait the last operation synced \($revs | join(",") | if . == "" then "no revision" else . end), want \($exp)"
-	    elif ($jobs | length) == 0 then "fail the operation ran no Sync-hook Job: is e2e.hook on?"
-	    elif ($jobs | all(.hookPhase == "Succeeded") | not) then
-	      "fail a hook Job did not succeed: \($jobs | map("\(.name)=\(.hookPhase // "unknown")") | join(", "))"
-	    else "ok operation Succeeded at \($exp), hook Jobs: \($jobs | map(.name) | join(", "))" end'
+	    elif ($synced | length) == 0 or (($synced | sort) != ($resolved | sort)) then
+	      "wait the last operation synced \($synced | join(",") | if . == "" then "no revision" else . end), the Application resolves \($resolved | join(",") | if . == "" then "no revision" else . end)"
+	    elif ($hooks | length) > 0 then
+	      if ($hooks | all(.hookPhase == "Succeeded")) then
+	        "ok operation Succeeded at \($exp), hook Jobs: \($hooks | map(.name) | join(", "))"
+	      elif ($hooks | any(.hookPhase == "Failed" or .hookPhase == "Error")) then
+	        "fail a hook Job did not succeed: \($hooks | map("\(.name)=\(.hookPhase // "unknown")") | join(", "))"
+	      else "wait a hook Job is still running: \($hooks | map("\(.name)=\(.hookPhase // "unknown")") | join(", "))" end
+	    elif ($tracked | length) > 0 then
+	      if ($tracked | all(.health.status == "Healthy")) then
+	        "ok operation Succeeded at \($exp), tracked Job: \($tracked | map(.name) | join(", "))"
+	      elif ($tracked | any(.health.status == "Degraded")) then
+	        "fail the tracked Job did not succeed: \($tracked | map("\(.name)=\(.health.status // "unknown")") | join(", "))"
+	      else "wait the tracked Job is not complete: \($tracked | map("\(.name)=\(.health.status // "unknown")") | join(", "))" end
+	    else "wait the Application has no e2e Job for \($dashed) yet" end'
 }
+
+# Test hook: judge the Application JSON on stdin and exit.
+if [ -n "${JUDGE_ONLY:-}" ]; then
+	judge
+	exit 0
+fi
 
 while :; do
 	body=$(curl -sS --max-time 20 --cacert "$SA/ca.crt" \
