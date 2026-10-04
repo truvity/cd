@@ -72,6 +72,10 @@ ring composed. Call with (dict "ctx" <product ctx> "ring" infra|app|e2e
 {{- end -}}
 {{- if not (hasKey $plat "applicationPrefix") -}}{{- fail "cd-delivery: platform.applicationPrefix is required (it may be empty)" -}}{{- end -}}
 {{- $meta := dict "name" (printf "%s%s%s" (toString $plat.applicationPrefix) $name $suffix) "namespace" (required "cd-delivery: platform.argocdNamespace is required" $plat.argocdNamespace) "annotations" (dict "argocd.argoproj.io/sync-wave" (toString (int $wave))) -}}
+{{- $e2eOpts := $p.e2e | default dict -}}
+{{- /* A Kargo Stage may only sync an Application that names it. Only the
+       end-to-end Application is ever handed to a Stage this way. */ -}}
+{{- if and (eq $ring "e2e") $e2eOpts.kargoStage -}}{{- $_ := set $meta.annotations "kargo.akuity.io/authorized-stage" $e2eOpts.kargoStage -}}{{- end -}}
 {{- if $labels -}}{{- $_ := set $meta "labels" $labels -}}{{- end -}}
 {{- /* Removing an Application removes what it deployed, unless the platform
        turns the finalizer off. */ -}}
@@ -94,6 +98,9 @@ ring composed. Call with (dict "ctx" <product ctx> "ring" infra|app|e2e
        forever. A failed run is a result to report, not a state to converge. */ -}}
 {{- $syncPolicy := dict "automated" (dict "prune" $prune "selfHeal" $self) "retry" $retry "syncOptions" (list (printf "ServerSideApply=%t" $ssa) (printf "CreateNamespace=%t" $cns)) -}}
 {{- if eq $ring "e2e" -}}{{- $_ := unset $syncPolicy "retry" -}}{{- end -}}
+{{- /* With `e2e.sync: manual` nothing syncs the end-to-end Application by
+       itself: the Kargo Stage that runs it writes the sync operation. */ -}}
+{{- if and (eq $ring "e2e") (eq ($e2eOpts.sync | default "auto") "manual") -}}{{- $_ := unset $syncPolicy "automated" -}}{{- end -}}
 {{- $repo := required (printf "cd-delivery: products.%s.repository or platform.chartRegistry is required" $name) ($p.repository | default $plat.chartRegistry) -}}
 {{- /* Merged last, so a product's own payload wins. A value that is empty (an
        empty string, zero, false) cannot override one the chart composed. */ -}}

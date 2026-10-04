@@ -1,0 +1,35 @@
+# A Stage that ends its promotion with an argocd-update of the end-to-end
+# Application and verifies the operation, with and without the promoted-version
+# check (which renders the verify ServiceAccount when on).
+argocd:
+  namespace: argocd
+git:
+  repoURL: https://git.example.com/acme/environments.git
+promotion:
+  branch: main
+  pinFile: "clusters/{stage}/pins.yaml"
+  pinKey: "pins.{pinKey}"
+promotedVersion:
+  image: registry.example.com/tools/curl:8
+  jqImage: registry.example.com/tools/jq:1
+  waitSeconds: 1800
+  pollSeconds: 10
+projects:
+  - name: shop
+    pinKey: shop
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+      versionPrefix: v
+    stages:
+      - name: devel
+        autoPromote: true
+        mode: direct
+        applications: [shop]
+        e2eApplication: shop-e2e
+        verification:
+          promotedVersion: true
+      - name: prod
+        from: devel
+        applications: [prod-shop]
+        e2eApplication: prod-shop-e2e

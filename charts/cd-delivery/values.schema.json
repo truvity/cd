@@ -533,6 +533,28 @@
               },
               "events": {
                 "type": "object"
+              },
+              "kargoStage": {
+                "type": "string",
+                "minLength": 1,
+                "description": "`<kargo project>:<stage>` that may sync the end-to-end Application. Rendered as the `kargo.akuity.io/authorized-stage` annotation on that Application only; omitted when unset."
+              },
+              "sync": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "manual"
+                ],
+                "description": "`auto` (default): the end-to-end Application syncs by itself. `manual`: it renders without `syncPolicy.automated`, for a Kargo Stage that syncs it."
+              },
+              "hook": {
+                "type": "boolean",
+                "description": "Render the end-to-end suite's Job as an Argo CD Sync hook (hook-delete-policy BeforeHookCreation, sync-wave 1) instead of a tracked resource with Force and Replace. Default false."
+              },
+              "ttlSecondsAfterFinished": {
+                "type": "integer",
+                "minimum": 120,
+                "description": "Seconds a finished hook Job is kept, when `hook` is true. Default 86400; the end-to-end chart refuses less than 120."
               }
             }
           },

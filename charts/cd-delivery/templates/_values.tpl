@@ -281,7 +281,18 @@ serviceAccount:
   name: {{ printf "%s-e2e" $name | quote }}
 job:
   annotations:
+    {{- if $e2e.hook }}
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "1"
+    {{- else }}
     argocd.argoproj.io/sync-options: "Force=true,Replace=true"
+    {{- end }}
+  {{- if $e2e.hook }}
+  {{- /* A hook Job is not tracked, so nothing prunes old versions and
+         self-heal no longer recreates one that deleted itself. */}}
+  ttlSecondsAfterFinished: {{ $e2e.ttlSecondsAfterFinished | default 86400 }}
+  {{- end }}
 {{- if $ident }}
 {{- $id := required "cd-delivery: platform.identity is required by a product with workloadIdentity" $plat.identity }}
 tls:

@@ -588,6 +588,11 @@
                 "promotionTemplate": {
                   "type": "object",
                   "description": "The Stage's promotion template, verbatim; replaces the built-in git promotion."
+                },
+                "e2eApplication": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "The Argo CD Application that runs the product's end-to-end suite as a sync hook. The Stage's promotion ends with an `argocd-update` step that syncs it and waits, and a verification check reads the operation. The Application must carry `kargo.akuity.io/authorized-stage` for this Stage and is not listed in `applications`. Needs `promotedVersion.image` and `.jqImage`."
                 }
               },
               "required": [
