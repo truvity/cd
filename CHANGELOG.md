@@ -7,6 +7,14 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Added:** `cd-delivery` knows delivery interface 13, the identity
+  ServiceAccount living in the `-infra` chart (after its PodIdentityAssociation,
+  on the primary tier, with a permanent never-delete guard; the product chart
+  does not render it there). It is chart-side only: this chart sends no new
+  value for it, so the render at 13 is identical to the render at 12. The
+  highest known interface is now 13; nothing changes for a product that stays
+  on 12 or lower.
+
 - **Added:** the end-to-end ring can run as a sync hook that a Kargo Stage
   triggers. Everything is off by default and no existing render changes.
   `cd-delivery`: `products.<name>.e2e.kargoStage` renders the
