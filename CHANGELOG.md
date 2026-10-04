@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Docs:** `docs/reference.md` states the `e2eApplication` requirements: the authorized-stage annotation (`e2e.kargoStage`), the v0.9.1 check semantics (OCI digests, hook `hookPhase`), and that trigger and hook go in one change per cluster. No render change.
+
 ## v0.9.1
 
 - **Behaviour change (opt-in only):** the `e2e-operation` check of `stages[].e2eApplication` compared
