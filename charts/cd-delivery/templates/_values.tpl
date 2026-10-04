@@ -102,6 +102,9 @@ events:
 {{- if ge $i 2 }}
 installName: {{ $name | quote }}
 {{- end }}
+{{- if ge $i 13 }}
+tier: {{ $plat.tier | default "primary" | quote }}
+{{- end }}
 database:
   host: {{ printf "%s-infra-pg-rw" $name | quote }}
   {{- if and $pgp.serverTLS (ge $i 8) }}

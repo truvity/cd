@@ -194,12 +194,13 @@ asked for: `postgres.platformOwned` below its step, and `mtls.strict` below
 its step, are refused. The end-to-end Application renders only from the
 step that publishes the end-to-end chart.
 
-Interface 13 is chart-side only: the workload's identity ServiceAccount lives
-in the `-infra` chart, rendered after its PodIdentityAssociation, on the
-primary tier. The charts do it themselves, so this chart sends no new value
-for it and the render at 13 is the render at 12; the number only tells the
-chart that the pinned charts read step 13, so a pin that declares it is
-accepted.
+Interface 13 moves the workload's identity ServiceAccount into the `-infra`
+chart, rendered after its PodIdentityAssociation, on the primary tier, and
+passes `tier` to the application ring as well: the same value (`test` or
+`primary`) the `-infra` ring gets, where the application chart's own default
+is `test`. `cloud.serviceAccountAnnotations` is not passed, since EKS Pod
+Identity needs no annotation on the ServiceAccount. A product below 13 gets
+no `tier` on the application ring.
 
 ### Using it from another chart
 

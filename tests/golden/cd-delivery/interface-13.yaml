@@ -317,6 +317,7 @@ spec:
         serviceAccount:
           app:
             name: shop
+        tier: primary
         tls:
           components:
             api:
