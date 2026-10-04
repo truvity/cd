@@ -90,6 +90,34 @@
             }
           }
         },
+        "syncRetry": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Retry policy of every generated Application. Defaults: no limit, refresh on each retry so it resolves the latest revision, backoff 15s doubling to 5m.",
+          "properties": {
+            "limit": {
+              "type": "integer"
+            },
+            "refresh": {
+              "type": "boolean"
+            },
+            "backoff": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "duration": {
+                  "type": "string"
+                },
+                "factor": {
+                  "type": "integer"
+                },
+                "maxDuration": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
         "cloud": {
           "type": "object",
           "additionalProperties": false,

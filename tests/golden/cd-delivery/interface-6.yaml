@@ -49,6 +49,13 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
     syncOptions:
     - ServerSideApply=true
     - CreateNamespace=false
@@ -104,6 +111,13 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
     syncOptions:
     - ServerSideApply=true
     - CreateNamespace=false
@@ -170,6 +184,13 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
     syncOptions:
     - ServerSideApply=true
     - CreateNamespace=false
