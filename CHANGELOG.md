@@ -7,7 +7,7 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
-- **Changed:** the `e2e-operation` check of `stages[].e2eApplication` compared
+- **Behaviour change (opt-in only):** the `e2e-operation` check of `stages[].e2eApplication` compared
   the Application's synced revision to the chart version, which never matches
   an OCI chart (Argo CD records a digest), so it waited until its deadline. It
   now requires the Application's `targetRevision` to be the promoted version,
@@ -15,7 +15,8 @@ release it wraps is named in each entry.
   currently resolves to, and the suite's Job for that version to have
   succeeded: a Sync-hook Job of the operation, or, before `e2e.hook` is on, a
   Healthy tracked Job of that version. The render changes only in the
-  check's script.
+  check's script, and only for a Stage that sets `e2eApplication`; leaving it
+  unset restores the previous output.
 
 ## v0.9.0
 
