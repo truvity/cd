@@ -1,0 +1,165 @@
+# Interface 13 over the interface-12 input, the same shape: step 13 is the
+# identity ServiceAccount living in the -infra chart, which the charts do
+# themselves and the platform sends nothing for, so the render is the
+# interface-12 render. Two products, to pin the order they render in.
+platform:
+  clusterName: east
+  argocdNamespace: argocd
+  applicationPrefix: east-
+  appProject: "{product}-{cluster}"
+  applicationLabels:
+    example.com/layer: delivery
+    example.com/product: "{product}"
+    example.com/sync-gating: "false"
+  waves:
+    infra: 10
+    app: 20
+    e2e: 30
+  chartRegistry: oci://registry.example.com/charts
+  tier: primary
+  finalizer: true
+  sync:
+    prune: true
+    selfHeal: true
+    serverSideApply: true
+    createNamespace: false
+  cloud:
+    accountID: example-account
+    region: example-region-1
+    permissionsBoundary: example-boundary
+    iamNameTemplate: "{cluster}-{slug}-{product}"
+    bucketNameTemplate: "example-{cluster}-{slug}-{product}"
+  postgres:
+    instances: 2
+    storage: 20Gi
+    labels:
+      example.com/product: "{product}"
+    scheduling:
+      nodeSelector:
+        example.com/pool: durable
+      tolerations:
+        - key: durable
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+  events:
+    url: nats://broker.example:4222
+    authAudience: broker
+    storage: file
+    replicas: 3
+    maxAge: 24h
+    account: "{product}"
+    tls:
+      serverName: broker.east.example
+      caConfigMap: private-ca
+  database:
+    rootCA:
+      configMapName: private-ca
+      key: ca-certificates.crt
+  identity:
+    trustDomain: east.example
+    mode: permissive
+    grantRequest: false
+  telemetry:
+    endpoint: http://collector.example:4318
+    sampleRatio: "1.0"
+  e2e:
+    mode: full
+    proberInterval: 30s
+    traces:
+      url: https://traces.example/select/jaeger
+      tokenURL: https://issuer.example/token
+      client: trace-reader
+      audience: issuer
+      caConfigMap: private-ca
+products:
+  shop:
+    pin: 2.4.1
+    interface: 13
+    hostname: shop.example.com
+    bucketSlug: sh
+    workloadIdentity: true
+    natsIdentity: true
+    parentRef:
+      group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: shop
+      namespace: gateways
+    surfaces:
+      - name: admin
+        hostname: admin.shop.example.com
+    mtls:
+      strict:
+        - api
+      peers:
+        api:
+          - namespace: shop
+            serviceAccount: shop-e2e-prober
+    postgres:
+      serverTLS: true
+      platformOwned: true
+      backup:
+        objectStoreName: shop-objectstore
+        serverName: shop-pg-g2
+    e2e:
+      enabled: true
+      proberGranted: true
+      peerComponents:
+        - api
+        - web
+      events:
+        stream: shop-shop-events
+        requestSubject: shop-shop.request
+    faro:
+      enabled: true
+      apiKey: example-public-key
+      sampleRate: 1
+      route:
+        ruleName: faro
+        path: /faro/collect
+        rewritePath: /collect
+        requestBufferLimit: 256Ki
+        backend:
+          name: faro-receiver
+          namespace: rum
+          port: 12347
+    access:
+      issuer: https://issuer.example
+      audience: shop-east
+      signOutUrl: /oauth2/sign_out
+    product:
+      mode: demo
+    alerts:
+      enabled: true
+      ruleLabels:
+        example.com/team: shop
+      alertLabels:
+        example.com/product: shop
+      journeyFailing:
+        ratio: 0.5
+        for: 10m
+    values:
+      app:
+        replicas: 2
+        route:
+          annotations:
+            example.com/note: merged-last
+    ignoreDifferences:
+      app:
+        - group: example.com
+          kind: Rule
+          jqPathExpressions:
+            - .spec.groups[]?.rules[]?.record
+  atlas:
+    pin: 0.9.0
+    interface: 2
+    repository: oci://other.example.com/charts
+    hostname: atlas.example.com
+    # Below interface 12: left out of the render, not refused.
+    alerts:
+      enabled: true
+    identityProviders:
+      workforce:
+        issuer_url: https://issuer.example
+        client_id_list:
+          - atlas:east

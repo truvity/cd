@@ -371,7 +371,7 @@
           "interface": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 12,
+            "maximum": 13,
             "description": "The highest delivery interface the pinned charts read (truvity/policy docs/contracts/delivery-interface.md)."
           },
           "repository": {
