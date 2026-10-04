@@ -7,6 +7,16 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Changed:** the `e2e-operation` check of `stages[].e2eApplication` compared
+  the Application's synced revision to the chart version, which never matches
+  an OCI chart (Argo CD records a digest), so it waited until its deadline. It
+  now requires the Application's `targetRevision` to be the promoted version,
+  the last operation to have Succeeded at the revision the Application
+  currently resolves to, and the suite's Job for that version to have
+  succeeded: a Sync-hook Job of the operation, or, before `e2e.hook` is on, a
+  Healthy tracked Job of that version. The render changes only in the
+  check's script.
+
 ## v0.9.0
 
 - **Added:** `cd-delivery` knows delivery interface 13, the identity
