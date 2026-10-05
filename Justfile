@@ -35,6 +35,8 @@ lint:
     hack/check-app-version.sh
     # Every negative fixture must fail, and for the refusal it declares.
     hack/lint-fixtures.sh
+    # The Go packages (chartgate and what follows) are linted with the charts.
+    golangci-lint run ./...
 
 # Golden renders, then the zero-diff gate.
 #
@@ -42,6 +44,7 @@ lint:
 # goldens show a reviewer what a change does to the render, and the parity
 # gate proves the wrapper adds nothing to the upstream chart's own.
 test:
+    go test ./...
     hack/golden.sh
     hack/parity.sh
     hack/health.sh
