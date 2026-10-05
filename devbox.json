@@ -3,6 +3,7 @@
     "git@2.55.0",
     "go@1.27.0",
     "golangci-lint@2.13.1",
+    "govulncheck@1.7.0",
     "goreleaser@2.17.1",
     "just-lsp@0.9.0",
     "just@1.58.0",
@@ -13,6 +14,6 @@
   "env": {},
   "shell": {
     "init_hook": [],
-    "scripts":   {}
+    "scripts": {}
   }
 }
