@@ -68,6 +68,14 @@
             "test"
           ]
         },
+        "availability": {
+          "type": "string",
+          "enum": [
+            "single",
+            "high"
+          ],
+          "description": "The cluster's redundancy, passed to the application chart as `availability` from delivery interface 14, which sizes its replicas and disruption budget from it. Unset: nothing is passed (the chart's default, single)."
+        },
         "finalizer": {
           "type": "boolean",
           "description": "Add the Argo CD resources finalizer, so removing an Application removes what it deployed."
@@ -371,7 +379,7 @@
           "interface": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 13,
+            "maximum": 15,
             "description": "The highest delivery interface the pinned charts read (truvity/policy docs/contracts/delivery-interface.md)."
           },
           "repository": {
@@ -492,7 +500,11 @@
               },
               "runtimeRole": {
                 "type": "boolean",
-                "description": "Defaults to true: the infra chart is handed postgres.runtimeRole, runtimePasswordSecret and runtimePassword.generate. Set false for an infra chart whose postgres schema does not have them; none of the three is sent."
+                "description": "Defaults to true: the infra chart is handed postgres.runtimeRole, runtimePasswordSecret and runtimePassword.generate. Set false for an infra chart whose postgres schema does not have them; none of the three is sent. Refused at delivery interface 15 or higher, where the runtime role is not optional."
+              },
+              "ownerAccess": {
+                "type": "boolean",
+                "description": "From delivery interface 15: pass the owner's credential (database.owner.passwordSecret) to the application chart. The exception; the default is the runtime role alone. Refused below 15, where the owner credential is always passed."
               },
               "backup": {
                 "type": "object",
