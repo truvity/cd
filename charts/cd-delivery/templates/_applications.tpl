@@ -18,7 +18,7 @@ that passes its own dict gets the same refusal of an unknown key from
 {{- $products := .products | default dict -}}
 {{- $docs := list -}}
 {{- if $products -}}
-{{- include "cd-delivery.assertKeys" (dict "what" "platform" "got" $plat "allowed" (list "tier" "finalizer" "sync" "syncRetry" "clusterName" "argocdNamespace" "applicationPrefix" "appProject" "applicationLabels" "waves" "chartRegistry" "cloud" "postgres" "events" "database" "identity" "telemetry" "e2e")) -}}
+{{- include "cd-delivery.assertKeys" (dict "what" "platform" "got" $plat "allowed" (list "tier" "finalizer" "sync" "syncRetry" "clusterName" "argocdNamespace" "applicationPrefix" "appProject" "applicationLabels" "waves" "chartRegistry" "cloud" "postgres" "events" "database" "identity" "telemetry" "e2e" "availability")) -}}
 {{- range $name := (keys $products | sortAlpha) -}}
 {{- $p := get $products $name -}}
 {{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s" $name) "got" $p "allowed" (list "pin" "interface" "repository" "hostname" "parentRef" "surfaces" "bucketSlug" "workloadIdentity" "natsIdentity" "mtls" "postgres" "e2e" "faro" "alerts" "identityProviders" "access" "product" "values" "ignoreDifferences")) -}}

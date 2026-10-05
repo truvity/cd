@@ -54,7 +54,13 @@ postgres:
   {{- end }}
   instances: {{ $pg.instances }}
   storage: {{ $pg.storage | quote }}
-  {{- if (hasKey $pgp "runtimeRole") | ternary $pgp.runtimeRole true }}
+  {{- if and (ge $i 15) (hasKey $pgp "runtimeRole") (not $pgp.runtimeRole) }}
+  {{- fail (printf "cd-delivery: products.%s: postgres.runtimeRole: false is refused at interface 15 or higher, where the runtime role is the default and not optional (the product declares %d)" $name $i) }}
+  {{- end }}
+  {{- if and (lt $i 15) $pgp.ownerAccess }}
+  {{- fail (printf "cd-delivery: products.%s: postgres.ownerAccess needs interface 15, the product declares %d" $name $i) }}
+  {{- end }}
+  {{- if or (ge $i 15) ((hasKey $pgp "runtimeRole") | ternary $pgp.runtimeRole true) }}
   runtimeRole: {{ printf "%s_app" (replace "-" "_" $name) | quote }}
   runtimePasswordSecret: {{ printf "%s-pg-runtime" $name | quote }}
   runtimePassword:
@@ -105,6 +111,11 @@ installName: {{ $name | quote }}
 {{- if ge $i 13 }}
 tier: {{ $plat.tier | default "primary" | quote }}
 {{- end }}
+{{- if ge $i 14 }}
+{{- with $plat.availability }}
+availability: {{ . | quote }}
+{{- end }}
+{{- end }}
 database:
   host: {{ printf "%s-infra-pg-rw" $name | quote }}
   {{- if and $pgp.serverTLS (ge $i 8) }}
@@ -115,8 +126,10 @@ database:
       configMapName: {{ $root.configMapName | quote }}
       key: {{ $root.key | quote }}
   {{- end }}
+  {{- if or (lt $i 15) $pgp.ownerAccess }}
   owner:
     passwordSecret: {{ printf "%s-infra-pg-app" $name | quote }}
+  {{- end }}
   app:
     role: {{ printf "%s_app" (replace "-" "_" $name) | quote }}
     passwordSecret: {{ printf "%s-pg-runtime" $name | quote }}

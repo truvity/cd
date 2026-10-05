@@ -7,6 +7,12 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.11.0
+
+- **Added:** `cd-delivery` knows delivery interfaces 14 and 15 (truvity/policy v1.46.0). The highest known interface is now 15; **nothing changes for a product that stays on 13 or lower** (every existing render is byte-identical).
+  - **14, `availability`:** a new optional `platform.availability: single | high`. From interface 14 it is handed to the application ring as `availability`, which the product chart sizes its replicas and disruption budget from. Unset, nothing is passed. Below 14 it is left out.
+  - **15, the runtime role is the default:** at 15 the infra ring always gets `postgres.runtimeRole`, `runtimePasswordSecret` and `runtimePassword.generate`, and `products.<name>.postgres.runtimeRole: false` is **refused**. The application ring gets `database.app.*` only; `database.owner.passwordSecret` is passed only when the product sets the new `products.<name>.postgres.ownerAccess: true` (the exception). `ownerAccess` below 15 is refused. A product below 15 keeps getting the owner credential and the `runtimeRole` opt-out as before.
+
 ## v0.10.0
 
 - **Behaviour change:** `cd-delivery` no longer stamps `argocd.argoproj.io/sync-wave` on the Applications it renders; they carry no sync-wave at all (an Application with no other annotation has no `annotations` key). `platform.waves` is **deprecated**: optional now, accepted and ignored for one release (v0.10.0), to be removed in the next; drop it from your values. Non-Application objects keep their waves (the e2e Job's hook wave, and every `cd-pipeline` object's `waves`).
