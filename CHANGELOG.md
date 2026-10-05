@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.9.2
+
 - **Behaviour change:** the e2e `argocd-update` step rendered `retry.timeout: 25m`. Kargo stores durations in Go's canonical form (`25m0s`), so ArgoCD saw the Stage as permanently OutOfSync (the same class as the Warehouse `interval` written as `30m0s`). It now renders `25m0s`, the only change in the render, and there is no opt-out: the old string is what caused the drift. `promotion.retry.timeout`, `promotion.gate.timeout` and `projects[].warehouse.interval` are user values passed through verbatim, so the schema now requires Go's canonical form (`5m0s`, `1h0m0s`, `30s`; not `5m` or `1h`) and refuses anything else. A consumer that set a non-canonical value must change it, which is also what ends its OutOfSync.
 - **Docs:** `docs/reference.md` states the `e2eApplication` requirements: the authorized-stage annotation (`e2e.kargoStage`), the v0.9.1 check semantics (OCI digests, hook `hookPhase`), and that trigger and hook go in one change per cluster. No render change.
 
