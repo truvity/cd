@@ -1,0 +1,26 @@
+name: Security
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    - cron: "0 6 * * *" # daily 6am UTC
+
+permissions:
+  contents: read
+
+jobs:
+  # The same recipe the shared workflow runs everywhere else, instead of
+  # a hand-rolled copy that installed devbox through an UNPINNED
+  # `curl | bash` -- many repositories carried that identical block.
+  #
+  # Deliberately NOT in ci.yaml's recipe list, and deliberately not a
+  # required context. A standard-library advisory with no released fix
+  # would otherwise wedge every pull request on a finding nobody can act
+  # on, which has happened before.
+  govulncheck:
+    uses: truvity/ci-workflows/.github/workflows/check.yaml@58d470dff71c732e208f47a80bb6c5d741e016a7 # v3.25.0
+    with:
+      recipes: '["vuln"]'

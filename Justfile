@@ -70,5 +70,10 @@ vendor chart:
 leak-canary:
     hack/leak-canary.sh
 
+# Reachable Go advisories. Not part of `check`: a standard-library advisory with
+# no released fix must not wedge every pull request (the Security workflow runs it).
+vuln:
+    govulncheck ./...
+
 # Everything CI runs on a pull request.
 check: lint test leak-canary
