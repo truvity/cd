@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.12.0
+
 - **Added:** package `genesis`, the imperative bootstrap of an Argo CD installation (repository-credentials Secret, `helm upgrade --install` of `cd-argocd` with its health preset and the installation's values file, the cluster Secret and the root Application), idempotent step by step. Moved from the estate's gitops repository: the installation's particulars (namespace, repository, cluster name, credentials source, break-glass access) are `Config` fields and arguments of `Run`. No chart changes; no render changes.
 
 - **Added:** package `parity`, the shared machinery of an extraction's parity proof (decode a render into keyed objects, compare object sets, render a vendored or live chart, frozen fixtures, the table of moves and the prune-window guard of a swap). Moved from the estate's gitops repository; it takes a `testing.TB` and imports no test-only code. No chart changes; no render changes.
