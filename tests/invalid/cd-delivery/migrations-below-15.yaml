@@ -1,4 +1,4 @@
-# expect: postgres.ownerAccess needs interface 15
+# expect: postgres.migrations needs interface 15
 platform:
   clusterName: east
   argocdNamespace: argocd
@@ -24,4 +24,4 @@ products:
     interface: 14
     hostname: shop.example.com
     postgres:
-      ownerAccess: true
+      migrations: true

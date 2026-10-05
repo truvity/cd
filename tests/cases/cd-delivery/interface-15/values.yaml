@@ -1,4 +1,4 @@
-# Interface 15 over the interface-13 input: step 15 makes the runtime role the default; the owner credential is passed only to the product that says ownerAccess (vault); shop gets the runtime role alone, and atlas, below 15, keeps the owner credential. Two products, to pin the order they render in.
+# Interface 15 over the interface-13 input: step 15 makes the runtime role the default; the application ring never gets database.owner. The owner credential reaches it as database.migration.passwordSecret only for the product that declares postgres.migrations (vault); shop gets the runtime role alone, and atlas, below 15, keeps database.owner. Two products, to pin the order they render in.
 platform:
   clusterName: east
   argocdNamespace: argocd
@@ -162,4 +162,4 @@ products:
     interface: 15
     hostname: vault.example.com
     postgres:
-      ownerAccess: true
+      migrations: true

@@ -7,6 +7,10 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.13.0
+
+- **Behaviour change (interface 15 only; nothing changes for a product on 14 or lower, and no product declares 15 yet):** `products.<name>.postgres.ownerAccess` is **removed** (truvity/policy v1.47.0 amends step 15). The application ring never gets `database.owner` at 15 or higher; its long-running workloads get `database.app.*` only. A product that runs schema migrations declares the new `products.<name>.postgres.migrations: true` and is handed `database.migration.passwordSecret`, which its chart may mount only in a migration Job or hook Job. `migrations` below 15 is refused. Use `migrations`, not `ownerAccess`, from v0.13.0; v0.11.0's `ownerAccess` was never used by a pin.
+
 ## v0.12.0
 
 - **Added:** package `genesis`, the imperative bootstrap of an Argo CD installation (repository-credentials Secret, `helm upgrade --install` of `cd-argocd` with its health preset and the installation's values file, the cluster Secret and the root Application), idempotent step by step. Moved from the estate's gitops repository: the installation's particulars (namespace, repository, cluster name, credentials source, break-glass access) are `Config` fields and arguments of `Run`. No chart changes; no render changes.

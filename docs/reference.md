@@ -168,7 +168,7 @@ required below must be present, and a key the chart does not read is refused.
 | `products.<name>.repository`, `.parentRef`, `.surfaces`, `.bucketSlug` | Where the charts are published, the route's parent by name, additional routes, and the slug that says the product owns cloud objects. |
 | `products.<name>.workloadIdentity`, `.natsIdentity`, `.mtls`, `.postgres`, `.e2e`, `.faro` | Per-cluster facts about the product: whether its namespace carries a workload identity and the broker accepts it, its mTLS peers and strict components, its database's server certificate, platform ownership and archive, its end-to-end run, and its browser telemetry. |
 | `products.<name>.postgres.runtimeRole` | Default `true`: the infra chart is handed `postgres.runtimeRole`, `runtimePasswordSecret` and `runtimePassword.generate`. Set `false` to send none of the three, for an infra chart whose `postgres` schema does not have them. Per product, below interface 15; at 15 or higher the runtime role is not optional and `false` is refused. |
-| `products.<name>.postgres.ownerAccess` | From interface 15: pass `database.owner.passwordSecret` to the application chart. The exception: at 15 the application ring gets the runtime role (`database.app.*`) alone unless this is `true`. Refused below 15, where the owner credential is always passed. |
+| `products.<name>.postgres.migrations` | The product runs schema migrations. From interface 15 the application ring is then handed `database.migration.passwordSecret` (the owner's credential), which the chart may mount only in a migration Job or hook Job; unset, nothing of the owner is passed. The long-running workloads get `database.app.*` alone, always. Refused below 15, where `database.owner.passwordSecret` is always passed. |
 | `platform.availability` | `single` or `high`: the cluster's redundancy, passed to the application ring as `availability` from interface 14 (the product sizes replicas and disruption budget from it). Unset: nothing passed. |
 | `products.<name>.identityProviders`, `.access`, `.product` | Passed to the application chart verbatim. |
 | `products.<name>.alerts` | The product's alert values (`enabled`, `remote`, `ruleLabels`, `alertLabels`, thresholds), passed to the application chart verbatim from interface 12; below it, left out. |
@@ -207,9 +207,11 @@ no `tier` on the application ring.
 Interface 14 passes `availability` (`platform.availability`, when set) to the
 application ring. Interface 15 makes the database runtime role the default:
 the infra ring always renders it (`runtimeRole: false` is refused), and the
-application ring is not handed the owner credential unless the product sets
-`postgres.ownerAccess: true`. A product below 14 gets no `availability`, and
-below 15 keeps the owner credential.
+application ring gets `database.app.*` and no `database.owner`; a product
+that declares `postgres.migrations: true` is also handed
+`database.migration.passwordSecret`, for its migration Job or hook Job alone.
+A product below 14 gets no `availability`, and below 15 keeps
+`database.owner.passwordSecret`.
 
 ### Using it from another chart
 

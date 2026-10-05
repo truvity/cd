@@ -502,9 +502,9 @@
                 "type": "boolean",
                 "description": "Defaults to true: the infra chart is handed postgres.runtimeRole, runtimePasswordSecret and runtimePassword.generate. Set false for an infra chart whose postgres schema does not have them; none of the three is sent. Refused at delivery interface 15 or higher, where the runtime role is not optional."
               },
-              "ownerAccess": {
+              "migrations": {
                 "type": "boolean",
-                "description": "From delivery interface 15: pass the owner's credential (database.owner.passwordSecret) to the application chart. The exception; the default is the runtime role alone. Refused below 15, where the owner credential is always passed."
+                "description": "The product declares that it runs schema migrations. From delivery interface 15 the owner's credential is then passed to the application chart as database.migration.passwordSecret, for a migration Job or hook Job alone; the long-running workloads get database.app.* only, always. Unset: no owner credential is passed at 15 or higher. Refused below 15, where the owner credential is passed as database.owner.passwordSecret."
               },
               "backup": {
                 "type": "object",
