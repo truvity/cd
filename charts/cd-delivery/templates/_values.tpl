@@ -57,8 +57,8 @@ postgres:
   {{- if and (ge $i 15) (hasKey $pgp "runtimeRole") (not $pgp.runtimeRole) }}
   {{- fail (printf "cd-delivery: products.%s: postgres.runtimeRole: false is refused at interface 15 or higher, where the runtime role is the default and not optional (the product declares %d)" $name $i) }}
   {{- end }}
-  {{- if and (lt $i 15) $pgp.ownerAccess }}
-  {{- fail (printf "cd-delivery: products.%s: postgres.ownerAccess needs interface 15, the product declares %d" $name $i) }}
+  {{- if and (lt $i 15) $pgp.migrations }}
+  {{- fail (printf "cd-delivery: products.%s: postgres.migrations needs interface 15, the product declares %d" $name $i) }}
   {{- end }}
   {{- if or (ge $i 15) ((hasKey $pgp "runtimeRole") | ternary $pgp.runtimeRole true) }}
   runtimeRole: {{ printf "%s_app" (replace "-" "_" $name) | quote }}
@@ -126,8 +126,11 @@ database:
       configMapName: {{ $root.configMapName | quote }}
       key: {{ $root.key | quote }}
   {{- end }}
-  {{- if or (lt $i 15) $pgp.ownerAccess }}
+  {{- if lt $i 15 }}
   owner:
+    passwordSecret: {{ printf "%s-infra-pg-app" $name | quote }}
+  {{- else if $pgp.migrations }}
+  migration:
     passwordSecret: {{ printf "%s-infra-pg-app" $name | quote }}
   {{- end }}
   app:

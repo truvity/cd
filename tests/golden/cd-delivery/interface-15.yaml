@@ -515,7 +515,7 @@ spec:
             passwordSecret: vault-pg-runtime
             role: vault_app
           host: vault-infra-pg-rw
-          owner:
+          migration:
             passwordSecret: vault-infra-pg-app
         events:
           auth:
