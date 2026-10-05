@@ -64,18 +64,17 @@ ring composed. Call with (dict "ctx" <product ctx> "ring" infra|app|e2e
 {{- $ring := .ring -}}
 {{- $suffix := get (dict "infra" "-infra" "app" "" "e2e" "-e2e") $ring -}}
 {{- $cluster := required "cd-delivery: platform.clusterName is required" $plat.clusterName -}}
-{{- $waves := required "cd-delivery: platform.waves is required" $plat.waves -}}
-{{- $wave := required (printf "cd-delivery: platform.waves.%s is required" $ring) (get $waves $ring) -}}
 {{- $labels := dict -}}
 {{- range $k, $v := ($plat.applicationLabels | default dict) -}}
 {{- $_ := set $labels $k (include "cd-delivery.fill" (dict "s" $v "product" $name "cluster" $cluster)) -}}
 {{- end -}}
 {{- if not (hasKey $plat "applicationPrefix") -}}{{- fail "cd-delivery: platform.applicationPrefix is required (it may be empty)" -}}{{- end -}}
-{{- $meta := dict "name" (printf "%s%s%s" (toString $plat.applicationPrefix) $name $suffix) "namespace" (required "cd-delivery: platform.argocdNamespace is required" $plat.argocdNamespace) "annotations" (dict "argocd.argoproj.io/sync-wave" (toString (int $wave))) -}}
+{{- $meta := dict "name" (printf "%s%s%s" (toString $plat.applicationPrefix) $name $suffix) "namespace" (required "cd-delivery: platform.argocdNamespace is required" $plat.argocdNamespace) "annotations" (dict) -}}
 {{- $e2eOpts := $p.e2e | default dict -}}
 {{- /* A Kargo Stage may only sync an Application that names it. Only the
        end-to-end Application is ever handed to a Stage this way. */ -}}
 {{- if and (eq $ring "e2e") $e2eOpts.kargoStage -}}{{- $_ := set $meta.annotations "kargo.akuity.io/authorized-stage" $e2eOpts.kargoStage -}}{{- end -}}
+{{- if not $meta.annotations -}}{{- $_ := unset $meta "annotations" -}}{{- end -}}
 {{- if $labels -}}{{- $_ := set $meta "labels" $labels -}}{{- end -}}
 {{- /* Removing an Application removes what it deployed, unless the platform
        turns the finalizer off. */ -}}

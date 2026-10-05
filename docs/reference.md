@@ -137,8 +137,8 @@ does not apply to it.
 A product is up to three charts, and the chart renders one Application for
 each: the infrastructure ring `<product>-infra` (the objects the install
 owns: cloud objects, database, event stream), the application ring `<product>`
-and the end-to-end ring `<product>-e2e`, in that sync-wave order. The rings are
-fixed; their wave numbers are yours. Every address a ring's chart reads is
+and the end-to-end ring `<product>-e2e`, with no sync-wave (each ring retries until what it
+waits for exists). The rings are fixed. Every address a ring's chart reads is
 passed by name, following the platform contract in truvity/policy
 (`docs/contracts/platform.md`, section 10): the chart builds the names of
 objects it asks for from the product's name (`<product>-infra-pg-rw`,
@@ -157,7 +157,7 @@ required below must be present, and a key the chart does not read is refused.
 | `platform.argocdNamespace`, `.applicationPrefix` (required) | Where the Applications live, and what their names start with (the prefix may be empty). |
 | `platform.appProject` (required) | The AppProject each Application runs under, with `{product}` and `{cluster}` tokens. |
 | `platform.applicationLabels` | Labels on every Application; values take the same tokens. |
-| `platform.waves` (required) | `infra`, `app` and `e2e` sync-wave numbers. |
+| `platform.waves` (deprecated) | Accepted and ignored since v0.10.0; Applications carry no sync-wave. Drop it. |
 | `platform.chartRegistry` | The base the charts are published under; a product may name its own `repository`. |
 | `platform.tier`, `.finalizer`, `.sync`, `.syncRetry` | Install kind handed to the charts (`primary`), the resources finalizer (on), and the sync policy (prune and self-heal on, server-side apply on, create-namespace off). Mechanism, not estate facts: these have defaults.  Every Application except the end-to-end one also retries a failed sync with the latest revision (`syncRetry`: no limit, refresh, 15s doubling to 5m). |
 | `platform.cloud` | `accountID`, `region`, `permissionsBoundary`, and the `iamNameTemplate` and `bucketNameTemplate` of a product's role and bucket (tokens `{cluster}`, `{slug}`, `{product}`). Needed by a product with a `bucketSlug`. A role name over 64 characters is refused. |

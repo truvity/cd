@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Behaviour change:** `cd-delivery` no longer stamps `argocd.argoproj.io/sync-wave` on the Applications it renders; they carry no sync-wave at all (an Application with no other annotation has no `annotations` key). `platform.waves` is **deprecated**: optional now, accepted and ignored for one release (v0.10.0), to be removed in the next; drop it from your values. Non-Application objects keep their waves (the e2e Job's hook wave, and every `cd-pipeline` object's `waves`).
+
 ## v0.9.2
 
 - **Behaviour change:** the e2e `argocd-update` step rendered `retry.timeout: 25m`. Kargo stores durations in Go's canonical form (`25m0s`), so ArgoCD saw the Stage as permanently OutOfSync (the same class as the Warehouse `interval` written as `30m0s`). It now renders `25m0s`, the only change in the render, and there is no opt-out: the old string is what caused the drift. `promotion.retry.timeout`, `promotion.gate.timeout` and `projects[].warehouse.interval` are user values passed through verbatim, so the schema now requires Go's canonical form (`5m0s`, `1h0m0s`, `30s`; not `5m` or `1h`) and refuses anything else. A consumer that set a non-canonical value must change it, which is also what ends its OutOfSync.
