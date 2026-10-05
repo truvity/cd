@@ -10,10 +10,6 @@ platform:
     example.com/layer: delivery
     example.com/product: "{product}"
     example.com/sync-gating: "false"
-  waves:
-    infra: 10
-    app: 20
-    e2e: 30
   chartRegistry: oci://registry.example.com/charts
   tier: primary
   finalizer: true

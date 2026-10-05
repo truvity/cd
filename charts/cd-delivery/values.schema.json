@@ -54,7 +54,7 @@
             "app",
             "e2e"
           ],
-          "description": "The sync-wave of each ring."
+          "description": "Deprecated and ignored: Applications carry no sync-wave. Accepted for one release so a consumer can drop it."
         },
         "chartRegistry": {
           "type": "string",
@@ -737,7 +737,6 @@
               "argocdNamespace",
               "applicationPrefix",
               "appProject",
-              "waves",
               "postgres",
               "events"
             ]
