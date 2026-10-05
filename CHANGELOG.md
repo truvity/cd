@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Added:** package `parity`, the shared machinery of an extraction's parity proof (decode a render into keyed objects, compare object sets, render a vendored or live chart, frozen fixtures, the table of moves and the prune-window guard of a swap). Moved from the estate's gitops repository; it takes a `testing.TB` and imports no test-only code. No chart changes; no render changes.
+
 - **Added:** the repository is also a Go module, `github.com/truvity/cd`, tagged with the charts. First package: `chartgate` and its command `cmd/chartgate`, which renders every Argo CD Helm Application of a repository (walking `clusters/<cluster>.yaml` through the repository's own charts) against the chart version Argo CD will pull and the values it will hand it, so a chart that refuses its values fails in CI and not at sync. Moved from the estate's gitops repository unchanged except that the repository's own URL is the required `-self-repo` flag. No chart changes; no render changes.
 
 ## v0.11.0
