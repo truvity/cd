@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.10.0
+
 - **Behaviour change:** `cd-delivery` no longer stamps `argocd.argoproj.io/sync-wave` on the Applications it renders; they carry no sync-wave at all (an Application with no other annotation has no `annotations` key). `platform.waves` is **deprecated**: optional now, accepted and ignored for one release (v0.10.0), to be removed in the next; drop it from your values. Non-Application objects keep their waves (the e2e Job's hook wave, and every `cd-pipeline` object's `waves`).
 
 ## v0.9.2
