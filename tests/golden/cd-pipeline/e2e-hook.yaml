@@ -645,7 +645,7 @@ spec:
           - name: shop-e2e
             namespace: argocd
         retry:
-          timeout: 25m
+          timeout: 25m0s
         uses: argocd-update
       vars:
       - name: gitRepo
@@ -752,7 +752,7 @@ spec:
           - name: prod-shop-e2e
             namespace: argocd
         retry:
-          timeout: 25m
+          timeout: 25m0s
         uses: argocd-update
       vars:
       - name: gitRepo

@@ -184,7 +184,8 @@
             },
             "timeout": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "pattern": "^([0-9]+h[0-5]?[0-9]m[0-5]?[0-9]s|[0-5]?[0-9]m[0-5]?[0-9]s|[0-5]?[0-9]s)$"
             }
           }
         },
@@ -194,7 +195,8 @@
           "properties": {
             "timeout": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "pattern": "^([0-9]+h[0-5]?[0-9]m[0-5]?[0-9]s|[0-5]?[0-9]m[0-5]?[0-9]s|[0-5]?[0-9]s)$"
             }
           }
         }
@@ -351,7 +353,8 @@
               },
               "interval": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "pattern": "^([0-9]+h[0-5]?[0-9]m[0-5]?[0-9]s|[0-5]?[0-9]m[0-5]?[0-9]s|[0-5]?[0-9]s)$"
               },
               "freightCreationPolicy": {
                 "type": "string",
