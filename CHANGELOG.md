@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Added:** the repository is also a Go module, `github.com/truvity/cd`, tagged with the charts. First package: `chartgate` and its command `cmd/chartgate`, which renders every Argo CD Helm Application of a repository (walking `clusters/<cluster>.yaml` through the repository's own charts) against the chart version Argo CD will pull and the values it will hand it, so a chart that refuses its values fails in CI and not at sync. Moved from the estate's gitops repository unchanged except that the repository's own URL is the required `-self-repo` flag. No chart changes; no render changes.
+
 ## v0.11.0
 
 - **Added:** `cd-delivery` knows delivery interfaces 14 and 15 (truvity/policy v1.46.0). The highest known interface is now 15; **nothing changes for a product that stays on 13 or lower** (every existing render is byte-identical).
