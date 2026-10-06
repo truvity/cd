@@ -1,0 +1,12 @@
+# Argo CD's core controllers only. OPT-IN: layer this file before your own
+# values.
+#
+# No ApplicationSet controller (an installation that renders explicit
+# Application objects has nothing for it to do; chart 9.x removed its
+# `enabled` toggle, replicas 0 is the supported way off) and no
+# notifications controller.
+argo-cd:
+  applicationSet:
+    replicas: 0
+  notifications:
+    enabled: false

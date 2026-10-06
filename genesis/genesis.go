@@ -38,8 +38,14 @@ type (
 		// Chart is the OCI reference of the cd-argocd chart, ChartVersion its version.
 		Chart        string
 		ChartVersion string
-		// ValuesFile is the values file layered after the chart's own health
-		// preset, the same one the self-management Application uses.
+		// Presets are the chart's presets (presets/<name>.yaml inside it)
+		// layered before ValuesFile, in order: the self-management
+		// Application's list, minus any preset whose objects need CRDs that
+		// do not exist yet (metrics, envoy-gateway). Nil means the health
+		// preset alone.
+		Presets []string
+		// ValuesFile is the values file layered after the presets, the same
+		// one the self-management Application uses.
 		ValuesFile string
 		// RepoURL is the git repository the credentials are for, and
 		// RepoCredsSecret the name of the Secret that holds them.
@@ -180,7 +186,7 @@ func ensureHelm(ctx context.Context, logger *slog.Logger, c Config) error {
 	}
 	defer cleanup()
 
-	args := append([]string{"upgrade", "--install", c.ReleaseName}, ChartArgs(c.Namespace, c.ValuesFile, chartDir)...)
+	args := append([]string{"upgrade", "--install", c.ReleaseName}, ChartArgs(c.Namespace, c.ValuesFile, chartDir, c.Presets...)...)
 	args = append(args, "--create-namespace")
 
 	helmCmd := c.kubeCmd(ctx, "helm", args...)
@@ -222,26 +228,31 @@ func PullChart(ctx context.Context, chart, version string) (chartDir string, cle
 
 // ChartArgs is everything helm takes after `upgrade --install <release>`
 // (or `template <release>`, which a caller's test runs) for the genesis install.
-// chartDir is the unpacked cd-argocd chart (PullChart).
+// chartDir is the unpacked cd-argocd chart (PullChart); presets are the
+// chart's presets by name (presets/<name>.yaml), none meaning health alone.
 //
 // It installs the SAME chart the Argo CD self-management Application syncs,
-// with the SAME value layers, in the same order: the chart's health preset
-// (presets/health.yaml), then the values file, so the first sync starts with
-// identical config, critically the resource health customizations that gate
-// the sync order, which live in the preset and are not in the values file.
-// The chart nests the upstream argo-cd values one level under `argo-cd:`, so
-// the genesis-only override is prefixed too:
+// with the SAME value layers, in the same order: the chart's presets, then
+// the values file, so the first sync starts with identical config, critically
+// the resource health customizations that gate the sync order, which live in
+// the health preset and are not in the values file. The chart nests the
+// upstream argo-cd values one level under `argo-cd:`, so the genesis-only
+// override is prefixed too:
 //   - HTTPRoute off: the Gateway API CRDs do not exist yet.
-//   - OIDC config is unresolved until the OIDC application runs; admin login
-//     (enabled in the values file) covers the gap.
-func ChartArgs(namespace, valuesFile, chartDir string) []string {
-	return []string{
-		chartDir,
-		"-n", namespace,
-		"-f", filepath.Join(chartDir, "presets", "health.yaml"),
+func ChartArgs(namespace, valuesFile, chartDir string, presets ...string) []string {
+	if len(presets) == 0 {
+		presets = []string{"health"}
+	}
+
+	args := []string{chartDir, "-n", namespace}
+	for _, p := range presets {
+		args = append(args, "-f", filepath.Join(chartDir, "presets", p+".yaml"))
+	}
+
+	return append(args,
 		"-f", valuesFile,
 		setFlag, "argo-cd.server.httproute.enabled=false",
-	}
+	)
 }
 
 func ensureRootApp(ctx context.Context, logger *slog.Logger, c Config) error {

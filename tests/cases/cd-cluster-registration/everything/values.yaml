@@ -1,0 +1,22 @@
+# A remote cluster reached by assuming an AWS role, and the cluster Argo CD
+# runs in, registered under a name of its own.
+clusters:
+  - name: workload
+    server: https://0123456789ABCDEF.gr7.example-region-1.eks.amazonaws.com
+    config:
+      awsAuthConfig:
+        clusterName: workload
+        # The ARN of the role Argo CD assumes (a placeholder here).
+        roleARN: workload-argocd-deployer-role-arn
+      tlsClientConfig:
+        caData: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCg==
+  - name: management
+    server: https://kubernetes.default.svc
+    stringData: true
+    annotations:
+      argocd.argoproj.io/sync-options: Prune=false,Delete=false
+    labels:
+      example.com/role: management
+    config:
+      tlsClientConfig:
+        insecure: false

@@ -1,0 +1,4 @@
+# expect: missing property 'config'
+clusters:
+  - name: workload
+    server: https://example.invalid

@@ -1,0 +1,11 @@
+# The controller's own metrics (:9090, `http-metrics`), scraped through the
+# upstream chart's metrics Service and ServiceMonitor. OPT-IN: layer this file
+# before your own values. Needs the ServiceMonitor CRD (Prometheus Operator, or
+# a VictoriaMetrics operator converting it). The management controller is not
+# scraped.
+kargo:
+  controller:
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true

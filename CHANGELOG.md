@@ -7,6 +7,11 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Added:** `cd-cluster-registration`, a new chart with no upstream: one Argo CD cluster Secret per entry of `clusters` (`name`, `server`, `config` verbatim as indented JSON with sorted keys, `data` by default or `stringData`, labels and annotations). Renders Secrets and nothing else; nothing with no clusters.
+- **Added:** `cd-argocd` presets `health-opt-in`, `ha`, `on-demand`, `core-only`, `sso-only`, `webhook-refresh`, `metrics` and `envoy-gateway` (docs/reference.md). Opt-in values files: a render that names none is byte-identical.
+- **Added:** `cd-kargo` presets `ha`, `restricted`, `on-demand`, `metrics`, `sso-only` and `external-webhooks`. Opt-in: a render that names none is byte-identical.
+- **Added:** `genesis.Config.Presets` (the cd-argocd presets the genesis install layers, in order; nil keeps the health preset alone) and `ChartArgs`'s variadic presets; `genesis.ResolveRepoCreds` with the `Store`/`Seed` interfaces, `genesis.OnePassword` (a Seed over the `op` CLI) and `genesis/ssmstore` (a Store over SSM SecureString parameters). Existing callers compile and behave as before.
+
 ## v0.17.0
 
 - **Added:** `cd-delivery` `platform.applicationSuffixes` (`infra`, `app`, `e2e`): the suffix of each ring's Application NAME, for a platform that names them `<product>-inf` and `<product>-app`. The chart, its repository and the Helm release keep `<product>-infra` and `<product>`, so the objects a product's charts render keep their names. Unset: the names stay `-infra`, none and `-e2e`, and every existing render is byte-identical.

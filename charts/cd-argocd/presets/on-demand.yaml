@@ -1,0 +1,31 @@
+# Prefer on-demand nodes for every Argo CD pod. OPT-IN: layer this file
+# before your own values.
+#
+# A spot reclaim of the node running the application controller or the repo
+# server pauses every sync. Preferred, never required: a spot node still
+# takes the pods when no on-demand capacity is up. The node label is
+# Karpenter's (karpenter.sh/capacity-type), which a node pool that allows
+# both capacity types sets on every node.
+#
+# A component's `affinity` replaces the upstream chart's soft
+# pod-anti-affinity preset for that component (the ha.yaml spread supersedes
+# it where both are layered).
+argo-cd:
+  server:
+    affinity: &on-demand
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+                - key: karpenter.sh/capacity-type
+                  operator: In
+                  values: [on-demand]
+  controller:
+    affinity: *on-demand
+  repoServer:
+    affinity: *on-demand
+  dex:
+    affinity: *on-demand
+  redis:
+    affinity: *on-demand

@@ -1,0 +1,31 @@
+# Argo CD's UI behind an Envoy Gateway. OPT-IN: layer this file before your
+# own values, which enable the route (`argo-cd.server.httproute`) and name its
+# parents and hostnames (and set `configs.params.server.insecure` when TLS
+# ends at the gateway). Needs Envoy Gateway's CRDs: leave it out of an install
+# that runs before they exist.
+#
+# A BackendTrafficPolicy on the server's HTTPRoute lifts Envoy Gateway's
+# default 15s route request timeout (requestTimeout 0s), which otherwise
+# cuts the UI's application watch (/api/v1/stream/applications, server-sent
+# events) and shows as 504s. streamIdleTimeout 5m still ends a dead stream.
+# One BackendTrafficPolicy per target: do not add a second on this route.
+# Rendered through the upstream chart's extraObjects (templated, so it
+# follows the release's name and namespace); setting extraObjects yourself
+# replaces it.
+argo-cd:
+  extraObjects:
+    - |-
+      apiVersion: gateway.envoyproxy.io/v1alpha1
+      kind: BackendTrafficPolicy
+      metadata:
+        name: {{ include "argo-cd.server.fullname" . }}-streaming
+        namespace: {{ include "argo-cd.namespace" . }}
+      spec:
+        targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: {{ include "argo-cd.server.fullname" . }}
+        timeout:
+          http:
+            requestTimeout: 0s
+            streamIdleTimeout: 5m

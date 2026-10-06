@@ -1,0 +1,17 @@
+# Pod Security `restricted` for every Kargo workload. OPT-IN: layer this file
+# before your own values.
+#
+# The upstream chart puts `global.securityContext` on the CONTAINER of every
+# Kargo workload (not on the pod), where it carries all four fields. Kargo's
+# image already runs as a non-root user, so this changes nothing the process
+# can do; it makes the pods admissible in a namespace that enforces
+# `restricted`.
+global:
+  securityContext:
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault

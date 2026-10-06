@@ -1,0 +1,16 @@
+# Every preset, layered in the order an installation behind an Envoy Gateway
+# with single sign-on would use, and the values they leave to the caller.
+argo-cd:
+  server:
+    httproute:
+      enabled: true
+      hostnames:
+        - argocd.example.com
+  configs:
+    params:
+      server.insecure: "true"
+    cm:
+      url: https://argocd.example.com
+    rbac:
+      policy.csv: |
+        g, example:admin, role:admin

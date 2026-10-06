@@ -1,0 +1,24 @@
+# Sign-in through single sign-on only. OPT-IN: layer this file before your
+# own values, which supply the OIDC provider (`argo-cd.configs.cm`
+# `oidc.config`, `url`) and the group bindings (`argo-cd.configs.rbac`
+# `policy.csv`).
+#
+# - The local admin account is off. It is a standing credential (a bcrypt
+#   hash in a Secret that nothing rotates because nothing uses it). Locked
+#   out is recoverable without it: Argo CD reconciles whether or not anyone
+#   can sign in, so reverting a values change is enough, and the
+#   Applications stay reachable with kubectl.
+# - The Argo CD session (the token argocd-server mints after the OIDC
+#   exchange) lasts at most 24h. That is the upstream default, stated so the
+#   ceiling is explicit.
+# - Nobody is entitled to anything unless a policy line says so
+#   (policy.default role:none), and groups come from the token's `groups`
+#   claim.
+argo-cd:
+  configs:
+    cm:
+      admin.enabled: "false"
+      users.session.duration: "24h"
+    rbac:
+      policy.default: role:none
+      scopes: '[groups]'

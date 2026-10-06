@@ -1,0 +1,22 @@
+# The Kargo UI and API, signed in through single sign-on only, behind a
+# gateway that terminates TLS. OPT-IN: layer this file before your own values,
+# which supply the host (`kargo.api.host`), the provider
+# (`kargo.api.oidc.issuerURL`, `clientID`, `cliClientID`), who reads
+# (`kargo.api.oidc.users`) and who administers (`kargo.api.oidc.admins`).
+#
+# - The admin account is off. It would be a standing credential (a password
+#   hash that nothing rotates because nothing uses it); Projects, Stages and
+#   Freight are Kubernetes resources, so a locked-out cluster admin still has
+#   kubectl.
+# - The username is the token's `email` claim.
+# - The API serves plaintext: TLS ends at the gateway in front of it.
+kargo:
+  api:
+    enabled: true
+    tls:
+      enabled: false
+    adminAccount:
+      enabled: false
+    oidc:
+      enabled: true
+      usernameClaim: email

@@ -1,0 +1,37 @@
+---
+# Source: cd-cluster-registration/templates/secrets.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cluster-workload
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+type: Opaque
+data:
+  name: d29ya2xvYWQ=
+  server: aHR0cHM6Ly8wMTIzNDU2Nzg5QUJDREVGLmdyNy5leGFtcGxlLXJlZ2lvbi0xLmVrcy5hbWF6b25hd3MuY29t
+  config: ewogICJhd3NBdXRoQ29uZmlnIjogewogICAgImNsdXN0ZXJOYW1lIjogIndvcmtsb2FkIiwKICAgICJyb2xlQVJOIjogIndvcmtsb2FkLWFyZ29jZC1kZXBsb3llci1yb2xlLWFybiIKICB9LAogICJ0bHNDbGllbnRDb25maWciOiB7CiAgICAiY2FEYXRhIjogIkxTMHRMUzFDUlVkSlRpQkRSVkpVU1VaSlEwRlVSUzB0TFMwdENnPT0iCiAgfQp9
+
+---
+# Source: cd-cluster-registration/templates/secrets.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cluster-management
+  namespace: argocd
+  labels:
+    example.com/role: management
+    argocd.argoproj.io/secret-type: cluster
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+type: Opaque
+stringData:
+  name: "management"
+  server: "https://kubernetes.default.svc"
+  config: |
+    {
+      "tlsClientConfig": {
+        "insecure": false
+      }
+    }

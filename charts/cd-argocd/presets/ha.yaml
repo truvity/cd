@@ -1,0 +1,33 @@
+# High availability for the request-serving parts. OPT-IN: layer this file
+# before your own values.
+#
+# The API server and the repo server run two replicas each, with a
+# PodDisruptionBudget that keeps one up and a per-node spread. The spread is
+# ScheduleAnyway, not DoNotSchedule: a hard spread leaves a pod Pending when
+# the pool is down to one node, while a node autoscaler still tries to satisfy
+# a soft spread first and provisions the second node rather than stacking.
+# The upstream chart adds each component's own label selector to a constraint
+# that names none.
+#
+# The application controller stays at one replica (it is sharded and
+# leader-based, not scaled by replicas), and so do Dex and Redis (Redis'
+# HA mode is the separate redis-ha subchart, and its cache is rebuildable).
+argo-cd:
+  server:
+    replicas: 2
+    pdb:
+      enabled: true
+      minAvailable: 1
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+  repoServer:
+    replicas: 2
+    pdb:
+      enabled: true
+      minAvailable: 1
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway

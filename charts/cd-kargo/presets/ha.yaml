@@ -1,0 +1,53 @@
+# High availability for Kargo's request-serving parts. OPT-IN: layer this
+# file before your own values. Written for a release named `kargo` (the
+# spread's label selector names the release: the upstream chart does not add
+# one of its own and does not template this value).
+#
+# The API server, the Kubernetes webhooks server (the admission webhook for
+# Kargo's own resources) and the external webhooks server (the receivers) run
+# two replicas each, with a PodDisruptionBudget that keeps one up and a
+# per-node spread. ScheduleAnyway, not DoNotSchedule: a hard spread leaves a
+# pod Pending whenever the pool is down to one node, while a node autoscaler
+# still tries to satisfy a soft spread first and provisions the second node
+# rather than stacking. The controller and the management controller stay at
+# one replica (leader-based).
+kargo:
+  api:
+    replicas: 2
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/instance: kargo
+            app.kubernetes.io/component: api
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 1
+  webhooksServer:
+    replicas: 2
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/instance: kargo
+            app.kubernetes.io/component: kubernetes-webhooks-server
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 1
+  externalWebhooksServer:
+    replicas: 2
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/instance: kargo
+            app.kubernetes.io/component: external-webhooks-server
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 1

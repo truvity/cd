@@ -1,0 +1,29 @@
+# Git webhooks refresh Applications; polling is the fallback. OPT-IN: layer
+# this file before your own values.
+#
+# - Polling every 300s (the upstream default is 120s) with a 60s jitter, so
+#   the repo server is not hit by every Application at once. A webhook
+#   refreshes within seconds; the forge does not redeliver a failed webhook,
+#   so polling still has to catch what it drops.
+# - Every webhook provider's secret reads the Secret `argocd-webhook`, key
+#   `secret`, which the installation provides (it must carry the label
+#   `app.kubernetes.io/part-of: argocd`, or Argo CD does not resolve the
+#   reference). Argo CD enables every provider's handler and, with no secret
+#   set, accepts any payload: giving all of them the same reference makes an
+#   unsigned payload of any provider fail verification. Bitbucket Cloud
+#   checks a UUID instead of a secret; the same value there matches no real
+#   hook.
+argo-cd:
+  configs:
+    cm:
+      timeout.reconciliation: 300s
+      timeout.reconciliation.jitter: 60s
+    secret:
+      githubSecret: $argocd-webhook:secret
+      gitlabSecret: $argocd-webhook:secret
+      bitbucketServerSecret: $argocd-webhook:secret
+      bitbucketUUID: $argocd-webhook:secret
+      gogsSecret: $argocd-webhook:secret
+      azureDevops:
+        username: argocd
+        password: $argocd-webhook:secret
