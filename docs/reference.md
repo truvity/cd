@@ -140,6 +140,17 @@ Application's `destination.name` resolves through it.
 | `stringData` | `true` writes `stringData` (readable); default `false` writes base64 `data`, which `kubectl apply` compares cleanly against the live object. |
 | `labels`, `annotations` | Yours, verbatim; the `argocd.argoproj.io/secret-type: cluster` label is always set. |
 
+## Go packages for a platform's generator
+
+`delivery` and `appproject` compute the rows the delivery charts are given,
+from facts the caller passes in; they read no files. `delivery.PinKey`,
+`KargoProject` and `KargoProjects` name a pin and its Kargo Project;
+`delivery.Product` and `PlatformCharts` build cd-pipeline's project rows from
+the clusters that own each pin, in the caller's promotion order;
+`delivery.ProberGranted` answers cd-delivery's `e2e.proberGranted`;
+`appproject.Deployer` builds the `<product>-<cluster>` AppProject whose
+deployer role one group holds.
+
 ## genesis
 
 `genesis.Run` seeds the repository credentials Secret, installs cd-argocd

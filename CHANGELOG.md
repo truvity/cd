@@ -7,6 +7,9 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Added:** Go package `delivery`, the delivery charts' rules a platform's generator needs before rendering: `PinKey` (`<camelCase product>Chart`), `KebabCase`, `KargoProject`/`KargoProjects` (a product's pin has the Project named after it, any other pin `platform-<kebab key>`), `KargoControllerNamespaces` (cd-kargo's own), `ValidAvailability` and `Platform.Complete` (interface 14's availability and database facts), `Suffixes`/`DefaultSuffixes`/`Renames` (cd-delivery `applicationSuffixes`), `Owners`, `Product` and `PlatformCharts` (the pipeline rows cd-pipeline renders, with the owned-but-undeclared and declared-but-unowned pins returned to the caller), and `ProberServiceAccount`/`ProberGranted`/`DefaultProberComponents` (cd-delivery's `e2e.proberGranted`). No chart changes.
+- **Added:** Go package `appproject`: `AppProject`/`Role` rows (cd-argocd and cd-pipeline `appProjects`), `Name` (`<product>-<cluster>`), `Policies`, `Deployer` (one deployer role, `DeployerActions` get/create/sync/delete), `Sort`, `ForNamespace`. No chart changes.
+
 ## v0.18.0
 
 - **Added:** `cd-cluster-registration`, a new chart with no upstream: one Argo CD cluster Secret per entry of `clusters` (`name`, `server`, `config` verbatim as indented JSON with sorted keys, `data` by default or `stringData`, labels and annotations). Renders Secrets and nothing else; nothing with no clusters.
