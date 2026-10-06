@@ -91,6 +91,14 @@ a string is replaced whole, and your values win. Pull it without installing:
 | Preset | What it sets |
 | --- | --- |
 | `health.yaml` | `argocd-cm` resource health customizations (Lua) for the kinds a GitOps install waits on: `Application` sync gate, `CustomResourceDefinition`, CloudNativePG `Cluster`/`Database`, `ValkeyCluster`, Keycloak, NACK `Stream`/`Consumer`, `*.services.k8s.aws`, `external-secrets.io/*`, `operator.cluster.x-k8s.io/*`, Gateway API `Gateway`/`GatewayClass`, Cluster API `Cluster`/`MachineDeployment`, `TalosControlPlane`. |
+| `health-opt-in.yaml` | Replaces `health.yaml`'s `Application` check (layer it after): only an Application labelled `truvity.io/sync-gating: "true"` counts for its parent; every other one reports Healthy at once, so a parent syncs as a plain fan-out. |
+| `ha.yaml` | API server and repo server: 2 replicas, a PDB (`minAvailable: 1`), a soft per-node spread. |
+| `on-demand.yaml` | Every component prefers on-demand nodes (`karpenter.sh/capacity-type`), never requires them. |
+| `core-only.yaml` | No ApplicationSet controller (`replicas: 0`), no notifications controller. |
+| `sso-only.yaml` | No local admin, a 24h session ceiling, `policy.default: role:none`, groups from the `groups` claim. Your values supply `oidc.config`, `url` and `policy.csv`. |
+| `webhook-refresh.yaml` | Polling every 300s with a 60s jitter; every webhook provider verifies against the Secret `argocd-webhook`, key `secret` (yours, labelled `app.kubernetes.io/part-of: argocd`). |
+| `metrics.yaml` | Metrics Services and ServiceMonitors for the application controller, the API server and the repo server (needs the ServiceMonitor CRD). |
+| `envoy-gateway.yaml` | A `BackendTrafficPolicy` on the server's HTTPRoute that lifts Envoy Gateway's 15s request timeout for the UI's event stream (needs Envoy Gateway's CRDs; via `extraObjects`, which your own `extraObjects` would replace). |
 
 The `Application` check has no exemption rule (which Applications should
 report Healthy at once is an estate's decision): keep your own copy of the
@@ -102,6 +110,46 @@ all of them: re-state the ones you want.
 Each check is run under Lua 5.1 against fixtures in `tests/health/` (`just
 health`). A preset is covered by a case under `tests/cases/cd-argocd/` that
 names it in a `presets` file, held to the same parity gate.
+
+## Presets (`cd-kargo`)
+
+Same mechanism as cd-argocd's (values files under `presets/`, layered before
+your values; on an Argo CD source, `helm.valueFiles: [presets/<name>.yaml]`).
+
+| Preset | What it sets |
+| --- | --- |
+| `ha.yaml` | API server, Kubernetes webhooks server, external webhooks server: 2 replicas, a PDB (`minAvailable: 1`), a soft per-node spread. Written for a release named `kargo` (the spread's label selector names it). |
+| `restricted.yaml` | `global.securityContext` for Pod Security `restricted` (the upstream chart puts it on every container). |
+| `on-demand.yaml` | Every pod prefers on-demand nodes (`karpenter.sh/capacity-type`). |
+| `metrics.yaml` | The controller's metrics Service and ServiceMonitor. |
+| `sso-only.yaml` | API and UI on, plaintext behind a TLS-terminating gateway, no admin account, OIDC on with `email` as the username. Your values supply the host, the issuer, the client ids, `users` and `admins`. |
+| `external-webhooks.yaml` | The external webhooks server's TLS terminated upstream. Your values supply its `host` and `basePath`. |
+
+## cd-cluster-registration
+
+One Argo CD cluster Secret per entry of `clusters`, in `namespace` (default:
+the release namespace), and nothing else. The Secret is the registration: an
+Application's `destination.name` resolves through it.
+
+| Key | Meaning |
+| --- | --- |
+| `name` | The registered name. Required. |
+| `secretName` | The Secret's name; default `cluster-<name>`. Two entries rendering the same Secret are refused. |
+| `server` | The API server URL (`https://`). Required. |
+| `config` | Argo CD's cluster config verbatim (`awsAuthConfig`, `execProviderConfig`, `tlsClientConfig`, ...), written as indented JSON with sorted keys. Required. |
+| `stringData` | `true` writes `stringData` (readable); default `false` writes base64 `data`, which `kubectl apply` compares cleanly against the live object. |
+| `labels`, `annotations` | Yours, verbatim; the `argocd.argoproj.io/secret-type: cluster` label is always set. |
+
+## genesis
+
+`genesis.Run` seeds the repository credentials Secret, installs cd-argocd
+with Helm (`Config.Presets`, then `Config.ValuesFile`; leave out presets
+whose objects need CRDs that do not exist yet, such as `metrics` and
+`envoy-gateway`), and applies the root Application. `genesis.ResolveRepoCreds`
+reads the GitHub App credentials from a `Store` (`genesis/ssmstore`: SSM
+SecureString parameters) and, when any is missing, reads all three from a
+`Seed` (`genesis.OnePassword`: the `op` CLI) and writes them back, so a
+repeated genesis needs no seed.
 
 ## Notes on the upstream charts
 

@@ -45,6 +45,15 @@ while IFS= read -r key; do
   have[$id]=1
 done < <(yq eval 'explode(.) | keys | .[]' "$tmp/combined.yaml")
 
+# presets/health-opt-in.yaml's checks, under an `opt-in.` prefix: the same
+# kinds as the health preset's, with a rule of their own.
+optin="$root/charts/cd-argocd/presets/health-opt-in.yaml"
+while IFS= read -r key; do
+  id="opt-in.${key#resource.customizations.health.}"
+  yq eval "$cm[\"$key\"]" "$optin" > "$tmp/lua/$id.lua"
+  have[$id]=1
+done < <(yq eval "$cm | keys | .[] | select(test(\"^resource\\.customizations\\.health\\.\"))" "$optin")
+
 for id in "${!have[@]}"; do
   checks=$((checks + 1))
   dir="$root/tests/health/$id"

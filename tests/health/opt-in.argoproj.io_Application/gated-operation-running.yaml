@@ -1,0 +1,12 @@
+# expect: Progressing
+# message: sync operation in progress
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: example
+  labels:
+    truvity.io/sync-gating: "true"
+status:
+  sync: {status: Synced}
+  health: {status: Healthy}
+  operationState: {phase: Running}

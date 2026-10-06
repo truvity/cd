@@ -1,0 +1,75 @@
+# The Application health check with OPT-IN gating. OPT-IN: layer this file
+# AFTER presets/health.yaml (it replaces that preset's Application check,
+# one key) and before your own values.
+#
+# presets/health.yaml's Application check makes every Application's health
+# count for its parent: an app-of-apps waits on each child. This variant
+# gates only the Applications labelled truvity.io/sync-gating=true; every
+# other Application reports Healthy to its parent at once, so a parent syncs
+# as a plain fan-out and never waits on a child. Waiting can deadlock: when a
+# child's fix has to flow through the very parent sync that waits on it. The
+# child's real health stays visible on the child itself. For a labelled
+# Application the check is presets/health.yaml's.
+argo-cd:
+  configs:
+    cm:
+      resource.customizations.health.argoproj.io_Application: |
+        hs = {}
+        hs.status = "Progressing"
+        hs.message = ""
+        -- OPT-IN gating (AA1 a, 2026-10-05, ADR-040): an Application's health
+        -- counts for its parent only when it carries
+        -- truvity.io/sync-gating="true". Nothing opts in today, so every
+        -- parent syncs as a plain fan-out and never waits on a child (the
+        -- waiting DEADLOCKED parents when a child's fix had to flow through
+        -- the very sync waiting on it: 3-layer wedge 2026-07-23). The child's
+        -- real health stays visible on the child Application itself. The
+        -- gate below is kept as the reserve option for bootstrap ordering.
+        if obj.metadata.labels == nil or obj.metadata.labels["truvity.io/sync-gating"] ~= "true" then
+          hs.status = "Healthy"
+          hs.message = "health gating is opt-in (truvity.io/sync-gating=true)"
+          return hs
+        end
+        -- A never-synced Application reports vacuous Healthy (empty resource
+        -- set) for a few seconds after creation, which lets app-of-apps sync
+        -- waves march past it before its first sync runs (observed: wave-45
+        -- ACK controllers admitted before the wave-37 iam stack created their
+        -- PodIdentityAssociations -> unrecoverable CrashLoop, since Pod
+        -- Identity injects credentials only at pod admission).
+        -- Gate on sync status: a wave is complete only when its Applications
+        -- are BOTH Synced and Healthy. (status.history is NOT a reliable
+        -- has-synced signal: Synced+Healthy apps were observed with empty
+        -- history.) Degraded passes through so real failures stay visible.
+        if obj.status ~= nil and obj.status.health ~= nil and obj.status.health.status == "Degraded" then
+          hs.status = "Degraded"
+          if obj.status.health.message ~= nil then
+            hs.message = obj.status.health.message
+          end
+          return hs
+        end
+        if obj.status == nil or obj.status.sync == nil or obj.status.sync.status ~= "Synced" then
+          hs.message = "waiting for sync to complete"
+          return hs
+        end
+        -- A running sync OPERATION means the app has not proven this revision:
+        -- comparison-based sync.status turns Synced as soon as resources match
+        -- git, while the operation may still be waiting on resource health or
+        -- running Sync/PostSync hooks (observed: the capi app reported Synced
+        -- while its PostSync registration hook had not run — waves marched
+        -- past an unregistered cluster). Failed/Error pass through as Degraded.
+        if obj.status.operationState ~= nil and obj.status.operationState.phase ~= nil and obj.status.operationState.phase ~= "Succeeded" then
+          if obj.status.operationState.phase == "Failed" or obj.status.operationState.phase == "Error" then
+            hs.status = "Degraded"
+            hs.message = obj.status.operationState.message or "sync operation failed"
+            return hs
+          end
+          hs.message = "sync operation in progress"
+          return hs
+        end
+        if obj.status.health ~= nil then
+          hs.status = obj.status.health.status
+          if obj.status.health.message ~= nil then
+            hs.message = obj.status.health.message
+          end
+        end
+        return hs

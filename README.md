@@ -16,6 +16,7 @@ way.
 | `cd-rollouts` — Argo Rollouts, from the upstream `argo-rollouts` chart 2.43.2 | `oci://ghcr.io/truvity/charts/cd-rollouts` |
 | `cd-delivery` — the Argo CD Applications that deliver a product's charts to a cluster; no upstream | `oci://ghcr.io/truvity/charts/cd-delivery` |
 | `cd-pipeline` — the Kargo delivery pipeline of a project: Project, Warehouse, Stages, promotion, verification, access; no upstream | `oci://ghcr.io/truvity/charts/cd-pipeline` |
+| `cd-cluster-registration` — Argo CD cluster Secrets from a list of clusters; no upstream | `oci://ghcr.io/truvity/charts/cd-cluster-registration` |
 
 The repository is also a Go module (`github.com/truvity/cd`). `chartgate`
 (`go run github.com/truvity/cd/cmd/chartgate -self-repo <your/repo>`) renders every Argo CD Helm
@@ -25,8 +26,10 @@ Application of a repository against its pinned chart and real values.
 published as the image `ghcr.io/truvity/cd/promotion-gate` (see
 [the reference](docs/reference.md#verification)).
 
-The `cluster-registration` chart is not here yet; it arrives one reviewed
-change at a time and is listed in the [CHANGELOG](CHANGELOG.md).
+The `genesis` package bootstraps an Argo CD installation (the repository
+credentials, from a store such as `genesis/ssmstore` seeded once from a
+password manager; the cd-argocd install with its presets; the root
+Application).
 
 ## Who it is for
 

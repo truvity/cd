@@ -1,0 +1,10 @@
+# Kargo's external webhook receivers behind a gateway that terminates TLS.
+# OPT-IN: layer this file before your own values, which supply the host
+# (`kargo.externalWebhooksServer.host`) and the path prefix the gateway routes
+# to the server (`kargo.externalWebhooksServer.basePath`; the server matches
+# the full path, so the route must not rewrite it).
+kargo:
+  externalWebhooksServer:
+    tls:
+      enabled: false
+      terminatedUpstream: true

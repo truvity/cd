@@ -1,0 +1,20 @@
+# Every preset, and the values they leave to the caller (neutral: example.com,
+# an issuer that does not exist).
+kargo:
+  api:
+    host: kargo.example.com
+    oidc:
+      issuerURL: https://issuer.example.com
+      clientID: kargo
+      cliClientID: kargo-cli
+      users:
+        claims:
+          iss:
+            - https://issuer.example.com
+      admins:
+        claims:
+          groups:
+            - example:admin
+  externalWebhooksServer:
+    host: kargo.example.com
+    basePath: /webhooks

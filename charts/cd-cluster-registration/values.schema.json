@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "cd-cluster-registration",
+  "description": "Argo CD cluster Secrets. Strict: a key the chart does not read is refused rather than ignored.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "namespace": {
+      "type": "string",
+      "description": "The namespace of the Secrets (Argo CD's); empty is the release namespace."
+    },
+    "clusters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "server", "config"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "description": "The registered name, what an Application's destination.name matches."
+          },
+          "secretName": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([-.a-z0-9]*[a-z0-9])?$",
+            "description": "The Secret's name; default cluster-<name>."
+          },
+          "server": {
+            "type": "string",
+            "pattern": "^https://",
+            "description": "The API server URL."
+          },
+          "config": {
+            "type": "object",
+            "minProperties": 1,
+            "description": "Argo CD's cluster config, verbatim; written as indented JSON with sorted keys."
+          },
+          "stringData": {
+            "type": "boolean",
+            "description": "Write stringData instead of base64 data."
+          },
+          "labels": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          },
+          "annotations": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

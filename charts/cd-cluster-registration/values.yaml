@@ -1,0 +1,27 @@
+# cd-cluster-registration: one Argo CD cluster Secret per entry of `clusters`.
+#
+# A cluster Secret IS the registration: Argo CD resolves an Application's
+# `destination.name` through the Secret whose `name` field matches, and
+# connects with its `server` and `config`. The facts (the API endpoint, the CA,
+# the role Argo CD assumes) belong to whoever created the cluster; this chart
+# only writes them in the shape Argo CD reads.
+#
+# With no clusters nothing is rendered.
+
+# The namespace the Secrets are created in: Argo CD's own. Empty means the
+# release namespace.
+namespace: ""
+
+# Each entry:
+#   name          the registered name (destination.name). Required.
+#   secretName    the Secret's name; default cluster-<name>.
+#   server        the API server URL. Required.
+#   config        Argo CD's cluster config, verbatim (awsAuthConfig,
+#                 execProviderConfig, tlsClientConfig, ...). Written as
+#                 indented JSON with sorted keys. Required.
+#   stringData    true writes the fields as stringData (readable in the
+#                 manifest); default false writes base64 `data`, which
+#                 `kubectl apply` compares cleanly against the live object.
+#   labels        extra labels (the secret-type label is always set).
+#   annotations   annotations, verbatim.
+clusters: []

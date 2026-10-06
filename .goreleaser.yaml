@@ -55,6 +55,6 @@ release:
 
     | | |
     |---|---|
-    | charts | `oci://ghcr.io/truvity/charts/{cd-argocd,cd-kargo,cd-rollouts,cd-delivery,cd-pipeline}:{{ .Version }}` |
+    | charts | `oci://ghcr.io/truvity/charts/{cd-argocd,cd-kargo,cd-rollouts,cd-delivery,cd-pipeline,cd-cluster-registration}:{{ .Version }}` |
     | promotion-gate image | `ghcr.io/truvity/cd/promotion-gate:{{ .Version }}` |
     | Go | `go get github.com/truvity/cd@{{ .Tag }}` |

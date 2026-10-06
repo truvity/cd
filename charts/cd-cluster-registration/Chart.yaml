@@ -1,0 +1,16 @@
+apiVersion: v2
+name: cd-cluster-registration
+description: >-
+  Argo CD cluster Secrets from a list of clusters: the registration that lets
+  an Application name a cluster as its destination. Renders Secrets and
+  nothing else.
+type: application
+# Stamped from the tag by the release workflow; never moved by hand.
+version: 0.0.0
+keywords:
+  - argocd
+  - gitops
+  - clusters
+home: https://github.com/truvity/cd
+sources:
+  - https://github.com/truvity/cd
