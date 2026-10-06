@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Added:** `cd-pipeline` renders Argo CD `AppProject`s from the opt-in `appProjects` map (name to `{labels, annotations, spec}`, `spec` verbatim) in `argocd.namespace`, so a pipeline and the projects of the Applications its Stages watch are one chart. The chart-wide `labels` and `annotations` are not put on them. Empty by default: every existing render is byte-identical.
+
 ## v0.13.0
 
 - **Behaviour change (interface 15 only; nothing changes for a product on 14 or lower, and no product declares 15 yet):** `products.<name>.postgres.ownerAccess` is **removed** (truvity/policy v1.47.0 amends step 15). The application ring never gets `database.owner` at 15 or higher; its long-running workloads get `database.app.*` only. A product that runs schema migrations declares the new `products.<name>.postgres.migrations: true` and is handed `database.migration.passwordSecret`, which its chart may mount only in a migration Job or hook Job. `migrations` below 15 is refused. Use `migrations`, not `ownerAccess`, from v0.13.0; v0.11.0's `ownerAccess` was never used by a pin.

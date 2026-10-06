@@ -5,3 +5,15 @@
 {{- range $p := .Values.projects }}
 {{- include "cd-pipeline.project" (dict "root" $ "p" $p) }}
 {{- end }}
+{{- /*
+Opt-in (a non-empty appProjects map): the Argo CD AppProjects of the projects
+the Stages watch. `spec` is verbatim; they land in argocd.namespace. The
+chart-wide labels and annotations are the Kargo objects' guard and are not
+put on them.
+*/ -}}
+{{- range $name, $ap := .Values.appProjects }}
+{{- $meta := dict "name" $name "namespace" ($.Values.argocd.namespace | default "argocd") }}
+{{- with $ap.labels }}{{- $_ := set $meta "labels" . }}{{- end }}
+{{- with $ap.annotations }}{{- $_ := set $meta "annotations" . }}{{- end }}
+{{- include "cd-pipeline.doc" (dict "apiVersion" "argoproj.io/v1alpha1" "kind" "AppProject" "metadata" $meta "spec" $ap.spec) }}
+{{- end }}
