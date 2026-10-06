@@ -192,3 +192,29 @@ func TestChartPathPrefersTheLiveCheckout(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestNormalizeRenderAndDeepMerge(t *testing.T) {
+	t.Parallel()
+
+	render := "---\n# Source: w/templates/own.yaml\nkind: Own\n---\n# Source: up/templates/a.yaml\n\nkind: A\n\n\n---\n# Source: up/templates/b.yaml\nkind: B\n"
+
+	got := NormalizeRender(render, "w/templates/")
+	if want := "---\n\nkind: A\n---\nkind: B\n"; got != want {
+		t.Errorf("NormalizeRender = %q, want %q", got, want)
+	}
+
+	merged := DeepMerge(
+		map[string]any{"a": map[string]any{"x": 1, "l": []any{1, 2}}, "b": 1},
+		map[string]any{"a": map[string]any{"y": 2, "l": []any{3}}},
+	)
+	if !Equal(merged, map[string]any{"a": map[string]any{"x": 1, "y": 2, "l": []any{3}}, "b": 1}) {
+		t.Errorf("DeepMerge = %v", merged)
+	}
+
+	w := Wrapper{Key: "up"}
+
+	flat := w.Flatten(map[string]any{"up": map[string]any{"v": 1, "global": map[string]any{"g": "nested", "h": 1}}, "global": map[string]any{"g": "root"}})
+	if !Equal(flat, map[string]any{"v": 1, "global": map[string]any{"g": "root", "h": 1}}) {
+		t.Errorf("Flatten = %v", flat)
+	}
+}
