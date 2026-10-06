@@ -62,3 +62,8 @@ promotedVersion:
 viewer: {}
 
 projects: []
+
+# Argo CD AppProjects of the projects, by name -> {labels, annotations, spec}
+# (spec is an AppProject spec verbatim). Rendered in argocd.namespace; the
+# chart-wide labels and annotations are not put on them. None by default.
+appProjects: {}

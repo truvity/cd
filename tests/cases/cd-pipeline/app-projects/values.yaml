@@ -1,0 +1,36 @@
+# The chart-wide annotations guard the Kargo objects; the AppProjects take only
+# their own labels and annotations, and land in argocd.namespace.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+annotations:
+  example.com/guard: "on"
+labels:
+  example.com/chart-wide: "yes"
+argocd:
+  namespace: delivery
+appProjects:
+  web-dev:
+    labels:
+      example.com/project: web
+    annotations:
+      example.com/note: first
+    spec:
+      description: The web project on dev
+      destinations:
+        - name: dev
+          namespace: web
+      sourceRepos:
+        - "*"
+  web-prod:
+    spec:
+      destinations:
+        - name: prod
+          namespace: web
+projects:
+  - name: web
+    chart:
+      repoURL: oci://registry.example.com/charts/web
+      semver: ">=1.0.0 <2.0.0"
+    stages:
+      - name: dev
+        autoPromote: true

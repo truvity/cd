@@ -617,6 +617,34 @@
           "stages"
         ]
       }
+    },
+    "appProjects": {
+      "type": "object",
+      "description": "Argo CD AppProjects, by name, rendered in `argocd.namespace` beside the pipeline: the projects whose Applications the Stages watch. Each entry's `spec` is the AppProject spec verbatim. Neither the chart-wide `labels` nor `annotations` apply to them (those guard Kargo objects).",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "annotations": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "spec": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "spec"
+        ]
+      }
     }
   }
 }
