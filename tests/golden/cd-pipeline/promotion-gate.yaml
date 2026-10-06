@@ -1,0 +1,311 @@
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: kargo-verify-dev
+  namespace: shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: shop-metrics-gate
+  namespace: shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: kargo-verify-shop-dev
+  namespace: cd-system
+rules:
+- apiGroups:
+  - argoproj.io
+  resourceNames:
+  - shop
+  resources:
+  - applications
+  verbs:
+  - get
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: kargo-verify-shop-dev
+  namespace: cd-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-verify-shop-dev
+subjects:
+- kind: ServiceAccount
+  name: kargo-verify-dev
+  namespace: shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: shop-dev-promoted-version
+  namespace: shop
+spec:
+  args:
+  - name: chart-version
+  metrics:
+  - count: 1
+    failureLimit: 0
+    name: promoted-version
+    provider:
+      job:
+        spec:
+          activeDeadlineSeconds: 1320
+          backoffLimit: 0
+          template:
+            spec:
+              containers:
+              - command:
+                - /ko-app/promotion-gate
+                - promoted-version
+                env:
+                - name: APPS
+                  value: shop
+                - name: CHART_REPO
+                  value: oci://registry.example.com/charts/shop
+                - name: CHART_NAME
+                  value: ""
+                - name: EXPECTED
+                  value: '{{args.chart-version}}'
+                - name: WAIT_SECONDS
+                  value: "1200"
+                - name: POLL_SECONDS
+                  value: "20"
+                - name: ARGOCD_NAMESPACE
+                  value: cd-system
+                image: ghcr.io/truvity/cd/promotion-gate:0.18.0
+                name: check
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 65532
+                runAsNonRoot: true
+                runAsUser: 65532
+                seccompProfile:
+                  type: RuntimeDefault
+              serviceAccountName: kargo-verify-dev
+          ttlSecondsAfterFinished: 21600
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: shop-dev-metrics-gate
+  namespace: shop
+spec:
+  args:
+  - name: chart-version
+  metrics:
+  - count: 1
+    failureLimit: 0
+    name: metrics-gate
+    provider:
+      job:
+        spec:
+          activeDeadlineSeconds: 2100
+          backoffLimit: 0
+          template:
+            spec:
+              containers:
+              - command:
+                - /ko-app/promotion-gate
+                - metrics-gate
+                env:
+                - name: CHART_VERSION
+                  value: '{{args.chart-version}}'
+                - name: PROJECT_NAME
+                  value: shop
+                - name: WORKLOAD_NAMESPACE
+                  value: shop
+                - name: WORKLOAD_RELEASE
+                  value: shop
+                - name: ISSUER_HOST
+                  value: issuer.example.com
+                - name: METRICS_BASE_URL
+                  value: https://metrics.example.com/prometheus
+                - name: SA_TOKEN_FILE
+                  value: /var/run/secrets/issuer/token
+                - name: PHASE1_SECONDS
+                  value: "900"
+                - name: BAKE_SECONDS
+                  value: "900"
+                - name: SCRAPE_LAG_SECONDS
+                  value: "30"
+                - name: POLL_SECONDS
+                  value: "15"
+                - name: MIN_JOURNEYS
+                  value: "20"
+                - name: MAX_FAILURE_RATIO
+                  value: "0.05"
+                - name: CHECK_FIRING_ALERTS
+                  value: "true"
+                - name: PROBER_JOURNEY_METRIC
+                  value: probe_journey_total
+                - name: E2E_JOB_REQUIRED
+                  value: "false"
+                image: ghcr.io/truvity/cd/promotion-gate:0.18.0
+                name: check
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+                volumeMounts:
+                - mountPath: /var/run/secrets/issuer
+                  name: issuer-token
+                  readOnly: true
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 65532
+                runAsNonRoot: true
+                runAsUser: 65532
+                seccompProfile:
+                  type: RuntimeDefault
+              serviceAccountName: shop-metrics-gate
+              volumes:
+              - name: issuer-token
+                projected:
+                  sources:
+                  - serviceAccountToken:
+                      audience: issuer
+                      expirationSeconds: 3600
+                      path: token
+          ttlSecondsAfterFinished: 21600
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  name: shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: shop
+  namespace: shop
+spec:
+  promotionPolicies:
+  - autoPromotionEnabled: true
+    stage: dev
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: dev
+  namespace: shop
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/versions/dev.yaml
+          updates:
+          - key: shop
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore: promote shop ${{ chartFrom(vars.chartRepo).Version }} to
+            dev'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/shop
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: shop
+    sources:
+      direct: true
+  verification:
+    analysisTemplates:
+    - name: shop-dev-promoted-version
+    - name: shop-dev-metrics-gate
+    args:
+    - name: chart-version
+      value: ${{ chartFrom("oci://registry.example.com/charts/shop").Version }}
+
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  name: shop
+  namespace: shop
+spec:
+  freightCreationPolicy: Automatic
+  interval: 5m0s
+  subscriptions:
+  - chart:
+      discoveryLimit: 20
+      repoURL: oci://registry.example.com/charts/shop
+      semverConstraint: '>=1.0.0 <2.0.0'
