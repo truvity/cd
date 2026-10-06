@@ -1,0 +1,10 @@
+# expect: Healthy
+# message: health gating is opt-in (truvity.io/sync-gating=true)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: example
+  labels:
+    truvity.io/sync-gating: "false"
+status:
+  sync: {status: OutOfSync}

@@ -69,3 +69,24 @@ func TestClusterSecretYAML(t *testing.T) {
 		}
 	}
 }
+
+// TestChartArgsLayersThePresetsInOrder: named presets replace the default
+// health-only layer, in the given order, all before the values file.
+func TestChartArgsLayersThePresetsInOrder(t *testing.T) {
+	t.Parallel()
+
+	args := ChartArgs("argocd", "/repo/v.yaml", "/c", "health", "ha", "sso-only")
+
+	var files []string
+
+	for i, a := range args {
+		if a == "-f" {
+			files = append(files, args[i+1])
+		}
+	}
+
+	want := []string{"/c/presets/health.yaml", "/c/presets/ha.yaml", "/c/presets/sso-only.yaml", "/repo/v.yaml"}
+	if !slices.Equal(files, want) {
+		t.Errorf("value layers = %v, want %v", files, want)
+	}
+}

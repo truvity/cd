@@ -1,0 +1,17 @@
+# Prefer on-demand nodes for every Kargo pod. OPT-IN: layer this file before
+# your own values.
+#
+# A spot reclaim pauses promotions. Preferred, never required: a spot node
+# still takes the pods when no on-demand capacity is up. The node label is
+# Karpenter's (karpenter.sh/capacity-type), which a node pool that allows both
+# capacity types sets on every node.
+global:
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - key: karpenter.sh/capacity-type
+                operator: In
+                values: [on-demand]
