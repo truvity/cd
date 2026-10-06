@@ -18,7 +18,7 @@ that passes its own dict gets the same refusal of an unknown key from
 {{- $products := .products | default dict -}}
 {{- $docs := list -}}
 {{- if $products -}}
-{{- include "cd-delivery.assertKeys" (dict "what" "platform" "got" $plat "allowed" (list "tier" "finalizer" "sync" "syncRetry" "clusterName" "argocdNamespace" "applicationPrefix" "appProject" "applicationLabels" "waves" "chartRegistry" "cloud" "postgres" "events" "database" "identity" "telemetry" "e2e" "availability")) -}}
+{{- include "cd-delivery.assertKeys" (dict "what" "platform" "got" $plat "allowed" (list "tier" "finalizer" "sync" "syncRetry" "clusterName" "argocdNamespace" "applicationPrefix" "applicationSuffixes" "appProject" "applicationLabels" "waves" "chartRegistry" "cloud" "postgres" "events" "database" "identity" "telemetry" "e2e" "availability")) -}}
 {{- range $name := (keys $products | sortAlpha) -}}
 {{- $p := get $products $name -}}
 {{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s" $name) "got" $p "allowed" (list "pin" "interface" "repository" "hostname" "parentRef" "surfaces" "bucketSlug" "workloadIdentity" "natsIdentity" "mtls" "postgres" "e2e" "faro" "alerts" "identityProviders" "access" "product" "values" "ignoreDifferences")) -}}
@@ -63,13 +63,19 @@ ring composed. Call with (dict "ctx" <product ctx> "ring" infra|app|e2e
 {{- $p := $c.p -}}
 {{- $ring := .ring -}}
 {{- $suffix := get (dict "infra" "-infra" "app" "" "e2e" "-e2e") $ring -}}
+{{- /* The Application's NAME may take its own suffix per ring
+       (platform.applicationSuffixes, e.g. infra: "-inf", app: "-app"); the
+       chart, its repository and the Helm release keep `$suffix`, so the
+       objects the product's charts render keep their names. */ -}}
+{{- $nameSuffix := $suffix -}}
+{{- with $plat.applicationSuffixes -}}{{- if hasKey . $ring -}}{{- $nameSuffix = index . $ring -}}{{- end -}}{{- end -}}
 {{- $cluster := required "cd-delivery: platform.clusterName is required" $plat.clusterName -}}
 {{- $labels := dict -}}
 {{- range $k, $v := ($plat.applicationLabels | default dict) -}}
 {{- $_ := set $labels $k (include "cd-delivery.fill" (dict "s" $v "product" $name "cluster" $cluster)) -}}
 {{- end -}}
 {{- if not (hasKey $plat "applicationPrefix") -}}{{- fail "cd-delivery: platform.applicationPrefix is required (it may be empty)" -}}{{- end -}}
-{{- $meta := dict "name" (printf "%s%s%s" (toString $plat.applicationPrefix) $name $suffix) "namespace" (required "cd-delivery: platform.argocdNamespace is required" $plat.argocdNamespace) "annotations" (dict) -}}
+{{- $meta := dict "name" (printf "%s%s%s" (toString $plat.applicationPrefix) $name $nameSuffix) "namespace" (required "cd-delivery: platform.argocdNamespace is required" $plat.argocdNamespace) "annotations" (dict) -}}
 {{- $e2eOpts := $p.e2e | default dict -}}
 {{- /* A Kargo Stage may only sync an Application that names it. Only the
        end-to-end Application is ever handed to a Stage this way. */ -}}
