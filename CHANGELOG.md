@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.17.0
+
 - **Added:** `cd-delivery` `platform.applicationSuffixes` (`infra`, `app`, `e2e`): the suffix of each ring's Application NAME, for a platform that names them `<product>-inf` and `<product>-app`. The chart, its repository and the Helm release keep `<product>-infra` and `<product>`, so the objects a product's charts render keep their names. Unset: the names stay `-infra`, none and `-e2e`, and every existing render is byte-identical.
 
 ## v0.16.0
