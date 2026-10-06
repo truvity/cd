@@ -312,7 +312,7 @@ and per project `name`, `stages` and, unless `warehouse.subscriptions` is given,
 | `promotion.*` | What a promotion writes: `branch`, `pinFile` and `pinKey` (tokens `{stage}`, `{project}`, `{slug}`, `{pinKey}`), `commitMessage` (also `{version}`), `prTitle`, `prLabels`, `provider`, and the `retry` and `gate` budgets. All have neutral defaults. |
 | `waves` | The Argo CD sync-wave of each kind of object: `project`, `warehouse`, `credentials`, `config`, `stage` (0 to 4). |
 | `argocd.namespace` | Where the Stages' Applications live (`argocd`). |
-| `jobs`, `promotedVersion` | What the verification Jobs run as (`runAsUser`, `runAsGroup`, TTL, headroom) and the built-in check's `image`, `jqImage`, `waitSeconds`, `pollSeconds` and optional replacement `script`. |
+| `jobs`, `promotedVersion` | What the verification Jobs run as (`runAsUser`, `runAsGroup`, TTL, headroom) and the built-in check's `image`, `jqImage`, `waitSeconds`, `pollSeconds`, optional replacement `script`, and `gateImage` (empty by default): the `promotion-gate` image, which runs the check as Go instead of the script (see [Verification](#verification)). |
 | `viewer` | `namespace`, `serviceAccount`, `role` and `bindingName` of the shared read-only ServiceAccount each project binds; `global.claims` also renders its namespace and ServiceAccount. |
 | `labels`, `annotations` | Labels and annotations on every object, beside the sync-wave. None by default; a consumer adopting objects that already exist sets Argo CD's `argocd.argoproj.io/sync-options: Prune=false,Delete=false` here to guard them. |
 | `appProjects` | Argo CD `AppProject`s by name, each `{labels, annotations, spec}` with `spec` verbatim, rendered in `argocd.namespace` beside the pipeline. The chart-wide `labels` and `annotations` (the Kargo objects' guard) are not put on them. None by default. |
@@ -355,6 +355,38 @@ Argo CD namespace that allows `get` on exactly those Applications; the chart
 renders both. The script is shipped in the chart (`files/`); `promotedVersion.script`
 replaces it.
 
+`promotedVersion.gateImage` runs the same check as Go instead: the Job runs
+that image with `/ko-app/promotion-gate promoted-version` and the same
+environment (`JQ` aside), and the chart renders no script ConfigMap and no jq
+volume for it, so neither `promotedVersion.image` nor `.jqImage` is needed by
+it (the end-to-end operation check still uses both). The image is
+`ghcr.io/truvity/cd/promotion-gate:<release>`, built from this repository's
+`cmd/promotion-gate` at every tag; the check decides exactly as the script
+does (`promotiongate.PromotedVersion`). Empty, the default: the script, and
+the render is unchanged.
+
+The same image's `metrics-gate` subcommand is the bake-window metrics gate
+(`promotiongate.MetricsGate`): wait until the promoted version is the only one
+serving, then pass on a sample count of prober journeys read from a
+Prometheus-compatible endpoint, failing early on a failure ratio, a container
+restart, a firing alert or the version's own failed end-to-end Job. It needs
+no chart support of its own: it is a `verification.checks[]` entry with
+`image`, `command: [/ko-app/promotion-gate, metrics-gate]`, its environment
+in `env` and its ServiceAccount token projected for the issuer's audience in
+`volumes` and `volumeMounts` (`tests/cases/cd-pipeline/promotion-gate` is a
+worked example). Its environment: `CHART_VERSION`, `PROJECT_NAME`,
+`WORKLOAD_NAMESPACE`, `WORKLOAD_RELEASE`, `ISSUER_HOST`, `METRICS_BASE_URL`,
+`SA_TOKEN_FILE`, `PHASE1_SECONDS`, `BAKE_SECONDS`, `SCRAPE_LAG_SECONDS`,
+`POLL_SECONDS`, `MIN_JOURNEYS`, `MAX_FAILURE_RATIO`, `CHECK_FIRING_ALERTS`,
+`PROBER_JOURNEY_METRIC` (required); `CA_BUNDLE` (the metrics endpoint's
+private root; the token exchange always verifies against the system trust
+store), `E2E_JOB_REQUIRED` (`true`), `TOKEN_ENDPOINT`
+(`https://$ISSUER_HOST/token`), `METRICS_QUERY_URL`
+(`$METRICS_BASE_URL/api/v1/query`), `EXCHANGE_CLIENT_ID` and
+`EXCHANGE_AUDIENCE` (`metrics-gate`), `MAX_ITERATIONS` (`0`, a test bound).
+Exit 0 passes, 1 fails; 2 is a missing or malformed input and 5 a response
+that is not the JSON it should be.
+
 `verification.checks[]` are Job checks of your own: an AnalysisTemplate with one
 measurement, run once, decided by the Job's exit code, under the `restricted` Pod
 Security profile. `script` becomes a ConfigMap mounted at `/scripts`; `env`,
@@ -364,4 +396,4 @@ names templates that exist already.
 Names derived by the chart, from the project's `name` and `slug` and the Stage's
 `name`: `kargo-verify-<stage>` (ServiceAccount), `kargo-verify-<project>-<stage>`
 (Role and RoleBinding in the Argo CD namespace), `<slug>-<stage>-verify-promoted-version`
-(ConfigMap) and `<slug>-<stage>-promoted-version` (AnalysisTemplate).
+(ConfigMap, not with `gateImage`) and `<slug>-<stage>-promoted-version` (AnalysisTemplate).

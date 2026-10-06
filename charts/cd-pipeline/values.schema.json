@@ -250,6 +250,10 @@
         "script": {
           "type": "string",
           "description": "Replaces the script the chart ships."
+        },
+        "gateImage": {
+          "type": "string",
+          "description": "The promotion-gate image (ghcr.io/truvity/cd/promotion-gate). Set: the promoted-version check runs its Go check, `/ko-app/promotion-gate promoted-version`, with no script ConfigMap and no jq volume, and needs neither `image` nor `jqImage`. Empty (the default): the shell script."
         }
       },
       "description": "The built-in promoted-version check."
@@ -453,7 +457,7 @@
                   "properties": {
                     "promotedVersion": {
                       "type": "boolean",
-                      "description": "Verify that the Stage's Applications render the promoted chart version (needs `applications` and `promotedVersion.image`, `.jqImage`)."
+                      "description": "Verify that the Stage's Applications render the promoted chart version (needs `applications`, and `promotedVersion.gateImage` or `promotedVersion.image` and `.jqImage`)."
                     },
                     "checks": {
                       "type": "array",

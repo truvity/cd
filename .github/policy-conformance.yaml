@@ -1,0 +1,13 @@
+# Named exceptions to the component contract's checkable rules. See
+# https://github.com/truvity/policy/blob/master/docs/contracts/component.md#exemptions
+#
+# C1: the repository ships an image (promotion-gate), which makes the rule ask
+# every committed appVersion to be the 0.0.0 placeholder. These three charts
+# wrap an upstream chart: their appVersion records the upstream release the
+# vendored archive carries (hack/check-app-version.sh holds it there, and the
+# release keeps it with chart-app-version: chart). It names that software, not
+# an image this repository builds. Their version stays 0.0.0.
+exempt:
+  C1:
+    reason: wrapper charts whose appVersion records the vendored upstream release (hack/check-app-version.sh), not an image this repository builds
+    charts: [cd-argocd, cd-kargo, cd-rollouts]

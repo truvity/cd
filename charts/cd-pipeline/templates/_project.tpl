@@ -111,13 +111,20 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- include "cd-pipeline.doc" (dict "apiVersion" "v1" "kind" "ServiceAccount" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $sa "ns" $name "wave" $w.config) | fromYaml)) -}}
 {{- include "cd-pipeline.doc" (dict "apiVersion" "rbac.authorization.k8s.io/v1" "kind" "Role" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $role "ns" $ns "wave" $w.config) | fromYaml) "rules" (list (dict "apiGroups" (list "argoproj.io") "resources" (list "applications") "resourceNames" $apps "verbs" (list "get")))) -}}
 {{- include "cd-pipeline.doc" (dict "apiVersion" "rbac.authorization.k8s.io/v1" "kind" "RoleBinding" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $role "ns" $ns "wave" $w.config) | fromYaml) "roleRef" (dict "apiGroup" "rbac.authorization.k8s.io" "kind" "Role" "name" $role) "subjects" (list (dict "kind" "ServiceAccount" "name" $sa "namespace" $name))) -}}
+{{- $env := list (dict "name" "APPS" "value" (join " " $apps)) (dict "name" "CHART_REPO" "value" $repoURL) (dict "name" "CHART_NAME" "value" $chartName) (dict "name" "EXPECTED" "value" (printf "%s%s" $prefix "{{args.chart-version}}")) (dict "name" "WAIT_SECONDS" "value" (toString (int $pv.waitSeconds))) (dict "name" "POLL_SECONDS" "value" (toString (int $pv.pollSeconds))) -}}
+{{- if $pv.gateImage -}}
+{{- /* The Go check (truvity/cd's promotion-gate image): no script, no jq. */ -}}
+{{- if ne $ns "argocd" -}}{{- $env = append $env (dict "name" "ARGOCD_NAMESPACE" "value" $ns) -}}{{- end -}}
+{{- include "cd-pipeline.jobCheck" (dict "root" $r "name" $at "ns" $name "metric" "promoted-version" "args" (list "chart-version") "sa" $sa "image" $pv.gateImage "command" (list "/ko-app/promotion-gate" "promoted-version") "env" $env "deadline" (add (int $pv.waitSeconds) $v.jobs.headroomSeconds)) -}}
+{{- else -}}
 {{- $script := $pv.script | default ($r.Files.Get "files/verify-promoted-version.sh") -}}
 {{- include "cd-pipeline.doc" (dict "apiVersion" "v1" "kind" "ConfigMap" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $cm "ns" $name "wave" $w.config) | fromYaml) "data" (dict "verify-promoted-version.sh" $script)) -}}
-{{- $env := list (dict "name" "APPS" "value" (join " " $apps)) (dict "name" "CHART_REPO" "value" $repoURL) (dict "name" "CHART_NAME" "value" $chartName) (dict "name" "EXPECTED" "value" (printf "%s%s" $prefix "{{args.chart-version}}")) (dict "name" "WAIT_SECONDS" "value" (toString (int $pv.waitSeconds))) (dict "name" "POLL_SECONDS" "value" (toString (int $pv.pollSeconds))) (dict "name" "JQ" "value" "/opt/jq/jq") -}}
+{{- $env = append $env (dict "name" "JQ" "value" "/opt/jq/jq") -}}
 {{- if ne $ns "argocd" -}}{{- $env = append $env (dict "name" "ARGOCD_NAMESPACE" "value" $ns) -}}{{- end -}}
 {{- $mounts := list (dict "name" "script" "mountPath" "/scripts" "readOnly" true) (dict "name" "jq-tool" "mountPath" "/opt/jq" "readOnly" true) -}}
 {{- $vols := list (include "cd-pipeline.scriptVolume" (dict "configMap" $cm) | fromYaml) (dict "name" "jq-tool" "image" (dict "reference" (required "cd-pipeline: promotedVersion.jqImage is required" $pv.jqImage) "pullPolicy" "IfNotPresent")) -}}
 {{- include "cd-pipeline.jobCheck" (dict "root" $r "name" $at "ns" $name "metric" "promoted-version" "args" (list "chart-version") "sa" $sa "image" (required "cd-pipeline: promotedVersion.image is required" $pv.image) "command" (list "/bin/sh" "/scripts/verify-promoted-version.sh") "env" $env "mounts" $mounts "volumes" $vols "deadline" (add (int $pv.waitSeconds) $v.jobs.headroomSeconds)) -}}
+{{- end -}}
 {{- end -}}
 
 {{- /* The end-to-end operation check: that the Promotion's sync of the end-to-end Application ran the suite hook for the promoted version and it succeeded. */ -}}
