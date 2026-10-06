@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.15.0
+
 - **Added:** `parity.Wrapper`, the zero-diff proof of a wrapper chart as one shared helper (layered values deep-merged, flattened to the upstream chart's own shape, both rendered, `# Source:` comments and the wrapper's own templates held out, compared byte for byte), with `DeepMerge` and `NormalizeRender`. `hack/parity.sh` is now a thin entry point to the Go test `tests/proof` built on it; the gate's verdict is unchanged. Other repositories that wrap an upstream chart use `parity.Wrapper` instead of keeping a copy of the shell script. No chart changes; no render changes.
 
 ## v0.14.0
