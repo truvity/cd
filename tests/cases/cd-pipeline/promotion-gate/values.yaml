@@ -1,0 +1,80 @@
+# The Go promotion gate (truvity/cd's promotion-gate image) for both checks:
+# `promotedVersion.gateImage` makes the promoted-version check run the image
+# (no script ConfigMap, no jq volume, and neither `image` nor `jqImage`
+# needed), and the metrics gate is an ordinary Job check of the project's own
+# that runs the same image's other subcommand, its ServiceAccount token
+# projected for the issuer's audience. Argo CD lives outside `argocd`, so the
+# check is told where.
+argocd:
+  namespace: cd-system
+git:
+  repoURL: https://git.example.com/acme/environments.git
+promotedVersion:
+  gateImage: ghcr.io/truvity/cd/promotion-gate:0.18.0
+  waitSeconds: 1200
+  pollSeconds: 20
+projects:
+  - name: shop
+    pinKey: shop
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    stages:
+      - name: dev
+        autoPromote: true
+        mode: direct
+        applications: [shop]
+        verification:
+          promotedVersion: true
+          checks:
+            - name: shop-dev-metrics-gate
+              metric: metrics-gate
+              serviceAccount: shop-metrics-gate
+              image: ghcr.io/truvity/cd/promotion-gate:0.18.0
+              command: [/ko-app/promotion-gate, metrics-gate]
+              env:
+                - name: CHART_VERSION
+                  value: "{{args.chart-version}}"
+                - name: PROJECT_NAME
+                  value: shop
+                - name: WORKLOAD_NAMESPACE
+                  value: shop
+                - name: WORKLOAD_RELEASE
+                  value: shop
+                - name: ISSUER_HOST
+                  value: issuer.example.com
+                - name: METRICS_BASE_URL
+                  value: https://metrics.example.com/prometheus
+                - name: SA_TOKEN_FILE
+                  value: /var/run/secrets/issuer/token
+                - name: PHASE1_SECONDS
+                  value: "900"
+                - name: BAKE_SECONDS
+                  value: "900"
+                - name: SCRAPE_LAG_SECONDS
+                  value: "30"
+                - name: POLL_SECONDS
+                  value: "15"
+                - name: MIN_JOURNEYS
+                  value: "20"
+                - name: MAX_FAILURE_RATIO
+                  value: "0.05"
+                - name: CHECK_FIRING_ALERTS
+                  value: "true"
+                - name: PROBER_JOURNEY_METRIC
+                  value: probe_journey_total
+                - name: E2E_JOB_REQUIRED
+                  value: "false"
+              volumeMounts:
+                - name: issuer-token
+                  mountPath: /var/run/secrets/issuer
+                  readOnly: true
+              volumes:
+                - name: issuer-token
+                  projected:
+                    sources:
+                      - serviceAccountToken:
+                          audience: issuer
+                          expirationSeconds: 3600
+                          path: token
+              deadlineSeconds: 2100

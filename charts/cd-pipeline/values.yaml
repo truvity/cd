@@ -52,10 +52,14 @@ jobs:
 
 # The built-in promoted-version check (see `stages[].verification.promotedVersion`).
 # `image` (a shell with curl) and `jqImage` (an image holding /jq) are required
-# by a stage that turns the check on.
+# by a stage that turns the check on, unless `gateImage` is set: then the check
+# runs that image's Go check (truvity/cd's promotion-gate image,
+# `/ko-app/promotion-gate promoted-version`) with no script and no jq. The
+# end-to-end operation check still needs `image` and `jqImage`.
 promotedVersion:
   waitSeconds: 1500
   pollSeconds: 15
+  gateImage: ""
 
 # The read-only access every signed-in user has: a RoleBinding in each project
 # to a ServiceAccount that lives in one shared namespace. Empty renders none.

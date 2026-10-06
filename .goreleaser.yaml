@@ -2,11 +2,59 @@ version: 2
 
 project_name: cd
 
-# Chart-only repository: goreleaser cuts the GitHub release and its
-# changelog; the artifacts are the Helm charts, packaged and pushed by the
-# shared release workflow after this.
+# goreleaser cuts the GitHub release and its changelog, and builds the one
+# image this repository ships: `promotion-gate` (cmd/promotion-gate, the
+# Kargo verification checks of cd-pipeline), published with ko. The Helm
+# charts are packaged and pushed by the shared release workflow after this.
+# chartgate is a `go run` tool, not a release artifact.
 builds:
-  - skip: true
+  - id: promotion-gate
+    main: ./cmd/promotion-gate
+    binary: promotion-gate
+    env: [CGO_ENABLED=0]
+    # linux only: the image is what runs it, and a Kargo Job is its only
+    # caller.
+    goos: [linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s -w]
+
+archives:
+  - id: promotion-gate
+    ids: [promotion-gate]
+    formats: [tar.gz]
+    name_template: "promotion-gate_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+kos:
+  # base_import_paths appends the cmd directory's basename, so with
+  # ko-docker-repo ghcr.io/truvity/cd (.github/workflows/release.yaml) the
+  # image is ghcr.io/truvity/cd/promotion-gate, and the binary sits at
+  # /ko-app/promotion-gate (cd-pipeline's promotedVersion.gateImage runs it).
+  - id: promotion-gate
+    build: promotion-gate
+    tags:
+      - "{{ .Version }}"
+      - "{{ if not .IsSnapshot }}latest{{ end }}"
+    platforms: [linux/amd64, linux/arm64]
+    bare: true
+    preserve_import_paths: false
+    base_import_paths: true
+    base_image: gcr.io/distroless/static:nonroot
+    sbom: none
+    labels:
+      org.opencontainers.image.title: promotion-gate
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.source: https://github.com/truvity/cd
 
 changelog:
   use: github-native
+
+release:
+  header: |
+    ## truvity/cd {{ .Tag }}
+
+    | | |
+    |---|---|
+    | charts | `oci://ghcr.io/truvity/charts/{cd-argocd,cd-kargo,cd-rollouts,cd-delivery,cd-pipeline}:{{ .Version }}` |
+    | promotion-gate image | `ghcr.io/truvity/cd/promotion-gate:{{ .Version }}` |
+    | Go | `go get github.com/truvity/cd@{{ .Tag }}` |

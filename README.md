@@ -20,10 +20,13 @@ way.
 The repository is also a Go module (`github.com/truvity/cd`). `chartgate`
 (`go run github.com/truvity/cd/cmd/chartgate -self-repo <your/repo>`) renders every Argo CD Helm
 Application of a repository against its pinned chart and real values.
+`promotiongate` holds the two Kargo verification checks of `cd-pipeline` as Go
+(the promoted-version check and the bake-window metrics gate); its command is
+published as the image `ghcr.io/truvity/cd/promotion-gate` (see
+[the reference](docs/reference.md#verification)).
 
-The `cluster-registration` chart and the promotion gate binary are not here yet; they
-arrive one reviewed change at a time and are listed in the
-[CHANGELOG](CHANGELOG.md).
+The `cluster-registration` chart is not here yet; it arrives one reviewed
+change at a time and is listed in the [CHANGELOG](CHANGELOG.md).
 
 ## Who it is for
 
@@ -142,8 +145,9 @@ just vendor cd-argocd   # re-vendor the upstream archive after moving its pin
 
 ## Releasing
 
-A tag `vX.Y.Z` publishes both charts at that version to
-`oci://ghcr.io/truvity/charts`. The first release is hand-cut. Automatic
+A tag `vX.Y.Z` publishes every chart at that version to
+`oci://ghcr.io/truvity/charts`, and the `promotion-gate` image as
+`ghcr.io/truvity/cd/promotion-gate:X.Y.Z`. The first release is hand-cut. Automatic
 patch releases are off until they are armed on purpose; minors and majors
 are always manual.
 

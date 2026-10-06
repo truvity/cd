@@ -1,7 +1,7 @@
-# Tag-triggered release, the shared implementation. Chart-only: goreleaser
-# cuts the GitHub release and its changelog (builds are skipped, see
-# .goreleaser.yaml), and each chart is then packaged at the tag's version and
-# pushed to oci://ghcr.io/truvity/charts/<name>.
+# Tag-triggered release, the shared implementation: goreleaser cuts the
+# GitHub release and its changelog and builds the promotion-gate image with ko
+# (see .goreleaser.yaml), and each chart is then packaged at the tag's version
+# and pushed to oci://ghcr.io/truvity/charts/<name>.
 #
 # The caller grants the permissions because a reusable workflow can narrow
 # them but never widen them.
@@ -35,3 +35,7 @@ jobs:
       # it to the vendored archive), while version is the tag. cd-delivery and
       # cd-pipeline have no upstream and no appVersion.
       chart-app-version: chart
+      # ko names the image after cmd/promotion-gate's own directory
+      # (base_import_paths in .goreleaser.yaml), so this nests it as
+      # ghcr.io/truvity/cd/promotion-gate.
+      ko-docker-repo: ghcr.io/truvity/cd

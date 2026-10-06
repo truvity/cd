@@ -7,6 +7,9 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Added:** package `promotiongate` and its command `cmd/promotion-gate`, published as the image `ghcr.io/truvity/cd/promotion-gate` (distroless, linux/amd64 and arm64) at every tag: the two Kargo verification checks of a pipeline as Go, so their Job image needs no shell, curl or jq. `promotion-gate promoted-version` is `cd-pipeline`'s promoted-version check; `promotion-gate metrics-gate` is the bake-window metrics gate (wait until the promoted version is the only one serving, then pass on a sample count of prober journeys, failing early on a failure ratio, a restart, a firing alert or the version's own failed e2e Job). Both read the environment the shell scripts read and decide exactly as they did, exit codes included; every scenario of the scripts' own test suites is ported, and the jq and awk semantics are proven against real jq and busybox awk.
+- **Added:** `cd-pipeline` `promotedVersion.gateImage` (empty by default): set to the `promotion-gate` image, the promoted-version check runs it (`/ko-app/promotion-gate promoted-version`) with no script ConfigMap and no jq volume, and needs neither `promotedVersion.image` nor `.jqImage`. Unset, every existing render is byte-identical. The metrics gate needs no chart change: it is a `verification.checks[]` entry running the same image (new golden `promotion-gate`).
+
 ## v0.17.0
 
 - **Added:** `cd-delivery` `platform.applicationSuffixes` (`infra`, `app`, `e2e`): the suffix of each ring's Application NAME, for a platform that names them `<product>-inf` and `<product>-app`. The chart, its repository and the Helm release keep `<product>-infra` and `<product>`, so the objects a product's charts render keep their names. Unset: the names stay `-infra`, none and `-e2e`, and every existing render is byte-identical.
