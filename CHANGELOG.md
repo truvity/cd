@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.18.0
+
 - **Added:** `cd-cluster-registration`, a new chart with no upstream: one Argo CD cluster Secret per entry of `clusters` (`name`, `server`, `config` verbatim as indented JSON with sorted keys, `data` by default or `stringData`, labels and annotations). Renders Secrets and nothing else; nothing with no clusters.
 - **Added:** `cd-argocd` presets `health-opt-in`, `ha`, `on-demand`, `core-only`, `sso-only`, `webhook-refresh`, `metrics` and `envoy-gateway` (docs/reference.md). Opt-in values files: a render that names none is byte-identical.
 - **Added:** `cd-kargo` presets `ha`, `restricted`, `on-demand`, `metrics`, `sso-only` and `external-webhooks`. Opt-in: a render that names none is byte-identical.
