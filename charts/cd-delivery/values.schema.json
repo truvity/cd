@@ -19,6 +19,16 @@
           "minLength": 1,
           "description": "The namespace the Applications are created in."
         },
+        "applicationSuffixes": {
+          "type": "object",
+          "description": "The suffix of each ring's Application NAME (infra, app, e2e); default -infra, none, -e2e. The chart, repository and release keep their names.",
+          "additionalProperties": false,
+          "properties": {
+            "infra": { "type": "string", "pattern": "^(-[a-z0-9]+)*$" },
+            "app": { "type": "string", "pattern": "^(-[a-z0-9]+)*$" },
+            "e2e": { "type": "string", "pattern": "^(-[a-z0-9]+)*$" }
+          }
+        },
         "applicationPrefix": {
           "type": "string",
           "description": "Prepended to every Application's name (empty is allowed)."

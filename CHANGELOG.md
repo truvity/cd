@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Added:** `cd-delivery` `platform.applicationSuffixes` (`infra`, `app`, `e2e`): the suffix of each ring's Application NAME, for a platform that names them `<product>-inf` and `<product>-app`. The chart, its repository and the Helm release keep `<product>-infra` and `<product>`, so the objects a product's charts render keep their names. Unset: the names stay `-infra`, none and `-e2e`, and every existing render is byte-identical.
+
 ## v0.16.0
 
 - **Added:** `chartgate` applies the values files a remote chart ships inside itself (`helm.valueFiles: [presets/<name>.yaml]`, Argo CD reads them from the chart it pulled). Before, the gate rendered a remote chart without them, so an Application that leaned on a preset for a required value failed the gate while Argo CD would have synced it. The gate extracts them from the archive it pulled, in the order listed and before the repository's `$values/` files and the inline values; a missing one fails unless `ignoreMissingValueFiles` is set. A preset that carries every value the chart needs renders as before.
