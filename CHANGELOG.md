@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Added:** `chartgate` applies the values files a remote chart ships inside itself (`helm.valueFiles: [presets/<name>.yaml]`, Argo CD reads them from the chart it pulled). Before, the gate rendered a remote chart without them, so an Application that leaned on a preset for a required value failed the gate while Argo CD would have synced it. The gate extracts them from the archive it pulled, in the order listed and before the repository's `$values/` files and the inline values; a missing one fails unless `ignoreMissingValueFiles` is set. A preset that carries every value the chart needs renders as before.
+
 ## v0.15.0
 
 - **Added:** `parity.Wrapper`, the zero-diff proof of a wrapper chart as one shared helper (layered values deep-merged, flattened to the upstream chart's own shape, both rendered, `# Source:` comments and the wrapper's own templates held out, compared byte for byte), with `DeepMerge` and `NormalizeRender`. `hack/parity.sh` is now a thin entry point to the Go test `tests/proof` built on it; the gate's verdict is unchanged. Other repositories that wrap an upstream chart use `parity.Wrapper` instead of keeping a copy of the shell script. No chart changes; no render changes.

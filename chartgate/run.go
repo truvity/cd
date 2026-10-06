@@ -1,10 +1,13 @@
 package chartgate
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -247,7 +250,7 @@ func (g *Gate) crawl(ctx context.Context, cluster string) ([]Result, []target) {
 }
 
 func (g *Gate) renderLocal(ctx context.Context, app Application, src Source) ([]byte, error) {
-	files, err := g.valueFiles(app, src, true)
+	files, err := g.valueFiles(app, src, true, "")
 	if err != nil {
 		return nil, err
 	}
@@ -266,21 +269,39 @@ func (g *Gate) renderLocal(ctx context.Context, app Application, src Source) ([]
 // layers them: valueFiles in order (a missing one is dropped when
 // ignoreMissingValueFiles is set, an error otherwise), then the inline
 // `values`, then `valuesObject`. $values/ names this repository's root.
-func (g *Gate) valueFiles(app Application, src Source, local bool) ([]string, error) {
+func (g *Gate) valueFiles(app Application, src Source, local bool, tgz string) ([]string, error) {
 	var files []string
 
 	// A local chart takes every value file. A remote chart takes the ones that
-	// are this repository's (`$values/...`): the files a chart ships inside
-	// itself (`presets/health.yaml`) are in the pulled archive, not here, and
-	// the gate renders without them. Argo CD hands the chart both, and a chart
+	// are this repository's (`$values/...`) and, when the pulled archive is
+	// given, the ones the chart ships inside itself (`presets/health.yaml`):
+	// Argo CD reads those from the chart it pulled, so the gate extracts them
+	// from the archive it pulled. Without the archive they are left out. A chart
 	// whose required values arrive in the repository's file (the sluis chart's
 	// `documents`) refuses to render without it.
 	for _, f := range src.Helm.ValueFiles {
-		if !local && !strings.HasPrefix(f, "$values/") {
+		shipped := !local && !strings.HasPrefix(f, "$values/")
+		if shipped && tgz == "" {
 			continue
 		}
 
 		path := strings.Replace(f, "$values/", g.Root+"/", 1)
+
+		if shipped {
+			p, err := g.extractShipped(tgz, f)
+			if err != nil {
+				if errors.Is(err, os.ErrNotExist) && src.Helm.IgnoreMissing {
+					continue
+				}
+
+				return nil, fmt.Errorf("value file %s: %w", f, err)
+			}
+
+			files = append(files, p)
+
+			continue
+		}
+
 		if _, err := os.Stat(path); err != nil {
 			if os.IsNotExist(err) && src.Helm.IgnoreMissing {
 				continue
@@ -365,7 +386,7 @@ func (g *Gate) check(ctx context.Context, t target) Result {
 		return res
 	}
 
-	files, err := g.valueFiles(t.app, t.source, false)
+	files, err := g.valueFiles(t.app, t.source, false, tgz)
 	if err != nil {
 		res.Status, res.Detail = StatusFail, err.Error()
 
@@ -575,4 +596,64 @@ func (g *Gate) helmStdin(ctx context.Context, stdin io.Reader, args ...string) (
 	}
 
 	return stdout.Bytes(), nil
+}
+
+// extractShipped writes the file rel of the pulled chart archive tgz to the
+// gate's work directory and returns its path. The archive's single top-level
+// directory is the chart's name; a missing file is os.ErrNotExist.
+func (g *Gate) extractShipped(tgz, rel string) (string, error) {
+	f, err := os.Open(tgz)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	zr, err := gzip.NewReader(f)
+	if err != nil {
+		return "", err
+	}
+	defer zr.Close()
+
+	clean := filepath.ToSlash(filepath.Clean(rel))
+	if strings.HasPrefix(clean, "../") || strings.HasPrefix(clean, "/") {
+		return "", fmt.Errorf("value file %s leaves the chart", rel)
+	}
+
+	tr := tar.NewReader(zr)
+
+	for {
+		h, err := tr.Next()
+		if errors.Is(err, io.EOF) {
+			return "", os.ErrNotExist
+		}
+
+		if err != nil {
+			return "", err
+		}
+
+		_, name, ok := strings.Cut(h.Name, "/")
+		if !ok || name != clean || h.Typeflag != tar.TypeReg {
+			continue
+		}
+
+		dir, err := os.MkdirTemp(g.work, "shipped-")
+		if err != nil {
+			return "", err
+		}
+
+		p := filepath.Join(dir, filepath.Base(clean))
+
+		out, err := os.Create(p)
+		if err != nil {
+			return "", err
+		}
+
+		if _, err := io.Copy(out, tr); err != nil { //nolint:gosec // a values file of a chart the gate pulled
+			out.Close()
+
+			return "", err
+		}
+
+		return p, out.Close()
+	}
 }
