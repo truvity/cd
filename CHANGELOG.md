@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.14.0
+
 - **Added:** `cd-pipeline` renders Argo CD `AppProject`s from the opt-in `appProjects` map (name to `{labels, annotations, spec}`, `spec` verbatim) in `argocd.namespace`, so a pipeline and the projects of the Applications its Stages watch are one chart. The chart-wide `labels` and `annotations` are not put on them. Empty by default: every existing render is byte-identical.
 
 ## v0.13.0
