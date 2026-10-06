@@ -606,13 +606,13 @@ func (g *Gate) extractShipped(tgz, rel string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	zr, err := gzip.NewReader(f)
 	if err != nil {
 		return "", err
 	}
-	defer zr.Close()
+	defer func() { _ = zr.Close() }()
 
 	clean := filepath.ToSlash(filepath.Clean(rel))
 	if strings.HasPrefix(clean, "../") || strings.HasPrefix(clean, "/") {
@@ -649,7 +649,7 @@ func (g *Gate) extractShipped(tgz, rel string) (string, error) {
 		}
 
 		if _, err := io.Copy(out, tr); err != nil { //nolint:gosec // a values file of a chart the gate pulled
-			out.Close()
+			_ = out.Close()
 
 			return "", err
 		}
