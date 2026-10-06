@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Added:** `parity.Wrapper`, the zero-diff proof of a wrapper chart as one shared helper (layered values deep-merged, flattened to the upstream chart's own shape, both rendered, `# Source:` comments and the wrapper's own templates held out, compared byte for byte), with `DeepMerge` and `NormalizeRender`. `hack/parity.sh` is now a thin entry point to the Go test `tests/proof` built on it; the gate's verdict is unchanged. Other repositories that wrap an upstream chart use `parity.Wrapper` instead of keeping a copy of the shell script. No chart changes; no render changes.
+
 ## v0.14.0
 
 - **Added:** `cd-pipeline` renders Argo CD `AppProject`s from the opt-in `appProjects` map (name to `{labels, annotations, spec}`, `spec` verbatim) in `argocd.namespace`, so a pipeline and the projects of the Applications its Stages watch are one chart. The chart-wide `labels` and `annotations` are not put on them. Empty by default: every existing render is byte-identical.
