@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.20.0
+
 - **Added:** `cd-delivery` `products.<name>.chart` and `delivery.ProductInput.Chart`: a product may install another product's charts, so one product runs as several tenants, each its own product (namespace, Helm release, Applications, pin, Kargo Stages and AppProjects named after it). The Application's source becomes `<repository>/<chart>[-infra|-e2e]`, and `delivery.Product`'s default repository `<registry>/<chart>/charts`. Unset, it is the product's own name and every existing render is byte-identical (new golden `tenant-chart`).
 
 ## v0.19.0
