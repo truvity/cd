@@ -21,7 +21,7 @@ that passes its own dict gets the same refusal of an unknown key from
 {{- include "cd-delivery.assertKeys" (dict "what" "platform" "got" $plat "allowed" (list "tier" "finalizer" "sync" "syncRetry" "clusterName" "argocdNamespace" "applicationPrefix" "applicationSuffixes" "appProject" "applicationLabels" "waves" "chartRegistry" "cloud" "postgres" "events" "database" "identity" "telemetry" "e2e" "availability")) -}}
 {{- range $name := (keys $products | sortAlpha) -}}
 {{- $p := get $products $name -}}
-{{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s" $name) "got" $p "allowed" (list "pin" "interface" "repository" "hostname" "parentRef" "surfaces" "bucketSlug" "workloadIdentity" "natsIdentity" "mtls" "postgres" "e2e" "faro" "alerts" "identityProviders" "access" "product" "values" "ignoreDifferences")) -}}
+{{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s" $name) "got" $p "allowed" (list "pin" "interface" "repository" "chart" "hostname" "parentRef" "surfaces" "bucketSlug" "workloadIdentity" "natsIdentity" "mtls" "postgres" "e2e" "faro" "alerts" "identityProviders" "access" "product" "values" "ignoreDifferences")) -}}
 {{- $docs = append $docs (include "cd-delivery.product" (dict "plat" $plat "name" $name "p" $p)) -}}
 {{- end -}}
 {{- end -}}
@@ -110,7 +110,12 @@ ring composed. Call with (dict "ctx" <product ctx> "ring" infra|app|e2e
 {{- /* Merged last, so a product's own payload wins. A value that is empty (an
        empty string, zero, false) cannot override one the chart composed. */ -}}
 {{- $values := mustMergeOverwrite (deepCopy .values) (deepCopy (dig "values" $ring (dict) $p)) -}}
-{{- $source := dict "repoURL" (printf "%s/%s%s" $repo $name $suffix) "path" "." "targetRevision" (toString $p.pin) "helm" (dict "releaseName" (printf "%s%s" $name $suffix) "valuesObject" $values) -}}
+{{- /* The charts a product installs are its own unless it names another
+       product's (`chart`): one product installed as several tenants, each
+       its own product here (namespace, release, Applications), all from one
+       set of charts. */ -}}
+{{- $chart := $p.chart | default $name -}}
+{{- $source := dict "repoURL" (printf "%s/%s%s" $repo $chart $suffix) "path" "." "targetRevision" (toString $p.pin) "helm" (dict "releaseName" (printf "%s%s" $name $suffix) "valuesObject" $values) -}}
 {{- $spec := dict "project" (include "cd-delivery.fill" (dict "s" (required "cd-delivery: platform.appProject is required" $plat.appProject) "product" $name "cluster" $cluster)) "sources" (list $source) "destination" (dict "name" $cluster "namespace" $name) "syncPolicy" $syncPolicy -}}
 {{- with (dig "ignoreDifferences" $ring (list) $p) -}}{{- $_ := set $spec "ignoreDifferences" . -}}{{- end -}}
 {{- $app := dict "apiVersion" "argoproj.io/v1alpha1" "kind" "Application" "metadata" $meta "spec" $spec -}}

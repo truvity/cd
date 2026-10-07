@@ -1,0 +1,23 @@
+# One product installed as a tenant: the product `shop-ie` (namespace,
+# release and Applications its own) installs the `shop` charts.
+platform:
+  clusterName: east
+  argocdNamespace: argocd
+  applicationPrefix: east-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+  postgres:
+    instances: 1
+    storage: 2Gi
+  events:
+    url: nats://broker.example:4222
+    storage: file
+    replicas: 1
+    maxAge: 24h
+    account: "{product}"
+products:
+  shop-ie:
+    pin: 1.0.0
+    interface: 1
+    chart: shop
+    hostname: shop-ie.example.com

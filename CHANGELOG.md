@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Added:** `cd-delivery` `products.<name>.chart` and `delivery.ProductInput.Chart`: a product may install another product's charts, so one product runs as several tenants, each its own product (namespace, Helm release, Applications, pin, Kargo Stages and AppProjects named after it). The Application's source becomes `<repository>/<chart>[-infra|-e2e]`, and `delivery.Product`'s default repository `<registry>/<chart>/charts`. Unset, it is the product's own name and every existing render is byte-identical (new golden `tenant-chart`).
+
 ## v0.19.0
 
 - **Added:** package `promotiongate` and its command `cmd/promotion-gate`, published as the image `ghcr.io/truvity/cd/promotion-gate` (distroless, linux/amd64 and arm64) at every tag: the two Kargo verification checks of a pipeline as Go, so their Job image needs no shell, curl or jq. `promotion-gate promoted-version` is `cd-pipeline`'s promoted-version check; `promotion-gate metrics-gate` is the bake-window metrics gate (wait until the promoted version is the only one serving, then pass on a sample count of prober journeys, failing early on a failure ratio, a restart, a firing alert or the version's own failed e2e Job). Both read the environment the shell scripts read and decide exactly as they did, exit codes included; every scenario of the scripts' own test suites is ported, and the jq and awk semantics are proven against real jq and busybox awk.

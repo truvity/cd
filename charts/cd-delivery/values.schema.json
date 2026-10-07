@@ -397,6 +397,11 @@
             "minLength": 1,
             "description": "Where the product's charts are published; defaults to platform.chartRegistry."
           },
+          "chart": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The base name of the charts this product installs (<chart>, <chart>-infra, <chart>-e2e); defaults to the product's own name. A tenant of another product names that product."
+          },
           "hostname": {
             "type": "string",
             "minLength": 1

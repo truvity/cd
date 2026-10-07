@@ -1,0 +1,99 @@
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-shop-ie-infra
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shop-ie
+  project: shop-ie-east
+  sources:
+  - helm:
+      releaseName: shop-ie-infra
+      valuesObject:
+        events:
+          account: shop-ie
+          maxAge: 24h
+          replicas: 1
+          storage: file
+        postgres:
+          instances: 1
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: shop-ie-pg-runtime
+          runtimeRole: shop_ie_app
+          storage: 2Gi
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/shop-infra
+    targetRevision: 1.0.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-shop-ie
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shop-ie
+  project: shop-ie-east
+  sources:
+  - helm:
+      releaseName: shop-ie
+      valuesObject:
+        database:
+          app:
+            passwordSecret: shop-ie-pg-runtime
+            role: shop_ie_app
+          host: shop-ie-infra-pg-rw
+          owner:
+            passwordSecret: shop-ie-infra-pg-app
+        events:
+          url: nats://broker.example:4222
+        route:
+          enabled: true
+          hostname: shop-ie.example.com
+        serviceAccount:
+          app:
+            name: shop-ie
+    path: .
+    repoURL: oci://registry.example.com/charts/shop
+    targetRevision: 1.0.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
