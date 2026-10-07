@@ -31,8 +31,14 @@ type (
 		// under (the chart is <ChartRepository>/<Name>); empty means
 		// <DefaultRegistry>/<Name>/charts.
 		ChartRepository string
-		Semver          string
-		MetricsGate     []string
+		// Chart is the product whose charts this one installs (the chart is
+		// <repository>/<Chart>, the default repository <DefaultRegistry>/
+		// <Chart>/charts); empty means Name. A tenant of a product is its own
+		// product -- namespace, pin, Stages and AppProjects named after it --
+		// installing that product's charts.
+		Chart       string
+		Semver      string
+		MetricsGate []string
 		// E2EJob false: the product runs no e2e Job as part of delivery.
 		E2EJob *bool
 	}
@@ -82,15 +88,20 @@ func Owners(order []string, owned map[string][]string, key string) []string {
 func Product(in ProductInput, defaultRegistry string, order []string, owned map[string][]string, appProjects []appproject.AppProject) ProductPipeline {
 	key := PinKey(in.Name)
 
+	chart := in.Chart
+	if chart == "" {
+		chart = in.Name
+	}
+
 	repo := in.ChartRepository
 	if repo == "" {
-		repo = defaultRegistry + "/" + in.Name + "/charts"
+		repo = defaultRegistry + "/" + chart + "/charts"
 	}
 
 	return ProductPipeline{
 		Name:        in.Name,
 		Key:         key,
-		RepoURL:     repo + "/" + in.Name,
+		RepoURL:     repo + "/" + chart,
 		Semver:      in.Semver,
 		Clusters:    Owners(order, owned, key),
 		MetricsGate: slices.Clone(in.MetricsGate),

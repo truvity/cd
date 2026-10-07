@@ -114,6 +114,15 @@ func TestProductAndPlatformCharts(t *testing.T) {
 		t.Errorf("Product with its own repository = %+v", q)
 	}
 
+	// A tenant installs another product's charts under its own name.
+	if q := Product(ProductInput{Name: "shop-ie", Chart: "shop"}, "oci://reg", order, owned, nil); q.RepoURL != "oci://reg/shop/charts/shop" || q.Key != "shopIeChart" || q.Name != "shop-ie" {
+		t.Errorf("tenant product = %+v", q)
+	}
+
+	if q := Product(ProductInput{Name: "shop-ie", Chart: "shop", ChartRepository: "oci://x/charts"}, "oci://reg", order, owned, nil); q.RepoURL != "oci://x/charts/shop" {
+		t.Errorf("tenant product with repository = %+v", q)
+	}
+
 	charts, missing, unowned := PlatformCharts(order, owned, map[string]bool{"shopChart": true},
 		map[string]ChartSpec{"certManager": {RepoURL: "r", Semver: "1"}, "unused": {}})
 
