@@ -36,7 +36,7 @@ lint:
     # Every negative fixture must fail, and for the refusal it declares.
     hack/lint-fixtures.sh
     # The Go packages (chartgate and what follows) are linted with the charts.
-    golangci-lint run ./...
+    GOTOOLCHAIN=local golangci-lint run ./...
 
 # Golden renders, then the zero-diff gate.
 #
