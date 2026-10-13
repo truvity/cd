@@ -5,7 +5,7 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
-## Unreleased
+## v0.25.0
 
 - **Behaviour change:** `cd-argocd` wraps the upstream `argo-cd` chart 10.10.3 (Argo CD v3.5.5), up from 9.7.0 (v3.4.4); the vendored archive, `appVersion`, goldens and docs move with it. Read before upgrading: the 10.0.0 upstream default `global.networkPolicy.create` flipped from `false` to `true`, so a render with no values now includes a NetworkPolicy per component (server open, repo-server and redis limited to the Argo CD components, metrics ports open); set `argo-cd.global.networkPolicy.create` (or the shared `global.networkPolicy.create`) to `false` to keep the old render. Argo CD 3.5 itself brings Helm 4 (plain-HTTP OCI repositories now need `insecureOCIForceHttp`, `spec.source.helm.version` is ignored), a React 19 UI (UI extensions must be rebuilt) and impersonation applied to server operations; the upstream guide `3.4-3.5` lists them. The presets and their values are unchanged.
 
