@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.23.0
+
 - **Added:** `cd-delivery` `platform.alerts.ignoreDifferences` (entries the application ring of every product whose alerts reach its chart, `alerts.enabled` at interface 12 or higher, gets before its own: a rule kind with server-side defaults, such as a VictoriaMetrics `VMRule`'s `record: ""`) and `platform.dashboards` with `products.<name>.dashboards` (the cluster's dashboard folder and data sources, handed to the application ring as `observability.dashboards`). Both unset: every existing render is byte-identical (new golden `alerts-dashboards`).
 
 ## v0.22.0
