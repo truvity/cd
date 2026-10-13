@@ -151,8 +151,12 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- include "cd-pipeline.jobCheck" (dict "root" $r "name" $at "ns" $name "metric" "e2e-operation" "args" (list "chart-version") "sa" $sa "image" (required "cd-pipeline: promotedVersion.image is required" $pv.image) "command" (list "/bin/sh" "/scripts/verify-e2e-operation.sh") "env" $env "mounts" $mounts "volumes" $vols "deadline" (add (int $pv.waitSeconds) $v.jobs.headroomSeconds)) -}}
 {{- end -}}
 
-{{- /* Job checks of the project's own. */ -}}
-{{- range $c := $verif.checks -}}
+{{- /* The metrics gate (verification.metricsGate), then the Job checks of the project's own. */ -}}
+{{- $checks := $verif.checks | default list -}}
+{{- if $verif.metricsGate -}}
+{{- $checks = prepend $checks (include "cd-pipeline.metricsGateCheck" (dict "root" $r "p" $p "s" $s "slug" $slug) | fromYaml) -}}
+{{- end -}}
+{{- range $c := $checks -}}
 {{- $templates = append $templates $c.name -}}
 {{- if hasKey $c "serviceAccount" -}}
 {{- if (hasKey $c "createServiceAccount" | ternary $c.createServiceAccount true) -}}

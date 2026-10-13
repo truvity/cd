@@ -1,0 +1,30 @@
+# The metrics gate as truvity/cd's promotion-gate image (`metricsGate.gateImage`):
+# the same Job check, running `/ko-app/promotion-gate metrics-gate`, with no
+# script ConfigMap and no jq volume. A spelled-out Stage turns it on with
+# `verification.metricsGate`; the workload's namespace and release are the
+# project's own.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+metricsGate:
+  gateImage: ghcr.io/truvity/cd/promotion-gate:0.18.0
+  issuerHost: issuer.example.com
+  endpoints:
+    dev:
+      url: https://metrics.example.com/prometheus
+  token:
+    audience: issuer
+projects:
+  - name: shop
+    pinKey: shop
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    metricsGate:
+      namespace: shop-system
+      release: shop-app
+    stages:
+      - name: dev
+        autoPromote: true
+        applications: [shop]
+        verification:
+          metricsGate: true

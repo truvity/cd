@@ -258,6 +258,189 @@
       },
       "description": "The built-in promoted-version check."
     },
+    "metricsGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "gateImage": {
+          "type": "string",
+          "description": "The promotion-gate image (ghcr.io/truvity/cd/promotion-gate). Set: the gate runs `/ko-app/promotion-gate metrics-gate`, with no script ConfigMap and no jq volume. Empty (the default): the shell script."
+        },
+        "image": {
+          "type": "string",
+          "description": "An image with a shell and curl; default promotedVersion.image."
+        },
+        "jqImage": {
+          "type": "string",
+          "description": "An image holding /jq, mounted as an image volume; default promotedVersion.jqImage."
+        },
+        "serviceAccount": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The ServiceAccount the Job runs as; tokens {stage}, {slug}, {project}."
+        },
+        "issuerHost": {
+          "type": "string",
+          "description": "The host of the issuer the Job exchanges its ServiceAccount token at (`https://<host>/token`)."
+        },
+        "endpoints": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "url": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The query endpoint's base URL; queries go to <url>/api/v1/query."
+              },
+              "caBundle": {
+                "type": "boolean",
+                "description": "Verify the endpoint with caBundle's root (mounted, and passed as CA_BUNDLE)."
+              }
+            },
+            "required": [
+              "url"
+            ]
+          },
+          "description": "Stage name -> the endpoint the gate of that Stage reads."
+        },
+        "token": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "audience": {
+              "type": "string",
+              "description": "The audience the projected ServiceAccount token is minted for."
+            },
+            "expirationSeconds": {
+              "type": "integer",
+              "minimum": 600
+            },
+            "volumeName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mountPath": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "caBundle": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "configMap": {
+              "type": "string",
+              "description": "The ConfigMap holding the root."
+            },
+            "key": {
+              "type": "string",
+              "minLength": 1
+            },
+            "volumeName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mountPath": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "phase1Seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "How long to wait for the promoted version to be the only one serving."
+        },
+        "bakeSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "How long, from the ready point, the bake may take to collect minJourneys clean samples."
+        },
+        "scrapeLagSeconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pollSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "minJourneys": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maxFailureRatio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "checkFiringAlerts": {
+          "type": "boolean"
+        },
+        "proberJourneyMetric": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "description": "The built-in metrics gate."
+    },
+    "graph": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "upstreams": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "description": "Stage -> the Stages it may promote from, in preference; the first the project has wins."
+        },
+        "applicationName": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The Argo CD Application a derived Stage watches; tokens {stage}, {app}."
+        },
+        "promotedVersion": {
+          "type": "boolean",
+          "description": "Every derived Stage runs the promoted-version check."
+        },
+        "approvers": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "subject": {
+              "type": "string",
+              "minLength": 1
+            },
+            "claims": {
+              "type": "object",
+              "description": "The claims of each approver subject; tokens {stage}, {slug}, {project} in every string."
+            }
+          }
+        },
+        "admins": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "subject": {
+              "type": "string",
+              "minLength": 1
+            },
+            "claims": {
+              "type": "object",
+              "description": "The claims of the admin subject; tokens {slug}, {project} in every string."
+            }
+          }
+        }
+      },
+      "description": "The promotion graph a project with `stageOrder` derives its Stages and access from."
+    },
     "viewer": {
       "type": "object",
       "additionalProperties": false,
@@ -412,6 +595,14 @@
                     "stages"
                   ]
                 }
+              },
+              "approvers": {
+                "type": "boolean",
+                "description": "Derive one approver subject per Stage after the first (graph.approvers); needs stageOrder."
+              },
+              "admins": {
+                "type": "boolean",
+                "description": "Derive one admin subject that promotes every Stage and approves (graph.admins); needs stageOrder."
               }
             }
           },
@@ -589,6 +780,10 @@
                         "minLength": 1
                       },
                       "description": "Names of AnalysisTemplates that exist already, run beside the rest."
+                    },
+                    "metricsGate": {
+                      "type": "boolean",
+                      "description": "Run the built-in metrics gate (`metricsGate`) before the Stage's own checks."
                     }
                   }
                 },
@@ -614,11 +809,112 @@
               "type": "string"
             },
             "description": "Annotations on the Project object alone, beside the chart-wide ones (for instance Kargo's `kargo.akuity.io/keep-namespace: \"true\"`, which makes deleting a Project leave its namespace and the Freight in it)."
+          },
+          "stageOrder": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true,
+            "description": "Derive the Stages, in this order, from the promotion graph (`graph`) instead of spelling `stages` out."
+          },
+          "upstreams": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "description": "Replaces graph.upstreams for the Stages it names."
+          },
+          "autoPromote": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Derived Stages that promote on their own although they have an upstream."
+          },
+          "applications": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "The applications every derived Stage watches, through graph.applicationName; default the slug."
+          },
+          "applicationsByStage": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "description": "Replaces `applications` for the Stages it names."
+          },
+          "e2eStages": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Derived Stages whose promotion runs the end-to-end Application."
+          },
+          "e2eApplication": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The end-to-end application, through graph.applicationName; default <slug>-e2e."
+          },
+          "metricsGateStages": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Derived Stages that run the metrics gate."
+          },
+          "metricsGate": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "namespace": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The workload's namespace; default the slug."
+              },
+              "release": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The workload's Helm release; default the slug."
+              },
+              "e2eJobRequired": {
+                "type": "boolean",
+                "description": "The version's own e2e Job must succeed (default true)."
+              }
+            },
+            "description": "The project's metrics gate inputs."
           }
         },
         "required": [
-          "name",
-          "stages"
+          "name"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "stages"
+            ]
+          },
+          {
+            "required": [
+              "stageOrder"
+            ]
+          }
         ]
       }
     },
