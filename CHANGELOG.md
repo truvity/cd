@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Added:** `cd-argocd` presets `behind-gateway` (the server's HTTPRoute on, plain HTTP behind a gateway that ends TLS, a ClusterIP Service) and `sync-timeout` (a sync operation running longer than an hour is ended). Opt-in values files: a render that names neither is byte-identical (new golden `behind-gateway`).
+
 ## v0.21.0
 
 - **Added:** `cd-pipeline` derived Stages: a project may give `stageOrder` (its Stage names in promotion order) instead of `stages`, and the chart derives each Stage's upstream, auto-promotion, Applications, end-to-end Application and checks from the new `graph` values (`upstreams`, `applicationName`, `promotedVersion`) and the project's `upstreams`, `autoPromote`, `applications`, `applicationsByStage`, `e2eStages`, `e2eApplication` and `metricsGateStages`; `access.approvers` derives one approver subject per Stage after the first (`graph.approvers`) and `access.admins` one admin subject (`graph.admins`). A project that spells its `stages` out renders byte-identically (new golden `graph`).

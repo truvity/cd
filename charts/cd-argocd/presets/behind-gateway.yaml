@@ -1,0 +1,22 @@
+# The API server behind a Gateway API gateway that ends TLS. OPT-IN: layer
+# this file before your own values, which name the route's parents
+# (`argo-cd.server.httproute.parentRefs`) and hostnames
+# (`argo-cd.server.httproute.hostnames`). Needs the Gateway API CRDs.
+#
+# - The upstream chart's HTTPRoute for the server, on.
+# - The server serves plain HTTP (`server.insecure`): TLS ends at the gateway,
+#   and a server that also terminated TLS would answer the gateway's plain
+#   HTTP with a redirect loop.
+# - The Service stays ClusterIP: the gateway is the only way in, so nothing
+#   else needs a load balancer or a node port.
+#
+# Layer envoy-gateway.yaml as well when the gateway is Envoy Gateway.
+argo-cd:
+  server:
+    service:
+      type: ClusterIP
+    httproute:
+      enabled: true
+  configs:
+    params:
+      server.insecure: "true"

@@ -98,6 +98,8 @@ a string is replaced whole, and your values win. Pull it without installing:
 | `sso-only.yaml` | No local admin, a 24h session ceiling, `policy.default: role:none`, groups from the `groups` claim. Your values supply `oidc.config`, `url` and `policy.csv`. |
 | `webhook-refresh.yaml` | Polling every 300s with a 60s jitter; every webhook provider verifies against the Secret `argocd-webhook`, key `secret` (yours, labelled `app.kubernetes.io/part-of: argocd`). |
 | `metrics.yaml` | Metrics Services and ServiceMonitors for the application controller, the API server and the repo server (needs the ServiceMonitor CRD). |
+| `behind-gateway.yaml` | The API server behind a Gateway API gateway that ends TLS: the upstream chart's HTTPRoute on, `server.insecure: "true"`, a ClusterIP Service. Your values name the route's `parentRefs` and `hostnames` (needs the Gateway API CRDs). |
+| `sync-timeout.yaml` | The application controller ends a sync operation still running after an hour (`controller.sync.timeout.seconds: "3600"`; Argo CD's default never does), freeing the Application for the next sync. |
 | `envoy-gateway.yaml` | A `BackendTrafficPolicy` on the server's HTTPRoute that lifts Envoy Gateway's 15s request timeout for the UI's event stream (needs Envoy Gateway's CRDs; via `extraObjects`, which your own `extraObjects` would replace). |
 
 The `Application` check has no exemption rule (which Applications should
