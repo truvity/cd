@@ -11,7 +11,7 @@ version: 0.0.0
 # by renovate (and checked by hack/parity.sh). The release workflow leaves
 # it alone (chart-app-version: chart): it records what is installed, not
 # which release of this chart installed it.
-appVersion: v3.4.4
+appVersion: v3.5.5
 keywords:
   - argocd
   - gitops
@@ -25,5 +25,5 @@ sources:
 # proves it still matches this line.
 dependencies:
   - name: argo-cd
-    version: 9.7.0
+    version: 10.10.3
     repository: https://argoproj.github.io/argo-helm

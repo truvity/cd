@@ -11,7 +11,7 @@ way.
 
 | What | Where |
 | --- | --- |
-| `cd-argocd` — Argo CD, from the upstream `argo-cd` chart 9.7.0 | `oci://ghcr.io/truvity/charts/cd-argocd` |
+| `cd-argocd` — Argo CD, from the upstream `argo-cd` chart 10.10.3 | `oci://ghcr.io/truvity/charts/cd-argocd` |
 | `cd-kargo` — Kargo, from the upstream `kargo` chart 1.11.6 | `oci://ghcr.io/truvity/charts/cd-kargo` |
 | `cd-rollouts` — Argo Rollouts, from the upstream `argo-rollouts` chart 2.43.2 | `oci://ghcr.io/truvity/charts/cd-rollouts` |
 | `cd-delivery` — the Argo CD Applications that deliver a product's charts to a cluster; no upstream | `oci://ghcr.io/truvity/charts/cd-delivery` |
