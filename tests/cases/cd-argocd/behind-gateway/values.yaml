@@ -1,0 +1,13 @@
+# The API server behind a gateway that ends TLS, with the one-hour sync
+# timeout: the presets turn the route on and the server to plain HTTP; the
+# caller names the route's parents and hostnames.
+argo-cd:
+  server:
+    httproute:
+      parentRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: public
+          namespace: gateway-system
+      hostnames:
+        - argocd.example.com

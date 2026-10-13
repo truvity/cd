@@ -1,0 +1,17 @@
+# End a sync operation that runs longer than an hour. OPT-IN: layer this file
+# before your own values.
+#
+# The application controller terminates a sync operation still running after
+# `controller.sync.timeout.seconds` (Argo CD's default: 0, never). A sync
+# stuck on a wave whose resources never become Healthy otherwise holds its
+# Application until someone terminates it by hand; ended, it frees the
+# Application for the next sync, which renders the source afresh.
+# An hour leaves a legitimately long sync (a large fan-out, a slow database
+# migration hook) room to finish.
+#
+# Argo CD does not retry a sync it ended this way for the same revision: a
+# new revision, or a sync started by hand, is the next one.
+argo-cd:
+  configs:
+    params:
+      controller.sync.timeout.seconds: "3600"
