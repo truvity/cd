@@ -56,7 +56,7 @@ values, in a branch, before the change that moves the source merges:
 ```sh
 # 1. The upstream chart, at the version you run today, with your values.
 helm template argocd argo-cd --repo https://argoproj.github.io/argo-helm \
-  --version 9.7.0 --namespace argocd -f values-before.yaml \
+  --version 10.10.3 --namespace argocd -f values-before.yaml \
   | grep -v '^# Source:' > before.yaml
 
 # 2. This chart, at the release that wraps the same upstream, with the

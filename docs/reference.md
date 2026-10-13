@@ -4,7 +4,7 @@
 
 | Chart | Upstream | Pin | Application version |
 | --- | --- | --- | --- |
-| `cd-argocd` | `argo-cd` from `https://argoproj.github.io/argo-helm` | 9.7.0 | v3.4.4 |
+| `cd-argocd` | `argo-cd` from `https://argoproj.github.io/argo-helm` | 10.10.3 | v3.5.5 |
 | `cd-kargo` | `kargo` from `oci://ghcr.io/akuity/kargo-charts` | 1.11.6 | v1.11.6 |
 | `cd-rollouts` | `argo-rollouts` from `oci://ghcr.io/argoproj/argo-helm` | 2.43.2 | v1.10.0 |
 
