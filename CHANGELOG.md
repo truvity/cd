@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.22.0
+
 - **Added:** `cd-argocd` presets `behind-gateway` (the server's HTTPRoute on, plain HTTP behind a gateway that ends TLS, a ClusterIP Service) and `sync-timeout` (a sync operation running longer than an hour is ended). Opt-in values files: a render that names neither is byte-identical (new golden `behind-gateway`).
 
 ## v0.21.0
