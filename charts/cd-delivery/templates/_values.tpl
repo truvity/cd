@@ -247,6 +247,13 @@ access:
 product:
   {{- toYaml . | nindent 2 }}
 {{- end }}
+{{- if $p.dashboards }}
+{{- with $plat.dashboards }}
+observability:
+  dashboards:
+    {{- toYaml . | nindent 4 }}
+{{- end }}
+{{- end }}
 {{- end -}}
 
 {{/* The end-to-end ring: the product's own suite and prober, in its namespace. */}}

@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Added:** `cd-delivery` `platform.alerts.ignoreDifferences` (entries the application ring of every product whose alerts reach its chart, `alerts.enabled` at interface 12 or higher, gets before its own: a rule kind with server-side defaults, such as a VictoriaMetrics `VMRule`'s `record: ""`) and `platform.dashboards` with `products.<name>.dashboards` (the cluster's dashboard folder and data sources, handed to the application ring as `observability.dashboards`). Both unset: every existing render is byte-identical (new golden `alerts-dashboards`).
+
 ## v0.22.0
 
 - **Added:** `cd-argocd` presets `behind-gateway` (the server's HTTPRoute on, plain HTTP behind a gateway that ends TLS, a ClusterIP Service) and `sync-timeout` (a sync operation running longer than an hour is ended). Opt-in values files: a render that names neither is byte-identical (new golden `behind-gateway`).
