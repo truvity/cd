@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.21.0
+
 - **Added:** `cd-pipeline` derived Stages: a project may give `stageOrder` (its Stage names in promotion order) instead of `stages`, and the chart derives each Stage's upstream, auto-promotion, Applications, end-to-end Application and checks from the new `graph` values (`upstreams`, `applicationName`, `promotedVersion`) and the project's `upstreams`, `autoPromote`, `applications`, `applicationsByStage`, `e2eStages`, `e2eApplication` and `metricsGateStages`; `access.approvers` derives one approver subject per Stage after the first (`graph.approvers`) and `access.admins` one admin subject (`graph.admins`). A project that spells its `stages` out renders byte-identically (new golden `graph`).
 - **Added:** `cd-pipeline` built-in metrics gate: `stages[].verification.metricsGate` (or `metricsGateStages`) renders the bake-window gate as a Job check from the new `metricsGate` values (issuer, per-Stage endpoint, projected token, private root, bake numbers) and `projects[].metricsGate` (workload namespace and release, `e2eJobRequired`), running the shell script now shipped as `files/verify-metrics-gate.sh` (tested in `tests/scripts`) or, with `metricsGate.gateImage`, the promotion-gate image. Off unless asked for: every existing render is byte-identical (new goldens `graph`, `metrics-gate-image`).
 
