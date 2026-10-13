@@ -1,0 +1,68 @@
+# Stages derived from the promotion graph: `stageOrder` names the Stages, the
+# chart works out the rest. dev takes Freight from the Warehouse; test and
+# stage take dev's; prod prefers stage. A product approves per Stage (one
+# subject per Stage after the first, the last one approving Freight) and runs
+# the metrics gate on dev (an endpoint behind a private root) and prod (plain
+# HTTP); a platform chart, whose prod skips stage (its `upstreams`) and
+# auto-promotes, is promoted by one admin group.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+promotedVersion:
+  image: registry.example.com/tools/curl:8
+  jqImage: registry.example.com/tools/jq:1
+metricsGate:
+  serviceAccount: "gate-{stage}"
+  issuerHost: issuer.example.com
+  endpoints:
+    dev:
+      url: https://metrics.dev.example.com/prometheus
+      caBundle: true
+    prod:
+      url: http://metrics-proxy.monitoring.svc:8427/prometheus
+  token:
+    audience: issuer
+  caBundle:
+    configMap: private-root
+  bakeSeconds: 600
+graph:
+  upstreams:
+    test: [dev]
+    stage: [dev]
+    prod: [stage, dev]
+  applicationName: "{stage}-{app}"
+  promotedVersion: true
+  approvers:
+    claims:
+      groups: ["{stage}:{slug}:approver"]
+  admins:
+    claims:
+      groups: [platform:admin]
+projects:
+  - name: shop
+    pinKey: shop
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    access:
+      approvers: true
+    stageOrder: [dev, test, stage, prod]
+    applicationsByStage:
+      test: [shop, shop-mock]
+    e2eStages: [test]
+    metricsGateStages: [dev, prod]
+    metricsGate:
+      e2eJobRequired: false
+  - name: platform-gateway
+    slug: gateway
+    pinKey: gateway
+    chart:
+      repoURL: https://charts.example.com/
+      name: gateway
+      semver: ">=2.0.0 <3.0.0"
+    access:
+      admins: true
+    stageOrder: [dev, stage, prod]
+    upstreams:
+      prod: [dev]
+    autoPromote: [prod]
+    applications: [gateway-fleet]

@@ -314,7 +314,7 @@ renders:
 ### Inputs
 
 With no projects nothing renders. Required, once there is a project: `git.repoURL`,
-and per project `name`, `stages` and, unless `warehouse.subscriptions` is given,
+and per project `name`, `stages` (or `stageOrder`, see [Derived Stages](#derived-stages)) and, unless `warehouse.subscriptions` is given,
 `chart.repoURL` and `chart.semver`.
 
 | Key | Meaning |
@@ -325,6 +325,8 @@ and per project `name`, `stages` and, unless `warehouse.subscriptions` is given,
 | `waves` | The Argo CD sync-wave of each kind of object: `project`, `warehouse`, `credentials`, `config`, `stage` (0 to 4). |
 | `argocd.namespace` | Where the Stages' Applications live (`argocd`). |
 | `jobs`, `promotedVersion` | What the verification Jobs run as (`runAsUser`, `runAsGroup`, TTL, headroom) and the built-in check's `image`, `jqImage`, `waitSeconds`, `pollSeconds`, optional replacement `script`, and `gateImage` (empty by default): the `promotion-gate` image, which runs the check as Go instead of the script (see [Verification](#verification)). |
+| `metricsGate` | The built-in metrics gate (see [Verification](#verification)): `gateImage`, `image` and `jqImage` (default `promotedVersion`'s), `serviceAccount` (`metrics-gate-{stage}`), `issuerHost`, `endpoints.<stage>` (`url`, `caBundle`), `token` (`audience`, `expirationSeconds`, `volumeName`, `mountPath`), `caBundle` (`configMap`, `key`, `volumeName`, `mountPath`) and the bake numbers (`phase1Seconds`, `bakeSeconds`, `scrapeLagSeconds`, `pollSeconds`, `minJourneys`, `maxFailureRatio`, `checkFiringAlerts`, `proberJourneyMetric`). |
+| `graph` | The promotion graph a project with `stageOrder` derives its Stages from: `upstreams`, `applicationName` (`{stage}-{app}`), `promotedVersion`, `approvers` (`subject`, `claims`) and `admins` (`subject`, `claims`). See [Derived Stages](#derived-stages). |
 | `viewer` | `namespace`, `serviceAccount`, `role` and `bindingName` of the shared read-only ServiceAccount each project binds; `global.claims` also renders its namespace and ServiceAccount. |
 | `labels`, `annotations` | Labels and annotations on every object, beside the sync-wave. None by default; a consumer adopting objects that already exist sets Argo CD's `argocd.argoproj.io/sync-options: Prune=false,Delete=false` here to guard them. |
 | `appProjects` | Argo CD `AppProject`s by name, each `{labels, annotations, spec}` with `spec` verbatim, rendered in `argocd.namespace` beside the pipeline. The chart-wide `labels` and `annotations` (the Kargo objects' guard) are not put on them. None by default. |
@@ -333,6 +335,9 @@ and per project `name`, `stages` and, unless `warehouse.subscriptions` is given,
 | `projects[].chart` | `repoURL`, `name` (index repositories), `semver`, `versionPrefix` (repositories whose tags carry one), `discoveryLimit`. |
 | `projects[].warehouse` | `name` (default the project's), `interval` (`5m0s`), `freightCreationPolicy` (`Automatic`), `subscriptions`. |
 | `projects[].access.subjects[]` | `name`, `claims`, `stages`, `approve`. |
+| `projects[].access.approvers`, `.admins` | With `stageOrder`: derive one approver subject per Stage after the first, or one admin subject (see [Derived Stages](#derived-stages)). |
+| `projects[].stageOrder` and the keys it reads | `upstreams`, `autoPromote`, `applications`, `applicationsByStage`, `e2eStages`, `e2eApplication`, `metricsGateStages`: see [Derived Stages](#derived-stages). |
+| `projects[].metricsGate` | The project's metrics-gate inputs: `namespace` and `release` of the workload (default the slug), `e2eJobRequired` (default true). |
 | `projects[].stages[]` | `name`, `from` (the upstream Stage; none means Freight straight from the Warehouse), `autoPromote`, `applications`, `mode` (`pr` after the first Stage, `direct` for it), `verification`, `promotionTemplate`, `e2eApplication` (an Application that runs the end-to-end suite as a sync hook: the promotion ends with an `argocd-update` step on it, `retry.timeout` `25m0s`, and a check requires the Application to pin the promoted version, its last operation to have Succeeded, with the synced revisions equal to the revisions the Application resolves to (for an OCI chart both are digests, never the version string), and the suite Job of that version to have succeeded (a Sync-hook Job of the operation with `hookPhase` `Succeeded`, or, before `e2e.hook` is on, a Healthy tracked Job); the step is refused by Kargo unless the Application carries `kargo.akuity.io/authorized-stage` for this Stage, which is `products.<name>.e2e.kargoStage` in `cd-delivery`; it is not listed in `applications`; needs `promotedVersion.image` and `.jqImage`). |
 
 Durations are written the way the API server stores them (`10m0s`, not `10m`):
@@ -341,10 +346,40 @@ duration differs only in spelling is OutOfSync forever.
 
 ### The graph is values
 
-`from` is explicit. The chart has no rule that makes a Stage depend on
-another by its name: a project whose Stages fan out, join or run in a line
-says so, per Stage. Promotion by pull request is the default for any Stage that
+`from` is explicit, or derived from rules you give as values (`graph`, see
+[Derived Stages](#derived-stages)). The chart has no built-in rule that makes
+a Stage depend on another by its name: a project whose Stages fan out, join or
+run in a line says so, per Stage or per graph. Promotion by pull request is the default for any Stage that
 has an upstream, and for the first it is a push to the branch.
+
+### Derived Stages
+
+A project may instead give `stageOrder`, its Stage names in promotion order,
+and let the chart derive the Stages from the `graph` rules. `graph.upstreams`
+maps a Stage to the Stages it may promote from, in preference, and a project's
+own `upstreams` replaces the entries it names. Then, for each Stage of
+`stageOrder`:
+
+- its `from` is the first of its candidates that is also a Stage of the
+  project; with none it takes Freight straight from the Warehouse;
+- it promotes on its own when it has no upstream, or when the project's
+  `autoPromote` lists it;
+- it watches `applicationsByStage.<stage>`, else `applications`, else the
+  slug, each named through `graph.applicationName` (tokens `{stage}`, `{app}`);
+- on the Stages `e2eStages` lists, `e2eApplication` (default `<slug>-e2e`,
+  through the same name) is its end-to-end Application;
+- it runs the promoted-version check when `graph.promotedVersion` is true, and
+  the metrics gate on the Stages `metricsGateStages` lists.
+
+The project's first Stage is the last one, in order, with no upstream.
+`access.approvers` adds one subject per Stage after the first, named
+`graph.approvers.subject` with the claims `graph.approvers.claims` (tokens
+`{stage}`, `{slug}`, `{project}` in every string): it may promote the first
+Stage and its own, and the one of the last Stage may also approve Freight.
+`access.admins` adds one subject, `graph.admins`, that promotes every Stage
+and approves. Subjects in `access.subjects` come first, verbatim. A project
+gives `stages` or `stageOrder`, never both, and the derived Stages render
+exactly as the same Stages spelled out would (`tests/cases/cd-pipeline/graph`).
 
 ### Promotion
 
@@ -381,12 +416,12 @@ The same image's `metrics-gate` subcommand is the bake-window metrics gate
 (`promotiongate.MetricsGate`): wait until the promoted version is the only one
 serving, then pass on a sample count of prober journeys read from a
 Prometheus-compatible endpoint, failing early on a failure ratio, a container
-restart, a firing alert or the version's own failed end-to-end Job. It needs
-no chart support of its own: it is a `verification.checks[]` entry with
-`image`, `command: [/ko-app/promotion-gate, metrics-gate]`, its environment
-in `env` and its ServiceAccount token projected for the issuer's audience in
-`volumes` and `volumeMounts` (`tests/cases/cd-pipeline/promotion-gate` is a
-worked example). Its environment: `CHART_VERSION`, `PROJECT_NAME`,
+restart, a firing alert or the version's own failed end-to-end Job. It can be
+a `verification.checks[]` entry of your own with `image`, `command:
+[/ko-app/promotion-gate, metrics-gate]`, its environment in `env` and its
+ServiceAccount token projected for the issuer's audience in `volumes` and
+`volumeMounts` (`tests/cases/cd-pipeline/promotion-gate` is a worked example),
+or the chart's built-in one below. Its environment: `CHART_VERSION`, `PROJECT_NAME`,
 `WORKLOAD_NAMESPACE`, `WORKLOAD_RELEASE`, `ISSUER_HOST`, `METRICS_BASE_URL`,
 `SA_TOKEN_FILE`, `PHASE1_SECONDS`, `BAKE_SECONDS`, `SCRAPE_LAG_SECONDS`,
 `POLL_SECONDS`, `MIN_JOURNEYS`, `MAX_FAILURE_RATIO`, `CHECK_FIRING_ALERTS`,
@@ -398,6 +433,21 @@ store), `E2E_JOB_REQUIRED` (`true`), `TOKEN_ENDPOINT`
 `EXCHANGE_AUDIENCE` (`metrics-gate`), `MAX_ITERATIONS` (`0`, a test bound).
 Exit 0 passes, 1 fails; 2 is a missing or malformed input and 5 a response
 that is not the JSON it should be.
+
+`verification.metricsGate: true` (or a derived Stage that `metricsGateStages`
+lists) adds the chart's own metrics gate, before the Stage's own checks: the
+shell script `files/verify-metrics-gate.sh` (the same decisions, `image` with
+curl and jq mounted from `jqImage`) or, with `metricsGate.gateImage`, the
+image's `metrics-gate`. The chart renders the ServiceAccount
+`metricsGate.serviceAccount`, the script ConfigMap `<slug>-<stage>-verify-metrics-gate`
+(not with `gateImage`) and the AnalysisTemplate `<slug>-<stage>-metrics-gate`,
+whose Job gets the environment above from `metricsGate` and the Stage's
+`endpoints` entry (`url` is `METRICS_BASE_URL`; `caBundle: true` mounts
+`metricsGate.caBundle.configMap` and sets `CA_BUNDLE`), its ServiceAccount
+token projected for `metricsGate.token.audience`, and a deadline of
+`phase1Seconds + bakeSeconds + jobs.headroomSeconds`. The issuer exchange must
+admit the ServiceAccount; the chart renders no grant
+(`tests/cases/cd-pipeline/graph`, `tests/cases/cd-pipeline/metrics-gate-image`).
 
 `verification.checks[]` are Job checks of your own: an AnalysisTemplate with one
 measurement, run once, decided by the Job's exit code, under the `restricted` Pod

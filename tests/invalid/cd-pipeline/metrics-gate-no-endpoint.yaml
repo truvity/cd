@@ -1,0 +1,19 @@
+# expect: metricsGate.endpoints.prod is required
+git:
+  repoURL: https://git.example.com/acme/environments.git
+metricsGate:
+  gateImage: registry.example.com/promotion-gate:1
+  issuerHost: issuer.example.com
+  token:
+    audience: issuer
+  endpoints:
+    dev:
+      url: https://metrics.example.com/prometheus
+projects:
+  - name: shop
+    pinKey: shop
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0"
+    stageOrder: [dev, prod]
+    metricsGateStages: [prod]

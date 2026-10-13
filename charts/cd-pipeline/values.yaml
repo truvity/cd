@@ -61,6 +61,71 @@ promotedVersion:
   pollSeconds: 15
   gateImage: ""
 
+# The metrics gate (`stages[].verification.metricsGate`, or a derived Stage
+# that `metricsGateStages` lists): a Job that waits until the promoted version
+# is the only one serving, then bakes on a sample count of prober journeys read
+# from a Prometheus-compatible endpoint (files/verify-metrics-gate.sh; with
+# `gateImage`, the promotion-gate image's `metrics-gate`, no script and no jq).
+# `issuerHost`, `token.audience` and an `endpoints` entry per gated Stage are
+# required by a gate; `image` and `jqImage` default to promotedVersion's.
+metricsGate:
+  gateImage: ""
+  image: ""
+  jqImage: ""
+  # The ServiceAccount the Job runs as; tokens {stage}, {slug}, {project}.
+  serviceAccount: "metrics-gate-{stage}"
+  # The issuer the Job trades its ServiceAccount token at (host only).
+  issuerHost: ""
+  # Stage -> {url: the endpoint's base URL (queries go to <url>/api/v1/query),
+  # caBundle: true when only caBundle's root verifies it}.
+  endpoints: {}
+  # The projected ServiceAccount token the Job exchanges.
+  token:
+    audience: ""
+    expirationSeconds: 3600
+    volumeName: issuer-token
+    mountPath: /var/run/secrets/tokens/issuer
+  # The ConfigMap holding the private root of an endpoint with caBundle.
+  caBundle:
+    configMap: ""
+    key: ca-certificates.crt
+    volumeName: ca-bundle
+    mountPath: /etc/ssl/metrics-ca
+  # Phase 1 (until the version is the only one serving) and the bake; the
+  # Job's deadline is their sum plus jobs.headroomSeconds.
+  phase1Seconds: 1500
+  bakeSeconds: 480
+  scrapeLagSeconds: 30
+  pollSeconds: 30
+  minJourneys: 10
+  maxFailureRatio: 0.05
+  checkFiringAlerts: true
+  proberJourneyMetric: probe_journey_total
+
+# The promotion graph a project with `stageOrder` derives its Stages and access
+# from (templates/_graph.tpl; docs/reference.md#cd-pipeline). Unused by a
+# project that spells its `stages` out.
+graph:
+  # Stage -> the Stages it may promote from, in preference: a derived Stage
+  # promotes from the first of them the project has. A Stage with none takes
+  # Freight from the Warehouse and promotes on its own. A project's
+  # `upstreams` replaces the entries it names.
+  upstreams: {}
+  # The Argo CD Application a derived Stage watches; tokens {stage}, {app}.
+  applicationName: "{stage}-{app}"
+  # Every derived Stage runs the promoted-version check.
+  promotedVersion: false
+  # access.approvers: one subject per Stage after the first; tokens {stage},
+  # {slug}, {project} in the name and in every claim value.
+  approvers:
+    subject: "approver-{stage}"
+    claims: {}
+  # access.admins: one subject that promotes every Stage and approves; tokens
+  # {slug}, {project} in the claim values.
+  admins:
+    subject: admin
+    claims: {}
+
 # The read-only access every signed-in user has: a RoleBinding in each project
 # to a ServiceAccount that lives in one shared namespace. Empty renders none.
 viewer: {}
