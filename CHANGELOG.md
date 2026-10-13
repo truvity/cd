@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+## v0.24.0
+
 - **Added:** Go package `deploy/pulumi/registryread` (Pulumi, through truvity/k8s's `podidentity` component): the cross-account registry read identity of a delivery tool on EKS, an IAM role and managed policy (`PolicyDocument`: the ECR token, pull, and list/describe for a tool that discovers versions) bound to the tool's ServiceAccount by a Pod Identity association, for `ArgoCDRepoCreds` (argocd-ecr-updater) and `KargoController`. `WithNames`, `WithImports`, `WithLegacyTopLevel`, `WithIgnoreAssociationTags` and `WithResourceOptions` let an installation that already runs one keep its URNs. The module now requires the Pulumi SDK and truvity/k8s; no chart changes.
 
 ## v0.23.0
