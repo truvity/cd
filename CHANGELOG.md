@@ -7,6 +7,8 @@ release it wraps is named in each entry.
 
 ## Unreleased
 
+- **Added:** Go package `deploy/pulumi/registryread` (Pulumi, through truvity/k8s's `podidentity` component): the cross-account registry read identity of a delivery tool on EKS, an IAM role and managed policy (`PolicyDocument`: the ECR token, pull, and list/describe for a tool that discovers versions) bound to the tool's ServiceAccount by a Pod Identity association, for `ArgoCDRepoCreds` (argocd-ecr-updater) and `KargoController`. `WithNames`, `WithImports`, `WithLegacyTopLevel`, `WithIgnoreAssociationTags` and `WithResourceOptions` let an installation that already runs one keep its URNs. The module now requires the Pulumi SDK and truvity/k8s; no chart changes.
+
 ## v0.23.0
 
 - **Added:** `cd-delivery` `platform.alerts.ignoreDifferences` (entries the application ring of every product whose alerts reach its chart, `alerts.enabled` at interface 12 or higher, gets before its own: a rule kind with server-side defaults, such as a VictoriaMetrics `VMRule`'s `record: ""`) and `platform.dashboards` with `products.<name>.dashboards` (the cluster's dashboard folder and data sources, handed to the application ring as `observability.dashboards`). Both unset: every existing render is byte-identical (new golden `alerts-dashboards`).

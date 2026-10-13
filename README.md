@@ -26,6 +26,10 @@ Application of a repository against its pinned chart and real values.
 published as the image `ghcr.io/truvity/cd/promotion-gate` (see
 [the reference](docs/reference.md#verification)).
 
+`deploy/pulumi/registryread` is a Pulumi package: the cross-account registry
+read identity (IAM role, policy and Pod Identity association) of argocd-ecr-updater
+and of Kargo's controller (see [the reference](docs/reference.md#deploypulumiregistryread)).
+
 The `genesis` package bootstraps an Argo CD installation (the repository
 credentials, from a store such as `genesis/ssmstore` seeded once from a
 password manager; the cd-argocd install with its presets; the root

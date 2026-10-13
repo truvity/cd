@@ -153,6 +153,24 @@ the clusters that own each pin, in the caller's promotion order;
 `appproject.Deployer` builds the `<product>-<cluster>` AppProject whose
 deployer role one group holds.
 
+## deploy/pulumi/registryread
+
+A Pulumi package: the cross-account registry read identity of a delivery tool
+on EKS. `registryread.New` registers, through truvity/k8s's `podidentity`
+component, an IAM role and its managed policy (`PolicyDocument`: the ECR
+authorization token anywhere, and the pull actions, plus list and describe for
+a tool that discovers versions, on every repository of one registry account)
+bound to the tool's ServiceAccount by an EKS Pod Identity association. The
+readers are `ArgoCDRepoCreds` (argocd-ecr-updater, which refreshes Argo CD's
+repository credentials; pull) and `KargoController` (a Warehouse lists and
+describes chart versions; pull and discover), each with an identity of its
+own. `Args.Description` is required: IAM cannot change a policy's
+description, so adopting a live policy needs its live value. An installation
+that already runs such an identity keeps its URNs and adopts the live objects
+with `WithNames`, `WithImports`, `WithLegacyTopLevel`,
+`WithIgnoreAssociationTags` and `WithResourceOptions`. ARNs are built from
+`Args.Partition` (default `aws`).
+
 ## genesis
 
 `genesis.Run` seeds the repository credentials Secret, installs cd-argocd
