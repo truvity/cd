@@ -1,0 +1,53 @@
+# The platform's alert-rule ignoreDifferences and dashboards. `shop` reaches
+# interface 12 with its alerts on and renders dashboards: its application
+# Application gets the platform's ignoreDifferences first, then its own, and
+# its chart gets observability.dashboards. `cart` sends alerts below 12 (they
+# do not reach its chart, so neither does the platform's entry) and asks for
+# no dashboards.
+platform:
+  clusterName: east
+  argocdNamespace: argocd
+  applicationPrefix: east-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+  postgres:
+    instances: 1
+    storage: 2Gi
+  events:
+    url: nats://broker.example:4222
+    storage: file
+    replicas: 1
+    maxAge: 24h
+    account: "{product}"
+  alerts:
+    ignoreDifferences:
+      - group: monitoring.example.com
+        kind: AlertRule
+        jqPathExpressions:
+          - .spec.groups[]?.rules[]?.record
+  dashboards:
+    enabled: true
+    clusterFolderUID: east
+    datasources:
+      metrics: east-metrics
+      logs: east-logs
+products:
+  shop:
+    pin: 2.0.0
+    interface: 12
+    hostname: shop.example.com
+    dashboards: true
+    alerts:
+      enabled: true
+    ignoreDifferences:
+      app:
+        - group: apps
+          kind: Deployment
+          jsonPointers:
+            - /spec/replicas
+  cart:
+    pin: 1.0.0
+    interface: 11
+    hostname: cart.example.com
+    alerts:
+      enabled: true

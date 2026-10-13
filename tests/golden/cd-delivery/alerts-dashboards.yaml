@@ -1,0 +1,221 @@
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-cart-infra
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: cart
+  project: cart-east
+  sources:
+  - helm:
+      releaseName: cart-infra
+      valuesObject:
+        events:
+          account: cart
+          maxAge: 24h
+          replicas: 1
+          storage: file
+        installName: cart
+        postgres:
+          instances: 1
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: cart-pg-runtime
+          runtimeRole: cart_app
+          storage: 2Gi
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/cart-infra
+    targetRevision: 1.0.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-cart
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: cart
+  project: cart-east
+  sources:
+  - helm:
+      releaseName: cart
+      valuesObject:
+        database:
+          app:
+            passwordSecret: cart-pg-runtime
+            role: cart_app
+          host: cart-infra-pg-rw
+          owner:
+            passwordSecret: cart-infra-pg-app
+        events:
+          url: nats://broker.example:4222
+        installName: cart
+        route:
+          enabled: true
+          hostname: cart.example.com
+        serviceAccount:
+          app:
+            name: cart
+    path: .
+    repoURL: oci://registry.example.com/charts/cart
+    targetRevision: 1.0.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-shop-infra
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shop
+  project: shop-east
+  sources:
+  - helm:
+      releaseName: shop-infra
+      valuesObject:
+        events:
+          account: shop
+          maxAge: 24h
+          replicas: 1
+          storage: file
+        installName: shop
+        postgres:
+          instances: 1
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: shop-pg-runtime
+          runtimeRole: shop_app
+          storage: 2Gi
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/shop-infra
+    targetRevision: 2.0.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-shop
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shop
+  ignoreDifferences:
+  - group: monitoring.example.com
+    jqPathExpressions:
+    - .spec.groups[]?.rules[]?.record
+    kind: AlertRule
+  - group: apps
+    jsonPointers:
+    - /spec/replicas
+    kind: Deployment
+  project: shop-east
+  sources:
+  - helm:
+      releaseName: shop
+      valuesObject:
+        alerts:
+          enabled: true
+        database:
+          app:
+            passwordSecret: shop-pg-runtime
+            role: shop_app
+          host: shop-infra-pg-rw
+          owner:
+            passwordSecret: shop-infra-pg-app
+        events:
+          url: nats://broker.example:4222
+        installName: shop
+        observability:
+          dashboards:
+            clusterFolderUID: east
+            datasources:
+              logs: east-logs
+              metrics: east-metrics
+            enabled: true
+        route:
+          enabled: true
+          hostname: shop.example.com
+        serviceAccount:
+          app:
+            name: shop
+    path: .
+    repoURL: oci://registry.example.com/charts/shop
+    targetRevision: 2.0.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
