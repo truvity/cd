@@ -167,8 +167,8 @@ describes chart versions; pull and discover), each with an identity of its
 own. `Args.Description` is required: IAM cannot change a policy's
 description, so adopting a live policy needs its live value. An installation
 that already runs such an identity keeps its URNs and adopts the live objects
-with `WithNames`, `WithImports`, `WithLegacyTopLevel`,
-`WithIgnoreAssociationTags` and `WithResourceOptions`. ARNs are built from
+with `WithNames`, `WithImports`, `WithIgnoreAssociationTags` and
+`WithResourceOptions`. ARNs are built from
 `Args.Partition` (default `aws`).
 
 ## genesis

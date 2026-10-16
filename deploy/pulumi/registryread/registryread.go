@@ -13,10 +13,9 @@
 // The resources are registered through truvity/k8s's podidentity component.
 // An installation that already runs such an identity keeps its Pulumi URNs and
 // adopts the live objects with the options: [WithNames] (the children's
-// logical names), [WithImports] (the IDs of what exists), [WithLegacyTopLevel]
-// (aliases from the top-level URNs the children had before they were
-// wrapped), [WithIgnoreAssociationTags] and [WithResourceOptions] (options of
-// the component itself).
+// logical names), [WithImports] (the IDs of what exists),
+// [WithIgnoreAssociationTags] and [WithResourceOptions] (options of the
+// component itself).
 package registryread
 
 import (
@@ -80,7 +79,6 @@ type (
 	settings struct {
 		names      podidentity.NameFunc
 		imports    podidentity.Imports
-		legacy     bool
 		ignoreTags bool
 		opts       []pulumi.ResourceOption
 	}
@@ -107,12 +105,6 @@ func WithNames(f podidentity.NameFunc) Option {
 // association's ID, which must not stay set once the association is in state.
 func WithImports(imp podidentity.Imports) Option {
 	return func(s *settings) { s.imports = imp }
-}
-
-// WithLegacyTopLevel aliases every child from the top-level URN it had before
-// it was wrapped in the component.
-func WithLegacyTopLevel() Option {
-	return func(s *settings) { s.legacy = true }
 }
 
 // WithIgnoreAssociationTags ignores tag changes on the association.
@@ -209,7 +201,6 @@ func New(ctx *pulumi.Context, name string, args Args, opts ...Option) (*podident
 		},
 		IgnoreAssociationTags: s.ignoreTags,
 		Imports:               s.imports,
-		LegacyTopLevel:        s.legacy,
 		Names:                 s.names,
 	}, s.opts...)
 }
