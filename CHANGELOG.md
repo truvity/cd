@@ -5,6 +5,10 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## v0.26.1
+
+- Dependency updates.
+
 ## v0.26.0
 
 - **Breaking (`deploy/pulumi/registryread`): `WithLegacyTopLevel` is removed.** It set truvity/k8s podidentity's `LegacyTopLevel`, an alias from the top-level URN a child had before it was wrapped in the component. A stack applied with the component holds the component URNs, so the alias resolves to nothing. Apply every stack that passes it with your current version, then drop the option: a preview shows no create or delete. The charts do not change.
