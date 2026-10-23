@@ -31,6 +31,9 @@ lint:
       fi
       echo "$chart: schema OK"
     done
+    # A library chart renders nothing: lint it, and render it through its
+    # consumer chart (tests/consumers) in `just test`.
+    helm lint charts/cd-lib
     # appVersion records the upstream release the vendored archive carries.
     hack/check-app-version.sh
     # Every negative fixture must fail, and for the refusal it declares.

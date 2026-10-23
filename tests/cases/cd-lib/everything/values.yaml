@@ -1,0 +1,6 @@
+clusterName: east
+appNames:
+  shop: shop-renamed
+overrides:
+  cilium:
+    mode: never

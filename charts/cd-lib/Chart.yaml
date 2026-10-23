@@ -1,0 +1,18 @@
+apiVersion: v2
+name: cd-lib
+description: >-
+  Template helpers for a platform's own Argo CD Application templates: the
+  Application naming rule, the retry block, the platform AppProject name, the
+  per-component override lookup, a pin-version gate, the ignoreDifferences of
+  a VMRule and two scheduling fragments. A library chart: it renders nothing
+  on its own.
+type: library
+# Stamped from the tag by the release workflow; never moved by hand.
+version: 0.0.0
+keywords:
+  - argocd
+  - gitops
+  - helm-library
+home: https://github.com/truvity/cd
+sources:
+  - https://github.com/truvity/cd

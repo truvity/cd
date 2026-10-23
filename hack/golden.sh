@@ -29,9 +29,22 @@ for values in "$root"/tests/cases/*/*/values.yaml; do
     done < "$case_dir/presets"
   fi
 
-  rendered="$(helm template "$chart" "$root/charts/$chart" \
+  # A library chart renders nothing, so a case of one renders the consumer
+  # chart tests/consumers/<chart>, with the library as its subchart.
+  chart_dir="$root/charts/$chart"
+  if [ -d "$root/tests/consumers/$chart" ]; then
+    consumer="$(mktemp -d)"
+    cp -r "$root/tests/consumers/$chart/." "$consumer/"
+    mkdir -p "$consumer/charts"
+    cp -r "$root/charts/$chart" "$consumer/charts/$chart"
+    chart_dir="$consumer"
+  fi
+
+  rendered="$(helm template "$chart" "$chart_dir" \
       --namespace "$(cat "$case_dir/namespace" 2>/dev/null || echo default)" \
       "${preset_args[@]}" -f "$values" | "$root/hack/golden-normalize.py")"
+
+  [ -d "$root/tests/consumers/$chart" ] && rm -rf "$chart_dir"
 
   if [ "$mode" = update ]; then
     mkdir -p "$(dirname "$golden")"

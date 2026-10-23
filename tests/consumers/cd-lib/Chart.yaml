@@ -1,0 +1,5 @@
+apiVersion: v2
+name: cd-lib-consumer
+description: A chart that calls every cd-lib helper, so the library has a render to hold. Not published.
+type: application
+version: 0.0.0

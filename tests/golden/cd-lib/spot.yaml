@@ -1,0 +1,53 @@
+---
+# Source: cd-lib-consumer/templates/helpers.yaml
+# One ConfigMap per helper call, so a change to a helper shows up as a golden diff.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: helpers
+data:
+  appPrefix: "west-"
+  project: "platform-west"
+  appNameRenamed: "west-shop"
+  appNamePlain: "west-other"
+  childAppNameRenamed: "east-shop"
+  childAppNamePlain: "east-other"
+  overrideSet: "always"
+  overrideKeyMissing: "always"
+  overrideComponentMissing: "always"
+  pinAtLeast_1.2.2: ""
+  pinAtLeast_empty: ""
+  pinAtLeast_sentinel: ""
+  pinAtLeast_v1.2.3: "true"
+  pinAtLeast_v2.0.0-rc1: "true"
+  pinAtLeastSince: ""
+  retry: |
+    retry:
+      limit: -1
+      refresh: true
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+  vmruleRecordIgnore: |
+    ignoreDifferences:
+      - group: operator.victoriametrics.com
+        kind: VMRule
+        jqPathExpressions:
+          - .spec.groups[]?.rules[]?.record
+  vmruleRecordAlertIgnore: |
+    ignoreDifferences:
+      - group: operator.victoriametrics.com
+        kind: VMRule
+        jqPathExpressions:
+          - .spec.groups[]?.rules[]?.record
+          - .spec.groups[]?.rules[]?.alert
+  preferOnDemand: |
+    {}
+  spreadPerNode: |
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: x

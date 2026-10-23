@@ -142,6 +142,31 @@ Application's `destination.name` resolves through it.
 | `stringData` | `true` writes `stringData` (readable); default `false` writes base64 `data`, which `kubectl apply` compares cleanly against the live object. |
 | `labels`, `annotations` | Yours, verbatim; the `argocd.argoproj.io/secret-type: cluster` label is always set. |
 
+## cd-lib
+
+A library chart: template helpers for a platform's own Argo CD Application
+templates, rendering nothing itself. Declare it as a dependency
+(`oci://ghcr.io/truvity/charts`, `cd-lib`) and `include` the named templates;
+there is no `values.yaml`, the helpers read the consumer's own values.
+
+| Template | Call with | Result |
+| --- | --- | --- |
+| `cd-lib.appPrefix` | root | `<clusterName>-` |
+| `cd-lib.project` | root | `platform-<clusterName>`, the AppProject of the cluster's own Applications |
+| `cd-lib.appName` | `(dict "root" $ "name" n)` | `<clusterName>-<n>`, `n` renamed by `appNames` where it lists it |
+| `cd-lib.childAppName` | `(dict "root" $ "cluster" c "name" n)` | the same for another cluster `c` |
+| `cd-lib.override` | `(dict "root" $ "component" c "key" k "default" d)` | `overrides.<c>.<k>`, else `d` |
+| `cd-lib.retry` | root | the `retry` block of a syncPolicy (unlimited, `refresh: true`, backoff 15s to 5m) |
+| `cd-lib.pinAtLeast` | `(dict "pin" p "since" "x.y.z")` | `true` when the pin is that version or later; nothing for a pin that is not a version, or no `since` |
+| `cd-lib.vmruleRecordIgnore`, `cd-lib.vmruleRecordAlertIgnore` | root | the `ignoreDifferences` of an Application that deploys a VMRule (the CRD defaults `record: ""`, and `alert: ""` for recordings) |
+| `cd-lib.preferOnDemand` | root | a preferred on-demand `nodeAffinity`; `{}` when `controlPlaneSpot` is set |
+| `cd-lib.spreadPerNode` | `(dict "labels" m)` | a soft per-node `topologySpreadConstraints` for pods matching `m` |
+
+The helpers read `clusterName`, `appNames`, `overrides` and `controlPlaneSpot`
+from the consumer's values; the first is required by the ones that name an
+Application. The golden renders go through `tests/consumers/cd-lib`, a chart
+that calls each helper.
+
 ## Go packages for a platform's generator
 
 `delivery` and `appproject` compute the rows the delivery charts are given,

@@ -1,0 +1,30 @@
+# One ConfigMap per helper call, so a change to a helper shows up as a golden diff.
+{{- $gates := dict "v1.2.3" "1.2.3" "1.2.2" "1.2.3" "sentinel" "1.0.0" "v2.0.0-rc1" "2.0.0" "empty" "" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: helpers
+data:
+  appPrefix: {{ include "cd-lib.appPrefix" . | quote }}
+  project: {{ include "cd-lib.project" . | quote }}
+  appNameRenamed: {{ include "cd-lib.appName" (dict "root" . "name" "shop") | quote }}
+  appNamePlain: {{ include "cd-lib.appName" (dict "root" . "name" "other") | quote }}
+  childAppNameRenamed: {{ include "cd-lib.childAppName" (dict "root" . "cluster" "east" "name" "shop") | quote }}
+  childAppNamePlain: {{ include "cd-lib.childAppName" (dict "root" . "cluster" "east" "name" "other") | quote }}
+  overrideSet: {{ include "cd-lib.override" (dict "root" . "component" "cilium" "key" "mode" "default" "always") | quote }}
+  overrideKeyMissing: {{ include "cd-lib.override" (dict "root" . "component" "cilium" "key" "other" "default" "always") | quote }}
+  overrideComponentMissing: {{ include "cd-lib.override" (dict "root" . "component" "nope" "key" "mode" "default" "always") | quote }}
+  {{- range $pin, $since := $gates }}
+  pinAtLeast_{{ $pin }}: {{ include "cd-lib.pinAtLeast" (dict "pin" $pin "since" $since) | quote }}
+  {{- end }}
+  pinAtLeastSince: {{ include "cd-lib.pinAtLeast" (dict "pin" "1.2.3" "since" "not-a-version") | quote }}
+  retry: |
+    {{- include "cd-lib.retry" . | nindent 4 }}
+  vmruleRecordIgnore: |
+    {{- include "cd-lib.vmruleRecordIgnore" . | nindent 4 }}
+  vmruleRecordAlertIgnore: |
+    {{- include "cd-lib.vmruleRecordAlertIgnore" . | nindent 4 }}
+  preferOnDemand: |
+    {{- include "cd-lib.preferOnDemand" . | nindent 4 }}
+  spreadPerNode: |
+    {{- include "cd-lib.spreadPerNode" (dict "labels" (dict "app.kubernetes.io/name" "x")) | nindent 4 }}

@@ -17,6 +17,7 @@ way.
 | `cd-delivery` — the Argo CD Applications that deliver a product's charts to a cluster; no upstream | `oci://ghcr.io/truvity/charts/cd-delivery` |
 | `cd-pipeline` — the Kargo delivery pipeline of a project: Project, Warehouse, Stages, promotion, verification, access; no upstream | `oci://ghcr.io/truvity/charts/cd-pipeline` |
 | `cd-cluster-registration` — Argo CD cluster Secrets from a list of clusters; no upstream | `oci://ghcr.io/truvity/charts/cd-cluster-registration` |
+| `cd-lib` — template helpers for a platform's own Application templates (a library chart); no upstream | `oci://ghcr.io/truvity/charts/cd-lib` |
 
 The repository is also a Go module (`github.com/truvity/cd`). `chartgate`
 (`go run github.com/truvity/cd/cmd/chartgate -self-repo <your/repo>`) renders every Argo CD Helm
