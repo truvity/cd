@@ -149,6 +149,10 @@ from facts the caller passes in; they read no files. `delivery.PinKey`,
 `KargoProject` and `KargoProjects` name a pin and its Kargo Project;
 `delivery.Product` and `PlatformCharts` build cd-pipeline's project rows from
 the clusters that own each pin, in the caller's promotion order;
+`delivery.BuildPipelines` does both for a whole platform (every product that
+has a pipeline, every platform chart) and refuses what would silently drop an
+object: a pin no cluster owns, a platform chart owned with no spec or
+specified with no owner, an AppProject no product covers;
 `delivery.ProberGranted` answers cd-delivery's `e2e.proberGranted`;
 `appproject.Deployer` builds the `<product>-<cluster>` AppProject whose
 deployer role one group holds.
