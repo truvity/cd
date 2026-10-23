@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "cd-lib",
+  "description": "A library chart takes no values of its own (Helm adds `global`): its helpers read the consumer's values (clusterName, appNames, overrides, controlPlaneSpot).",
+  "type": "object",
+  "properties": {
+    "global": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}
