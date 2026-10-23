@@ -95,19 +95,19 @@ func TestProberGranted(t *testing.T) {
 func TestProductAndPlatformCharts(t *testing.T) {
 	t.Parallel()
 
-	order := []string{"devel", "kernel", "stage", "prod"}
+	order := []string{"dev", "hub", "qa", "live"}
 	owned := map[string][]string{
-		"devel": {"shopChart", "certManager", "orphan"},
-		"stage": {"shopChart", "certManager"},
-		"prod":  {"shopChart"},
+		"dev": {"shopChart", "certManager", "orphan"},
+		"qa": {"shopChart", "certManager"},
+		"live":  {"shopChart"},
 	}
-	aps := []appproject.AppProject{appproject.Deployer("shop", "prod", "g"), appproject.Deployer("other", "prod", "g")}
+	aps := []appproject.AppProject{appproject.Deployer("shop", "live", "g"), appproject.Deployer("other", "live", "g")}
 	off := false
 
-	p := Product(ProductInput{Name: "shop", Semver: "^1", MetricsGate: []string{"devel"}, E2EJob: &off}, "oci://reg", order, owned, aps)
+	p := Product(ProductInput{Name: "shop", Semver: "^1", MetricsGate: []string{"dev"}, E2EJob: &off}, "oci://reg", order, owned, aps)
 
-	if p.Key != "shopChart" || p.RepoURL != "oci://reg/shop/charts/shop" || !slices.Equal(p.Clusters, []string{"devel", "stage", "prod"}) ||
-		!p.E2EJobOff || len(p.AppProjects) != 1 || p.AppProjects[0].Name != "shop-prod" {
+	if p.Key != "shopChart" || p.RepoURL != "oci://reg/shop/charts/shop" || !slices.Equal(p.Clusters, []string{"dev", "qa", "live"}) ||
+		!p.E2EJobOff || len(p.AppProjects) != 1 || p.AppProjects[0].Name != "shop-live" {
 		t.Errorf("Product = %+v", p)
 	}
 
@@ -127,11 +127,11 @@ func TestProductAndPlatformCharts(t *testing.T) {
 	charts, missing, unowned := PlatformCharts(order, owned, map[string]bool{"shopChart": true},
 		map[string]ChartSpec{"certManager": {RepoURL: "r", Semver: "1"}, "unused": {}})
 
-	if len(charts) != 1 || charts[0].Key != "certManager" || charts[0].Name != "cert-manager" || !slices.Equal(charts[0].Clusters, []string{"devel", "stage"}) {
+	if len(charts) != 1 || charts[0].Key != "certManager" || charts[0].Name != "cert-manager" || !slices.Equal(charts[0].Clusters, []string{"dev", "qa"}) {
 		t.Errorf("charts = %+v", charts)
 	}
 
-	if !slices.Equal(missing["orphan"], []string{"devel"}) || len(missing) != 1 {
+	if !slices.Equal(missing["orphan"], []string{"dev"}) || len(missing) != 1 {
 		t.Errorf("missing = %v", missing)
 	}
 
@@ -143,19 +143,19 @@ func TestProductAndPlatformCharts(t *testing.T) {
 func TestBuildPipelines(t *testing.T) {
 	t.Parallel()
 
-	order := []string{"devel", "kernel", "stage", "prod"}
+	order := []string{"dev", "hub", "qa", "live"}
 	owned := map[string][]string{
-		"devel": {"shopChart", "ghostChart", "certManager"},
-		"stage": {"shopChart", "certManager"},
-		"prod":  {"shopChart", "ghostChart"},
+		"dev": {"shopChart", "ghostChart", "certManager"},
+		"qa": {"shopChart", "certManager"},
+		"live":  {"shopChart", "ghostChart"},
 	}
-	aps := []appproject.AppProject{appproject.Deployer("shop", "prod", "g"), appproject.Deployer("ghost", "prod", "g")}
+	aps := []appproject.AppProject{appproject.Deployer("shop", "live", "g"), appproject.Deployer("ghost", "live", "g")}
 	in := PipelinesInput{
 		Order: order, Owned: owned, DefaultRegistry: "oci://reg", AppProjects: aps,
 		Products: []PipelineProduct{
 			{ProductInput: ProductInput{Name: "shop", Semver: "^1"}},
 			// Skipped on every cluster that owns it: the row stays, with no Stage.
-			{ProductInput: ProductInput{Name: "ghost", Semver: "^1"}, SkipClusters: []string{"devel", "prod"}},
+			{ProductInput: ProductInput{Name: "ghost", Semver: "^1"}, SkipClusters: []string{"dev", "live"}},
 		},
 		Charts: map[string]ChartSpec{"certManager": {RepoURL: "r", Semver: "1"}},
 	}
@@ -165,7 +165,7 @@ func TestBuildPipelines(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(got.Products) != 2 || got.Products[0].Name != "shop" || !slices.Equal(got.Products[0].Clusters, []string{"devel", "stage", "prod"}) {
+	if len(got.Products) != 2 || got.Products[0].Name != "shop" || !slices.Equal(got.Products[0].Clusters, []string{"dev", "qa", "live"}) {
 		t.Errorf("shop = %+v", got.Products)
 	}
 
@@ -178,7 +178,7 @@ func TestBuildPipelines(t *testing.T) {
 	}
 
 	// The caller's owned map is not changed by a skip.
-	if !slices.Equal(owned["devel"], []string{"shopChart", "ghostChart", "certManager"}) {
+	if !slices.Equal(owned["dev"], []string{"shopChart", "ghostChart", "certManager"}) {
 		t.Errorf("owned changed: %v", owned)
 	}
 
@@ -194,7 +194,7 @@ func TestBuildPipelines(t *testing.T) {
 			in.Charts = map[string]ChartSpec{"certManager": {}, "unused": {}}
 		}, ErrSpecUnowned},
 		"uncovered AppProject": {func(in *PipelinesInput) {
-			in.AppProjects = append(slices.Clone(in.AppProjects), appproject.Deployer("stray", "prod", "g"))
+			in.AppProjects = append(slices.Clone(in.AppProjects), appproject.Deployer("stray", "live", "g"))
 		}, ErrAppProjectUncovered},
 	} {
 		bad := in
