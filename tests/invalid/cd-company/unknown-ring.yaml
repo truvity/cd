@@ -1,0 +1,4 @@
+# expect: additional properties 'other' not allowed
+services: [example-service]
+pins: {example-service: ""}
+values: {example-service: {other: {}}}

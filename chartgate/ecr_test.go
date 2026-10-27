@@ -56,7 +56,7 @@ func TestECRLoginThenRender(t *testing.T) {
 
 	g := newECRGate(t, `echo s3cret`, fakeHelm, true)
 
-	res := g.check(context.Background(), ecrTarget())
+	res, _ := g.check(context.Background(), ecrTarget())
 	if res.Status != StatusOK {
 		t.Fatalf("status = %s (%s), want ok", res.Status, res.Detail)
 	}
@@ -69,7 +69,7 @@ func TestECRLoginUsesRegionFromHostAndProfile(t *testing.T) {
 	g := newECRGate(t, `echo "$@" > `+log+`; echo s3cret`, fakeHelm, true)
 	g.AWSProfile = "ci-profile"
 
-	if res := g.check(context.Background(), ecrTarget()); res.Status != StatusOK {
+	if res, _ := g.check(context.Background(), ecrTarget()); res.Status != StatusOK {
 		t.Fatalf("status = %s (%s)", res.Status, res.Detail)
 	}
 
@@ -84,7 +84,7 @@ func TestECRLoginFailureSkipsLocally(t *testing.T) {
 
 	g := newECRGate(t, `echo "Unable to locate credentials" >&2; exit 255`, fakeHelm, false)
 
-	res := g.check(context.Background(), ecrTarget())
+	res, _ := g.check(context.Background(), ecrTarget())
 	if res.Status != StatusSkip || !strings.Contains(res.Detail, "needs auth") {
 		t.Fatalf("status = %s (%s), want a needs-auth skip", res.Status, res.Detail)
 	}
@@ -95,7 +95,7 @@ func TestECRLoginFailureFailsInCI(t *testing.T) {
 
 	g := newECRGate(t, `echo "Unable to locate credentials" >&2; exit 255`, fakeHelm, true)
 
-	res := g.check(context.Background(), ecrTarget())
+	res, _ := g.check(context.Background(), ecrTarget())
 	if res.Status != StatusFail || !strings.Contains(res.Detail, "Unable to locate credentials") {
 		t.Fatalf("status = %s (%s), want FAIL carrying aws's error", res.Status, res.Detail)
 	}
@@ -108,7 +108,7 @@ func TestECRLoginIsOncePerHost(t *testing.T) {
 	g := newECRGate(t, `echo x >> `+count+`; echo s3cret`, fakeHelm, true)
 
 	for range 3 {
-		if res := g.check(context.Background(), ecrTarget()); res.Status != StatusOK {
+		if res, _ := g.check(context.Background(), ecrTarget()); res.Status != StatusOK {
 			t.Fatalf("status = %s (%s)", res.Status, res.Detail)
 		}
 	}

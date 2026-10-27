@@ -1,0 +1,4 @@
+# expect: values.example-service.app.cloud is platform-owned
+services: [example-service]
+pins: {example-service: ""}
+values: {example-service: {app: {cloud: {accountID: EXAMPLE_ACCOUNT}}}}

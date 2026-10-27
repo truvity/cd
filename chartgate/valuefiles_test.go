@@ -9,22 +9,23 @@ import (
 	"testing"
 )
 
-// A remote chart is rendered with the repository's own value files (`$values/`)
-// and without the ones the chart ships inside itself; a local chart takes both.
-func TestValueFilesOfARemoteChartAreTheRepositorys(t *testing.T) {
+// Named refs resolve only through a matching Application source. A chart's
+// shipped files cannot silently disappear when the caller has no archive.
+func TestValueFilesRequireMatchingRefAndChartArchive(t *testing.T) {
 	root := t.TempDir()
 
 	if err := os.WriteFile(filepath.Join(root, "values.yaml"), []byte("a: 1\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
-	g := &Gate{Root: root, work: t.TempDir()}
+	g := &Gate{Root: root, SelfRepo: self, work: t.TempDir()}
+	app := Application{Sources: []Source{{RepoURL: "https://github.com/example/repo.git", Ref: "values"}}}
 
 	var src Source
 
-	src.Helm.ValueFiles = []string{"presets/health.yaml", "$values/values.yaml"}
+	src.Helm.ValueFiles = []string{"$values/values.yaml"}
 
-	remote, err := g.valueFiles(Application{}, src, false, "")
+	remote, err := g.valueFiles(app, src, false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,9 +34,13 @@ func TestValueFilesOfARemoteChartAreTheRepositorys(t *testing.T) {
 		t.Errorf("remote value files = %v, want the repository's file alone", remote)
 	}
 
+	src.Helm.ValueFiles = []string{"presets/health.yaml"}
+	if _, err := g.valueFiles(app, src, false, ""); err == nil {
+		t.Error("shipped files require a chart archive")
+	}
 	src.Helm.ValueFiles = []string{"$values/missing.yaml"}
 
-	if _, err := g.valueFiles(Application{}, src, false, ""); err == nil {
+	if _, err := g.valueFiles(app, src, false, ""); err == nil {
 		t.Error("a missing repository value file must fail the gate, as it fails Argo CD")
 	}
 }
@@ -71,13 +76,14 @@ func TestValueFilesOfARemoteChartIncludeTheShippedOnes(t *testing.T) {
 	_ = zw.Close()
 	_ = out.Close()
 
-	g := &Gate{Root: root, work: t.TempDir()}
+	g := &Gate{Root: root, SelfRepo: self, work: t.TempDir()}
+	app := Application{Sources: []Source{{RepoURL: "https://github.com/example/repo.git", Ref: "values"}}}
 
 	var src Source
 
 	src.Helm.ValueFiles = []string{"presets/p.yaml", "$values/values.yaml"}
 
-	files, err := g.valueFiles(Application{}, src, false, tgz)
+	files, err := g.valueFiles(app, src, false, tgz)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,12 +98,12 @@ func TestValueFilesOfARemoteChartIncludeTheShippedOnes(t *testing.T) {
 	}
 
 	src.Helm.ValueFiles = []string{"presets/missing.yaml"}
-	if _, err := g.valueFiles(Application{}, src, false, tgz); err == nil {
+	if _, err := g.valueFiles(app, src, false, tgz); err == nil {
 		t.Error("a missing shipped value file must fail the gate, as it fails Argo CD")
 	}
 
 	src.Helm.IgnoreMissing = true
-	if files, err := g.valueFiles(Application{}, src, false, tgz); err != nil || len(files) != 0 {
+	if files, err := g.valueFiles(app, src, false, tgz); err != nil || len(files) != 0 {
 		t.Errorf("ignoreMissingValueFiles: files = %v, err = %v", files, err)
 	}
 }

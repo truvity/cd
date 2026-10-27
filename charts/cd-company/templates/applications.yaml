@@ -1,0 +1,34 @@
+{{- $products := dict -}}
+{{- range $kind := list "pins" "values" "products" -}}
+  {{- range $service := keys (index $.Values $kind) | sortAlpha -}}
+    {{- if not (has $service $.Values.services) -}}
+      {{- fail (printf "cd-company: unknown service %q in %s (not in services)" $service $kind) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- range $service := .Values.services -}}
+  {{- if not (hasKey $.Values.pins $service) -}}
+    {{- fail (printf "cd-company: missing pins.%s (use an empty string for a dormant service)" $service) -}}
+  {{- end -}}
+  {{- $pin := index $.Values.pins $service -}}
+  {{- if not (kindIs "string" $pin) -}}
+    {{- fail (printf "cd-company: pins.%s must be a string" $service) -}}
+  {{- end -}}
+  {{- $values := index $.Values.values $service | default dict -}}
+  {{- range $ring, $payload := $values -}}
+    {{- if not (has $ring (list "infra" "app" "e2e")) -}}
+      {{- fail (printf "cd-company: values.%s: unknown ring %q" $service $ring) -}}
+    {{- end -}}
+    {{- include "cd-company.assertOwnership" (dict "path" (printf "values.%s.%s" $service $ring) "payload" $payload "owned" (include "cd-company.owned" $ring | fromYaml)) -}}
+  {{- end -}}
+  {{- if ne $pin "" -}}
+    {{- if not (hasKey $.Values.products $service) -}}
+      {{- fail (printf "cd-company: missing products.%s for non-dormant service" $service) -}}
+    {{- end -}}
+    {{- $product := deepCopy (index $.Values.products $service) -}}
+    {{- $_ := set $product "pin" $pin -}}
+    {{- $_ := set $product "values" $values -}}
+    {{- $_ := set $products $service $product -}}
+  {{- end -}}
+{{- end -}}
+{{- include "cd-delivery.applications" (dict "platform" .Values.platform "products" $products) -}}

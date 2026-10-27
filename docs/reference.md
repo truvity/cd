@@ -308,6 +308,79 @@ an unknown top-level key of `platform` or of a product itself, and the
 required inputs by name; the schema remains the full check for the chart
 installed on its own.
 
+## cd-company
+
+The company delivery adapter calls `cd-delivery.applications` with composed
+products. `platform`, `products` (product facts without `pin`/`values`) and the
+`services` allowlist are platform-owned. Company-owned `pins` and `values` are
+separate maps:
+
+```yaml
+# pins/example-service/devel.yaml
+pins: {example-service: "1.2.3"}
+```
+
+```yaml
+# values/example-service/devel.yaml
+values:
+  example-service:
+    infra: {postgres: {parameters: {max_connections: "100"}}}
+    app: {config: {greeting: hello}}
+    e2e: {config: {timeout: 30s}}
+```
+
+The layout repeats for `stage` and `prod` and for each allowed service. Each
+service requires a string pin; `""` means dormant and emits no Applications.
+Non-dormant services require product facts. Unknown services, envelope/fact
+keys and rings fail. `values.<service>` accepts only `infra`, `app`, `e2e`.
+Company files contain only their indicated envelope; the caller enforces those
+file boundaries and supplies authoritative platform facts.
+
+Company ring values cannot override platform-owned delivery paths: `cloud`,
+`events`, `identity`, `route`, `serviceAccount`, `tier`, `pin`, `chart`,
+`repository`, `interface`, `appProject`, or the platform's postgres fields
+(sizing, scheduling, labels, roles/passwords, TLS, backup and ownership).
+Generated connection, identity and install paths are also reserved; see the
+[chart README](../charts/cd-company/README.md#refusals) for the full path list.
+Business configuration merges using cd-delivery's existing semantics. The
+adapter uses the existing cd-delivery application chart as a locked, packaged
+dependency (`file://../cd-delivery`). Its own `cd-delivery.products` map must
+stay empty, so only the parent's named-template call renders Applications.
+`just vendor cd-company` refreshes the archive; the chart proofs check it against
+the source. `python3 hack/company-schema.py --check` checks composed-schema drift.
+
+Kargo writes normal and rollback pins: direct promotion in `devel`, PRs in
+`stage`/`prod`; human pin edits are emergency-only. Humans change values through
+check-gated PRs. Merged values apply at the current pin without a separate Kargo
+promotion. The chart and Go tool ship from the same cd release/tag.
+
+## chartgate
+
+`chartgate.Gate.RunApplications` and CLI `-application <yaml>` (repeatable) plus
+`-sources <yaml>` accept root Applications and explicit Git checkout/revision
+mappings, without a bootstrap layout. Mappings bind exact
+`repoURL`/`targetRevision` pairs to caller-supplied roots and full immutable
+commit IDs. A branch source may explicitly select the company candidate SHA;
+the gate verifies checkout HEAD and reports the selected revisions.
+
+`$<ref>/...` resolves against that Application's matching named source and its
+mapping. Pure refs are file-only. Files are layered in listed order (including
+chart-shipped files), then `valuesObject` when present (including `{}`), otherwise
+inline `values`, preserving
+release name and destination namespace. Missing required files, unknown refs
+and missing mappings fail; `ignoreMissingValueFiles` only skips missing files.
+
+Both local and pinned remote charts are followed through child Applications.
+The complete `cd-company` -> product-chart tree is checked, with bounded
+recursion, cycle detection and context-aware render deduplication. A wrapper's
+success does not hide child pull/authentication/schema/template failures; the
+report identifies each failing Application and chart. Existing `Run`/CLI
+`-root`/`-self-repo`/`-cluster` bootstrap mode remains available.
+
+See [chartgate usage](../chartgate/README.md) for the complete candidate invocation,
+source-mapping YAML, precedence, authentication and reporting contract. The
+caller owns checkouts and status reporting; the shared gate renders charts.
+
 ## cd-pipeline
 
 The Kargo delivery pipeline of one or more projects, and nothing else (no

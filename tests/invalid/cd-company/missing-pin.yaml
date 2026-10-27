@@ -1,0 +1,2 @@
+# expect: missing pins.example-service
+services: [example-service]

@@ -1,0 +1,4 @@
+# expect: values.example-service.infra.postgres.instances is platform-owned
+services: [example-service]
+pins: {example-service: ""}
+values: {example-service: {infra: {postgres: {instances: 3}}}}

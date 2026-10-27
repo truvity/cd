@@ -1,0 +1,6 @@
+dependencies:
+- name: cd-delivery
+  repository: file://../cd-delivery
+  version: 0.0.0
+digest: sha256:8f93a5acfc63f4c76aa254449d6d0ba2662900811e010f8da26e14f53ddbde6d
+generated: "2026-10-28T00:06:35.609250938+07:00"

@@ -1,0 +1,5 @@
+# expect: additional properties 'pin' not allowed
+services: [example-service]
+pins: {example-service: ""}
+products:
+  example-service: {pin: "1.2.3", interface: 15, hostname: example-service.example.com}

@@ -1,0 +1,3 @@
+# expect: missing products.example-service for non-dormant service
+services: [example-service]
+pins: {example-service: "1.2.3"}

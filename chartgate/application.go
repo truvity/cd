@@ -6,12 +6,11 @@
 // every pin masked as a sentinel and never opens the charts those
 // Applications point at, so a chart that refuses a value (its
 // values.schema.json) or fails to template with ours is first found when
-// Argo CD syncs. This package closes that gap: it starts from the
-// committed bootstrap Application of each cluster (clusters/<cluster>.yaml),
-// follows it through the repository's own charts it installs the way Argo CD does
-// (valueFiles, ignoreMissingValueFiles, $values refs), and for every
-// Application source that is a Helm chart elsewhere pulls that chart at
-// targetRevision and runs `helm template` with the Application's values.
+// Argo CD syncs. This package closes that gap: it starts from explicit root
+// Applications and immutable Git source mappings, or a cluster's committed
+// bootstrap Application (clusters/<cluster>.yaml). It follows Applications
+// emitted by local and remote charts with Argo CD's values precedence, pulls
+// each remote chart at targetRevision and runs `helm template` with its values.
 package chartgate
 
 import (
@@ -31,6 +30,7 @@ type (
 	Application struct {
 		Name      string
 		Namespace string // spec.destination.namespace
+		Cluster   string // spec.destination.name (or the bootstrap cluster)
 		Sources   []Source
 	}
 
@@ -50,7 +50,7 @@ type (
 		ValueFiles    []string       `yaml:"valueFiles"`
 		IgnoreMissing bool           `yaml:"ignoreMissingValueFiles"`
 		Values        string         `yaml:"values"`
-		ValuesObject  map[string]any `yaml:"valuesObject"`
+		ValuesObject  map[string]any `yaml:"valuesObject,omitempty"`
 	}
 
 	// ChartKind says how a chart is addressed.
@@ -86,6 +86,7 @@ func ParseApplications(stream []byte) ([]Application, error) {
 				Sources     []Source `yaml:"sources"`
 				Destination struct {
 					Namespace string `yaml:"namespace"`
+					Name      string `yaml:"name"`
 				} `yaml:"destination"`
 			} `yaml:"spec"`
 		}
@@ -105,6 +106,7 @@ func ParseApplications(stream []byte) ([]Application, error) {
 		app := Application{
 			Name:      doc.Metadata.Name,
 			Namespace: doc.Spec.Destination.Namespace,
+			Cluster:   doc.Spec.Destination.Name,
 			Sources:   doc.Spec.Sources,
 		}
 		if doc.Spec.Source != nil {
@@ -176,7 +178,7 @@ func Classify(s Source, repoSelf func(string) bool) (Classification, Chart) {
 	case s.Ref != "" && s.Path == "" && s.Chart == "":
 		return ClassRefOnly, Chart{}
 	case isGit(s.RepoURL) && s.Chart == "":
-		if repoSelf(s.RepoURL) && s.Path != "" && s.Path != "." {
+		if repoSelf != nil && repoSelf(s.RepoURL) && s.Path != "" {
 			return ClassLocal, Chart{}
 		}
 
@@ -202,6 +204,7 @@ func Classify(s Source, repoSelf func(string) bool) (Classification, Chart) {
 
 func isGit(repoURL string) bool {
 	return strings.HasSuffix(repoURL, ".git") ||
+		strings.HasPrefix(repoURL, "ssh://") || strings.HasPrefix(repoURL, "git@") ||
 		strings.HasPrefix(repoURL, "https://github.com/") ||
 		strings.HasPrefix(repoURL, "https://gitlab.com/")
 }

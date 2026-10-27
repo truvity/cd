@@ -1,0 +1,7 @@
+# Platform-owned facts and allowlist; company-owned pins and ring payloads.
+# No installation facts have defaults.
+platform: {}
+products: {}
+services: []
+pins: {}
+values: {}
