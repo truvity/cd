@@ -1,0 +1,7 @@
+# expect: additional properties 'example-service' not allowed
+cd-delivery:
+  products:
+    example-service:
+      pin: "1.2.3"
+      interface: 15
+      hostname: example-service.example.com

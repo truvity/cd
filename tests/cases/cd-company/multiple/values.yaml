@@ -1,0 +1,44 @@
+platform:
+  clusterName: stage
+  argocdNamespace: argocd
+  applicationPrefix: stage-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+  tier: primary
+  availability: high
+  postgres: {instances: 2, storage: 2Gi}
+  events:
+    url: nats://broker.example.com:4222
+    storage: file
+    replicas: 2
+    maxAge: 24h
+    account: "{product}"
+  cloud:
+    accountID: EXAMPLE_ACCOUNT
+    region: example-region
+    iamNameTemplate: "{cluster}-{product}"
+    bucketNameTemplate: "{cluster}-{slug}"
+  e2e: {mode: full}
+products:
+  example-service:
+    interface: 15
+    hostname: example-service.example.com
+    bucketSlug: example-service
+    e2e:
+      enabled: true
+      events: {url: nats://broker.example.com:4222}
+  example-worker:
+    interface: 15
+    hostname: example-worker.example.com
+services: [example-service, example-worker, example-dormant]
+pins:
+  example-service: "1.2.3"
+  example-worker: "2.0.0"
+  example-dormant: ""
+values:
+  example-service:
+    infra: {postgres: {parameters: {max_connections: "100"}}}
+    app: {config: {greeting: hello}}
+    e2e: {config: {timeout: 30s}}
+  example-worker:
+    app: {config: {concurrency: 2}}

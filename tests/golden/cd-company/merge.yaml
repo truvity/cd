@@ -1,0 +1,111 @@
+---
+# Source: cd-company/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: devel-example-service-infra
+  namespace: argocd
+spec:
+  destination:
+    name: devel
+    namespace: example-service
+  project: example-service-devel
+  sources:
+  - helm:
+      releaseName: example-service-infra
+      valuesObject:
+        events:
+          account: example-service
+          maxAge: 24h
+          replicas: 1
+          storage: file
+        installName: example-service
+        postgres:
+          instances: 1
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: example-service-pg-runtime
+          runtimeRole: example_service_app
+          storage: 2Gi
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/example-service-infra
+    targetRevision: 1.2.3
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-company/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: devel-example-service
+  namespace: argocd
+spec:
+  destination:
+    name: devel
+    namespace: example-service
+  project: example-service-devel
+  sources:
+  - helm:
+      releaseName: example-service
+      valuesObject:
+        config:
+          enabled: false
+          optional: ""
+          retries: 0
+        database:
+          app:
+            passwordSecret: example-service-pg-runtime
+            role: example_service_app
+          host: example-service-infra-pg-rw
+        events:
+          url: nats://broker.example.com:4222
+        installName: example-service
+        product:
+          greeting: company
+          nested:
+            first: platform
+            second: company
+            shared: company
+          preserved: platform
+        route:
+          enabled: true
+          hostname: example-service.example.com
+        serviceAccount:
+          app:
+            name: example-service
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/example-service
+    targetRevision: 1.2.3
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false

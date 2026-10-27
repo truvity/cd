@@ -1,0 +1,2 @@
+# expect: unknown service "example-unknown" in pins
+pins: {example-unknown: "1.2.3"}

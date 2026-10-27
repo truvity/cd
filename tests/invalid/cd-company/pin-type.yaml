@@ -1,0 +1,3 @@
+# expect: got number, want string
+services: [example-service]
+pins: {example-service: 123}

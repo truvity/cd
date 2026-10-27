@@ -2,13 +2,14 @@
 # check workflow (truvity/ci-workflows) runs each one as its own job, so a
 # laptop and CI run the same thing.
 
-charts := "cd-argocd cd-kargo cd-rollouts cd-delivery cd-pipeline cd-cluster-registration"
+chart_names := "cd-argocd cd-kargo cd-rollouts cd-delivery cd-company cd-pipeline cd-cluster-registration"
 
 # Lint every chart, and prove every refusal still refuses.
 lint:
     #!/usr/bin/env bash
     set -euo pipefail
-    for chart in {{ charts }}; do
+    python3 hack/company-schema.py --check
+    for chart in {{ chart_names }}; do
       # A chart renders with WHATEVER archive is in its charts/ directory:
       # move the version in Chart.yaml and leave the vendored archive
       # behind, and Helm renders the old upstream while every check passes
@@ -50,6 +51,12 @@ test:
     hack/health.sh
     hack/e2e-operation.sh
 
+# Render every chart fixture, and check the adapter's composition contracts.
+charts:
+    python3 hack/company-schema.py --check
+    go test ./tests/proof/
+    hack/golden.sh
+
 # The Lua health checks of presets/health.yaml, each run against its fixtures.
 health:
     hack/health.sh
@@ -58,11 +65,11 @@ health:
 golden:
     hack/golden.sh update
 
-# Re-vendor one chart's pinned upstream into its charts/ directory, after
-# moving the version in its Chart.yaml. The archive is committed on
-# purpose: a render that needs the network is a render that differs
-# depending on when it runs. Then `just golden` and read the diff, and
-# move appVersion to the upstream's.
+# Re-vendor a chart's declared dependencies into its charts/ directory.
+# cd-company packages the sibling cd-delivery source; upstream wrappers
+# first move the dependency pin in Chart.yaml. Commit the archive so a
+# render needs no network. Then `just golden` and review the diff; for an
+# upstream wrapper also move appVersion to the upstream's.
 vendor chart:
     helm dependency update charts/{{ chart }}
 

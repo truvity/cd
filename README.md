@@ -15,12 +15,15 @@ way.
 | `cd-kargo` — Kargo, from the upstream `kargo` chart 1.11.6 | `oci://ghcr.io/truvity/charts/cd-kargo` |
 | `cd-rollouts` — Argo Rollouts, from the upstream `argo-rollouts` chart 2.43.2 | `oci://ghcr.io/truvity/charts/cd-rollouts` |
 | `cd-delivery` — the Argo CD Applications that deliver a product's charts to a cluster; no upstream | `oci://ghcr.io/truvity/charts/cd-delivery` |
+| `cd-company` — company pins/values adapted to cd-delivery with platform-owned facts and an allowlist | `oci://ghcr.io/truvity/charts/cd-company` |
 | `cd-pipeline` — the Kargo delivery pipeline of a project: Project, Warehouse, Stages, promotion, verification, access; no upstream | `oci://ghcr.io/truvity/charts/cd-pipeline` |
 | `cd-cluster-registration` — Argo CD cluster Secrets from a list of clusters; no upstream | `oci://ghcr.io/truvity/charts/cd-cluster-registration` |
 
 The repository is also a Go module (`github.com/truvity/cd`). `chartgate`
 (`go run github.com/truvity/cd/cmd/chartgate -self-repo <your/repo>`) renders every Argo CD Helm
-Application of a repository against its pinned chart and real values.
+Application of a repository against its pinned chart and real values. It also
+accepts explicit root Applications and immutable source mappings and follows
+remote wrappers through their children; see [chartgate usage](chartgate/README.md).
 `promotiongate` holds the two Kargo verification checks of `cd-pipeline` as Go
 (the promoted-version check and the bake-window metrics gate); its command is
 published as the image `ghcr.io/truvity/cd/promotion-gate` (see
@@ -146,8 +149,11 @@ chart in this repository sets a default of its own yet.
 ```sh
 devbox shell
 just check      # lint, goldens, the zero-diff gate, the leak canary
+just charts     # chart renders and adapter composition proofs
 just golden     # regenerate tests/golden/ after an intended change; read the diff
 just vendor cd-argocd   # re-vendor the upstream archive after moving its pin
+just vendor cd-company  # package the sibling cd-delivery chart dependency
+python3 hack/company-schema.py  # refresh the adapter's composed schema
 ```
 
 ## Releasing

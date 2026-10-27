@@ -1,0 +1,2 @@
+# expect: additional properties 'other' not allowed
+other: true

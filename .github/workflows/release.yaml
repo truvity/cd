@@ -29,11 +29,11 @@ jobs:
       packages: write
     uses: truvity/ci-workflows/.github/workflows/release-public.yaml@51bc0eb7d5d89931d336219f87bde091deaf48ed # v5.4.0
     with:
-      charts: '["cd-argocd", "cd-kargo", "cd-rollouts", "cd-delivery", "cd-pipeline", "cd-cluster-registration"]'
+      charts: '["cd-argocd", "cd-kargo", "cd-rollouts", "cd-delivery", "cd-company", "cd-pipeline", "cd-cluster-registration"]'
       # Three of these charts package software we do not build: appVersion
       # keeps recording the upstream release (hack/check-app-version.sh holds
       # it to the vendored archive), while version is the tag. cd-delivery,
-      # cd-pipeline and cd-cluster-registration have no upstream and no
+      # cd-company, cd-pipeline and cd-cluster-registration have no upstream and no
       # appVersion.
       chart-app-version: chart
       # ko names the image after cmd/promotion-gate's own directory

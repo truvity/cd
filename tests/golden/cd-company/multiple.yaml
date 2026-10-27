@@ -1,0 +1,275 @@
+---
+# Source: cd-company/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: stage-example-service-infra
+  namespace: argocd
+spec:
+  destination:
+    name: stage
+    namespace: example-service
+  project: example-service-stage
+  sources:
+  - helm:
+      releaseName: example-service-infra
+      valuesObject:
+        cloud:
+          accountID: EXAMPLE_ACCOUNT
+          bucket: stage-example-service
+          clusterName: stage
+          iamName: stage-example-service
+          region: example-region
+          serviceAccount: example-service
+        events:
+          account: example-service
+          maxAge: 24h
+          replicas: 2
+          storage: file
+        installName: example-service
+        postgres:
+          instances: 2
+          parameters:
+            max_connections: "100"
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: example-service-pg-runtime
+          runtimeRole: example_service_app
+          storage: 2Gi
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/example-service-infra
+    targetRevision: 1.2.3
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-company/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: stage-example-service
+  namespace: argocd
+spec:
+  destination:
+    name: stage
+    namespace: example-service
+  project: example-service-stage
+  sources:
+  - helm:
+      releaseName: example-service
+      valuesObject:
+        archive:
+          bucket:
+            name: stage-example-service
+            region: example-region
+        availability: high
+        config:
+          greeting: hello
+        database:
+          app:
+            passwordSecret: example-service-pg-runtime
+            role: example_service_app
+          host: example-service-infra-pg-rw
+        events:
+          url: nats://broker.example.com:4222
+        installName: example-service
+        route:
+          enabled: true
+          hostname: example-service.example.com
+        serviceAccount:
+          app:
+            name: example-service
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/example-service
+    targetRevision: 1.2.3
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-company/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: stage-example-service-e2e
+  namespace: argocd
+spec:
+  destination:
+    name: stage
+    namespace: example-service
+  project: example-service-stage
+  sources:
+  - helm:
+      releaseName: example-service-e2e
+      valuesObject:
+        appRelease: example-service
+        archive:
+          bucket: stage-example-service
+          region: example-region
+        config:
+          timeout: 30s
+        database:
+          app:
+            passwordSecret: example-service-pg-runtime
+            role: example_service_app
+          host: example-service-infra-pg-rw
+          name: example_service
+          owner:
+            role: example_service_owner
+        events:
+          url: nats://broker.example.com:4222
+        job:
+          annotations:
+            argocd.argoproj.io/sync-options: Force=true,Replace=true
+        mode: full
+        prober:
+          enabled: true
+          interval: 30s
+        serviceAccount:
+          create: true
+          name: example-service-e2e
+    path: .
+    repoURL: oci://registry.example.com/charts/example-service-e2e
+    targetRevision: 1.2.3
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-company/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: stage-example-worker-infra
+  namespace: argocd
+spec:
+  destination:
+    name: stage
+    namespace: example-worker
+  project: example-worker-stage
+  sources:
+  - helm:
+      releaseName: example-worker-infra
+      valuesObject:
+        events:
+          account: example-worker
+          maxAge: 24h
+          replicas: 2
+          storage: file
+        installName: example-worker
+        postgres:
+          instances: 2
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: example-worker-pg-runtime
+          runtimeRole: example_worker_app
+          storage: 2Gi
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/example-worker-infra
+    targetRevision: 2.0.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-company/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: stage-example-worker
+  namespace: argocd
+spec:
+  destination:
+    name: stage
+    namespace: example-worker
+  project: example-worker-stage
+  sources:
+  - helm:
+      releaseName: example-worker
+      valuesObject:
+        availability: high
+        config:
+          concurrency: 2
+        database:
+          app:
+            passwordSecret: example-worker-pg-runtime
+            role: example_worker_app
+          host: example-worker-infra-pg-rw
+        events:
+          url: nats://broker.example.com:4222
+        installName: example-worker
+        route:
+          enabled: true
+          hostname: example-worker.example.com
+        serviceAccount:
+          app:
+            name: example-worker
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/example-worker
+    targetRevision: 2.0.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false

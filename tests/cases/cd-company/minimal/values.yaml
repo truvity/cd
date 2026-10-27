@@ -1,0 +1,24 @@
+platform:
+  clusterName: devel
+  argocdNamespace: argocd
+  applicationPrefix: devel-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+  postgres: {instances: 1, storage: 2Gi}
+  events:
+    url: nats://broker.example.com:4222
+    storage: file
+    replicas: 1
+    maxAge: 24h
+    account: "{product}"
+products:
+  example-service:
+    interface: 15
+    hostname: example-service.example.com
+services: [example-service]
+pins: {example-service: "1.2.3"}
+values:
+  example-service:
+    app:
+      config:
+        greeting: hello

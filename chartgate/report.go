@@ -3,6 +3,7 @@ package chartgate
 import (
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -17,8 +18,12 @@ const (
 // printed one per line, never summarized away.
 func Report(w io.Writer, results []Result, elapsed time.Duration) int {
 	var ok, fail, skip int
+	selected := map[SourceRevision]bool{}
 
 	for _, r := range results {
+		for _, s := range r.Sources {
+			selected[s] = true
+		}
 		switch r.Status {
 		case StatusOK:
 			ok++
@@ -26,6 +31,32 @@ func Report(w io.Writer, results []Result, elapsed time.Duration) int {
 			fail++
 		case StatusSkip:
 			skip++
+		}
+	}
+	if len(selected) > 0 {
+		sayf(w, "\nSelected Git sources (requested revision -> immutable checkout HEAD):\n")
+		ordered := make([]SourceRevision, 0, len(selected))
+		for source := range selected {
+			ordered = append(ordered, source)
+		}
+		sort.Slice(ordered, func(i, j int) bool {
+			a, b := ordered[i], ordered[j]
+			if a.RepoURL != b.RepoURL {
+				return a.RepoURL < b.RepoURL
+			}
+			if a.TargetRevision != b.TargetRevision {
+				return a.TargetRevision < b.TargetRevision
+			}
+			if a.Revision != b.Revision {
+				return a.Revision < b.Revision
+			}
+			if a.Ref != b.Ref {
+				return a.Ref < b.Ref
+			}
+			return a.Root < b.Root
+		})
+		for _, s := range ordered {
+			sayf(w, "  %s@%s -> %s (ref=%q, root=%s)\n", s.RepoURL, s.TargetRevision, s.Revision, s.Ref, s.Root)
 		}
 	}
 

@@ -5,6 +5,12 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## Unreleased
+
+- **Added:** `cd-company`, a service-allowlisted adapter from company-owned string pins and infra/app/e2e values to the existing `cd-delivery.applications` renderer. Empty pins are dormant; missing pins, unknown services/rings/keys and platform-owned payload overrides fail. The existing cd-delivery application chart is a locked, packaged dependency whose own products are required to stay empty, so it renders no duplicate Applications. Templates have one source tree; strict platform/product schemas are composed from cd-delivery with a drift check, and chart proofs detect stale dependency archives. The chart ships under the existing cd tag with the Go module.
+- **Added:** `chartgate.Gate.RunApplications`, `SourceMapping` and CLI `-application`/`-sources` for actual root Applications and multiple caller-owned Git checkouts at verified immutable revisions. Arbitrary named refs select the supplied candidate checkout, with chart-shipped/listed files and the selected inline representation layered in Argo CD order. `valuesObject` (even `{}`) replaces inline `values`, matching Argo CD rather than merging the two representations. Reports expose selected source revisions. Existing bootstrap mode remains available.
+- **Behaviour change (`chartgate`):** remote Application-producing charts are now followed through their descendants, just like local charts. A wrapper success can no longer hide a child's pull, authentication, schema or template failure. Traversal detects cycles, bounds depth/render contexts and preserves distinct values/release/namespace contexts. Missing source refs and required chart-shipped files fail rather than being omitted. Local ordinary value-file paths resolve relative to their chart within the checkout. Required private ECR authentication remains fail-closed in CI.
+
 ## v0.26.2
 
 - Dependency updates.

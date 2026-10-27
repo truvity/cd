@@ -13,12 +13,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 	"time"
-
-	"go.yaml.in/yaml/v3"
 )
 
 type (
@@ -33,6 +30,7 @@ type (
 		Status  Status
 		Detail  string
 		Elapsed time.Duration
+		Sources []SourceRevision // selected Git checkouts, including values refs
 	}
 
 	// Gate carries everything a run needs.
@@ -43,6 +41,13 @@ type (
 		Jobs     int    // concurrent helm invocations
 		// SelfRepo recognizes this repository's git URL in an Application.
 		SelfRepo func(string) bool
+		// Sources bind an Application's exact repoURL/targetRevision to an
+		// existing checkout at an immutable commit. The gate never checks out Git.
+		Sources []SourceMapping
+		// MaxDepth and MaxRenders bound Application-producing chart trees.
+		// Zero selects 32 levels and 10000 distinct render contexts.
+		MaxDepth   int
+		MaxRenders int
 
 		// AWS is the aws CLI, used to mint the ECR registry password for
 		// charts in a private ECR registry. Empty means "aws" on PATH.
@@ -59,10 +64,19 @@ type (
 		// without credentials leaves it off and still gets the skip.
 		RequireECR bool
 
-		work   string // per-run scratch for value files
-		pullMu sync.Mutex
-		pulls  map[string]*pullOnce
-		logins map[string]*pullOnce // ECR host -> login outcome (err only)
+		work     string // per-run scratch for value files
+		pullMu   sync.Mutex
+		pulls    map[string]*pullOnce
+		logins   map[string]*pullOnce // ECR host -> login outcome (err only)
+		renders  map[string]*renderOnce
+		sem      chan struct{}
+		explicit bool
+	}
+
+	renderOnce struct {
+		once   sync.Once
+		result Result
+		output []byte
 	}
 
 	pullOnce struct {
@@ -88,174 +102,21 @@ const (
 	StatusSkip Status = "not checked"
 )
 
-// Run checks every cluster and returns the results sorted by cluster,
-// application, chart.
-func (g *Gate) Run(ctx context.Context, clusters []string) []Result {
-	if g.Jobs < 1 {
-		g.Jobs = 4
-	}
-
-	g.pulls = map[string]*pullOnce{}
-	g.logins = map[string]*pullOnce{}
-
-	work, err := os.MkdirTemp("", "chartgate-")
-	if err != nil {
-		return []Result{{Cluster: "-", App: "(chartgate)", Chart: "temp dir", Status: StatusFail, Detail: err.Error()}}
-	}
-
-	defer func() { _ = os.RemoveAll(work) }()
-
-	g.work = work
-
-	var (
-		mu      sync.Mutex
-		results []Result
-		targets []target
-		wg      sync.WaitGroup
-	)
-
-	// Phase 1: walk each cluster's Application tree. Local charts render
-	// here (they are fast and they emit the next level of Applications).
-	for _, cluster := range clusters {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
-			res, tgts := g.crawl(ctx, cluster)
-
-			mu.Lock()
-			results = append(results, res...)
-			targets = append(targets, tgts...)
-			mu.Unlock()
-		}()
-	}
-
-	wg.Wait()
-
-	// Phase 2: remote charts, in parallel, pulls deduplicated.
-	sem := make(chan struct{}, g.Jobs)
-
-	for i := range targets {
-		t := targets[i]
-
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
-			sem <- struct{}{}
-			defer func() { <-sem }()
-
-			res := g.check(ctx, t)
-
-			mu.Lock()
-			results = append(results, res)
-			mu.Unlock()
-		}()
-	}
-
-	wg.Wait()
-
-	sort.Slice(results, func(i, j int) bool {
-		a, b := results[i], results[j]
-		if a.Cluster != b.Cluster {
-			return a.Cluster < b.Cluster
-		}
-
-		if a.App != b.App {
-			return a.App < b.App
-		}
-
-		return a.Chart < b.Chart
-	})
-
-	return results
-}
-
-// crawl starts from clusters/<cluster>.yaml, the hand-applied bootstrap
-// Application, and follows every local chart it installs.
-func (g *Gate) crawl(ctx context.Context, cluster string) ([]Result, []target) {
-	var (
-		results []Result
-		targets []target
-	)
-
-	boot := filepath.Join(g.Root, "clusters", cluster+".yaml")
-
-	raw, err := os.ReadFile(boot)
-	if err != nil {
-		return []Result{{Cluster: cluster, App: "(bootstrap)", Chart: "clusters/" + cluster + ".yaml", Status: StatusFail, Detail: err.Error()}}, nil
-	}
-
-	queue, err := ParseApplications(raw)
-	if err != nil {
-		return []Result{{Cluster: cluster, App: "(bootstrap)", Chart: "clusters/" + cluster + ".yaml", Status: StatusFail, Detail: err.Error()}}, nil
-	}
-
-	seen := map[string]bool{}
-
-	for len(queue) > 0 {
-		app := queue[0]
-		queue = queue[1:]
-
-		for i := range app.Sources {
-			src := app.Sources[i]
-
-			class, chart := Classify(src, g.SelfRepo)
-
-			switch class {
-			case ClassRefOnly:
-			case ClassGit:
-				results = append(results, Result{
-					Cluster: cluster, App: app.Name, Chart: src.RepoURL + " " + src.Path + "@" + src.TargetRevision,
-					Status: StatusSkip, Detail: "git source of plain manifests, not a Helm chart",
-				})
-			case ClassLocal:
-				key := app.Name + "|" + src.Path
-				if seen[key] {
-					continue
-				}
-
-				seen[key] = true
-
-				start := time.Now()
-				out, err := g.renderLocal(ctx, app, src)
-
-				res := Result{Cluster: cluster, App: app.Name, Chart: src.Path + " (this repo)", Status: StatusOK, Elapsed: time.Since(start)}
-				if err != nil {
-					res.Status, res.Detail = StatusFail, err.Error()
-					results = append(results, res)
-
-					continue
-				}
-
-				results = append(results, res)
-
-				next, err := ParseApplications(out)
-				if err != nil {
-					results = append(results, Result{Cluster: cluster, App: app.Name, Chart: src.Path, Status: StatusFail, Detail: err.Error()})
-
-					continue
-				}
-
-				queue = append(queue, next...)
-			case ClassRemote:
-				targets = append(targets, target{cluster: cluster, app: app, source: src, chart: chart})
-			}
-		}
-	}
-
-	return results, targets
-}
-
 func (g *Gate) renderLocal(ctx context.Context, app Application, src Source) ([]byte, error) {
+	root, err := g.sourceRoot(src)
+	if err != nil {
+		return nil, err
+	}
+	chart, err := checkoutPath(root, src.Path)
+	if err != nil {
+		return nil, err
+	}
 	files, err := g.valueFiles(app, src, true, "")
 	if err != nil {
 		return nil, err
 	}
 
-	args := []string{"template", app.Release(src), filepath.Join(g.Root, src.Path)}
+	args := []string{"template", app.Release(src), chart}
 	args = append(args, namespaceArgs(app)...)
 
 	for _, f := range files {
@@ -263,88 +124,6 @@ func (g *Gate) renderLocal(ctx context.Context, app Application, src Source) ([]
 	}
 
 	return g.helm(ctx, args...)
-}
-
-// valueFiles resolves an Application source's values the way Argo CD
-// layers them: valueFiles in order (a missing one is dropped when
-// ignoreMissingValueFiles is set, an error otherwise), then the inline
-// `values`, then `valuesObject`. $values/ names this repository's root.
-func (g *Gate) valueFiles(app Application, src Source, local bool, tgz string) ([]string, error) {
-	var files []string
-
-	// A local chart takes every value file. A remote chart takes the ones that
-	// are this repository's (`$values/...`) and, when the pulled archive is
-	// given, the ones the chart ships inside itself (`presets/health.yaml`):
-	// Argo CD reads those from the chart it pulled, so the gate extracts them
-	// from the archive it pulled. Without the archive they are left out. A chart
-	// whose required values arrive in the repository's file (the sluis chart's
-	// `documents`) refuses to render without it.
-	for _, f := range src.Helm.ValueFiles {
-		shipped := !local && !strings.HasPrefix(f, "$values/")
-		if shipped && tgz == "" {
-			continue
-		}
-
-		path := strings.Replace(f, "$values/", g.Root+"/", 1)
-
-		if shipped {
-			p, err := g.extractShipped(tgz, f)
-			if err != nil {
-				if errors.Is(err, os.ErrNotExist) && src.Helm.IgnoreMissing {
-					continue
-				}
-
-				return nil, fmt.Errorf("value file %s: %w", f, err)
-			}
-
-			files = append(files, p)
-
-			continue
-		}
-
-		if _, err := os.Stat(path); err != nil {
-			if os.IsNotExist(err) && src.Helm.IgnoreMissing {
-				continue
-			}
-
-			return nil, fmt.Errorf("value file %s: %w", f, err)
-		}
-
-		files = append(files, path)
-	}
-
-	dir, err := os.MkdirTemp(g.work, "values-")
-	if err != nil {
-		return nil, err
-	}
-
-	write := func(name string, body []byte) error {
-		p := filepath.Join(dir, name)
-		files = append(files, p)
-
-		return os.WriteFile(p, body, 0o600)
-	}
-
-	if src.Helm.Values != "" {
-		if err := write("values.yaml", []byte(src.Helm.Values)); err != nil {
-			return nil, err
-		}
-	}
-
-	if len(src.Helm.ValuesObject) > 0 {
-		raw, err := yaml.Marshal(src.Helm.ValuesObject)
-		if err != nil {
-			return nil, err
-		}
-
-		if err := write("valuesObject.yaml", raw); err != nil {
-			return nil, err
-		}
-	}
-
-	_ = app
-
-	return files, nil
 }
 
 func namespaceArgs(app Application) []string {
@@ -355,9 +134,9 @@ func namespaceArgs(app Application) []string {
 	return []string{"--namespace", app.Namespace}
 }
 
-// check renders one remote chart.
-func (g *Gate) check(ctx context.Context, t target) Result {
-	res := Result{Cluster: t.cluster, App: t.app.Name, Chart: t.chart.String()}
+// check renders one remote chart and keeps its output for child discovery.
+func (g *Gate) check(ctx context.Context, t target) (res Result, output []byte) {
+	res = Result{Cluster: t.cluster, App: t.app.Name, Chart: t.chart.String()}
 	if rel := t.app.Release(t.source); rel != t.app.Name {
 		res.App += " [" + rel + "]"
 	}
@@ -375,7 +154,7 @@ func (g *Gate) check(ctx context.Context, t target) Result {
 				res.Detail = "needs auth: " + why + " (login failed: " + firstLine(err.Error()) + ")"
 			}
 
-			return res
+			return res, nil
 		}
 	}
 
@@ -383,14 +162,14 @@ func (g *Gate) check(ctx context.Context, t target) Result {
 	if err != nil {
 		res.Status, res.Detail = StatusFail, "helm pull: "+err.Error()
 
-		return res
+		return res, nil
 	}
 
 	files, err := g.valueFiles(t.app, t.source, false, tgz)
 	if err != nil {
 		res.Status, res.Detail = StatusFail, err.Error()
 
-		return res
+		return res, nil
 	}
 
 	args := []string{"template", t.app.Release(t.source), tgz}
@@ -400,15 +179,16 @@ func (g *Gate) check(ctx context.Context, t target) Result {
 		args = append(args, "-f", f)
 	}
 
-	if _, err := g.helm(ctx, args...); err != nil {
+	output, err = g.helm(ctx, args...)
+	if err != nil {
 		res.Status, res.Detail = StatusFail, err.Error()
 
-		return res
+		return res, nil
 	}
 
 	res.Status = StatusOK
 
-	return res
+	return res, output
 }
 
 // pull fetches chart into the cache once per run, and not at all when an

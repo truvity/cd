@@ -1,0 +1,15 @@
+apiVersion: v2
+name: cd-company
+description: >-
+  Company pins and ring values adapted to cd-delivery Applications, with a
+  platform-owned service allowlist and ownership checks.
+type: application
+# Stamped from the same release tag as cd-delivery and the Go module.
+version: 0.0.0
+home: https://github.com/truvity/cd
+sources:
+  - https://github.com/truvity/cd
+dependencies:
+  - name: cd-delivery
+    version: 0.0.0
+    repository: file://../cd-delivery
