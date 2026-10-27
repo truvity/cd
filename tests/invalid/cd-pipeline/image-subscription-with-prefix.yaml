@@ -1,0 +1,15 @@
+# expect: takes neither name nor versionPrefix
+# subscribeAs image writes the tag as discovered; a versionPrefix would double it.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+projects:
+  - name: hubble
+    pinKey: hubble
+    chart:
+      repoURL: oci://registry.example.com/vendor/charts/hubble
+      semver: ">=1.2.9"
+      subscribeAs: image
+      versionPrefix: v
+    stages:
+      - name: dev
+        autoPromote: true

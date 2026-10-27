@@ -23,7 +23,14 @@ Stages, as YAML documents. Call with (dict "root" . "p" <project map>).
 {{- if not $subs -}}
 {{- $sub := dict "repoURL" (required (printf "cd-pipeline: projects.%s.chart.repoURL is required (or warehouse.subscriptions)" $name) $repoURL) "semverConstraint" (required (printf "cd-pipeline: projects.%s.chart.semver is required" $name) $chart.semver) "discoveryLimit" ($chart.discoveryLimit | default 20) -}}
 {{- if $chartName -}}{{- $_ := set $sub "name" $chartName -}}{{- end -}}
+{{- $mode := include "cd-pipeline.chartMode" (dict "name" $name "chart" $chart) | fromYaml -}}
+{{- if $mode.image -}}
+{{- /* An OCI chart whose tags carry a `v`: Helm's tag listing drops them, so subscribe as an image. */ -}}
+{{- $sub = dict "repoURL" $mode.repo "imageSelectionStrategy" "SemVer" "strictSemvers" false "constraint" $chart.semver "discoveryLimit" ($chart.discoveryLimit | default 20) -}}
+{{- $subs = list (dict "image" $sub) -}}
+{{- else -}}
 {{- $subs = list (dict "chart" $sub) -}}
+{{- end -}}
 {{- end -}}
 {{- include "cd-pipeline.doc" (dict "apiVersion" "kargo.akuity.io/v1alpha1" "kind" "Warehouse" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $whName "ns" $name "wave" $w.warehouse) | fromYaml) "spec" (dict "interval" ($wh.interval | default "5m0s") "freightCreationPolicy" ($wh.freightCreationPolicy | default "Automatic") "subscriptions" $subs)) -}}
 
@@ -94,7 +101,8 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- $chartName := $chart.name | default "" -}}
 {{- $prefix := $chart.versionPrefix | default "" -}}
 {{- $upstream := $s.from | default "" -}}
-{{- $verArg := dict "name" "chart-version" "value" (printf "${{ %s.Version }}" (include "cd-pipeline.chartFrom" (dict "repoURL" $repoURL "name" $chartName "vars" false))) -}}
+{{- $mode := include "cd-pipeline.chartMode" (dict "name" $name "chart" $chart) | fromYaml -}}
+{{- $verArg := dict "name" "chart-version" "value" (printf "${{ %s.%s }}" (include "cd-pipeline.chartFrom" (dict "repoURL" $mode.repo "name" $chartName "vars" false "image" $mode.image)) (ternary "Tag" "Version" $mode.image)) -}}
 {{- $verif := $s.verification | default dict -}}
 {{- $templates := list -}}
 

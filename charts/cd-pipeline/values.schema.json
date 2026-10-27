@@ -522,6 +522,14 @@
               "discoveryLimit": {
                 "type": "integer",
                 "minimum": 1
+              },
+              "subscribeAs": {
+                "type": "string",
+                "enum": [
+                  "chart",
+                  "image"
+                ],
+                "description": "How the Warehouse discovers the chart. `chart` (default) is a chart subscription. `image` is an image subscription with SemVer selection and `strictSemvers: false`, for an OCI chart whose tags carry a `v` (Helm's tag listing drops them, so a chart subscription finds nothing). A leading `oci://` is dropped from `repoURL` for the subscription, the promotion steps write the discovered tag as it is (the `v` stays), and `name` and `versionPrefix` are refused."
               }
             },
             "required": [

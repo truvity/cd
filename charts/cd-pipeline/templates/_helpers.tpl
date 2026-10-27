@@ -37,10 +37,13 @@ One document: `---` and the object. Call with the object (a map).
 Kargo's `chartFrom` call for a chart. `vars` true reads the promotion's own
 variables (chartRepo, and chartName where the chart has one); false spells the
 repository and name out, as a Stage's verification arguments must.
-Call with (dict "repoURL" .. "name" .. "vars" <bool>).
+Call with (dict "repoURL" .. "name" .. "vars" <bool> "image" <bool>); with `image` the call is `imageFrom` and `repoURL` is the image repository.
 */}}
 {{- define "cd-pipeline.chartFrom" -}}
-{{- if .vars -}}
+{{- if .image -}}
+{{- /* An image subscription (chart.subscribeAs: image): Kargo's `imageFrom`, whose Tag is the discovered tag as it is. */ -}}
+{{- if .vars -}}{{- print "imageFrom(vars.chartRepo)" -}}{{- else -}}{{- printf "imageFrom(%q)" .repoURL -}}{{- end -}}
+{{- else if .vars -}}
 {{- printf "chartFrom(vars.chartRepo%s)" (ternary ", vars.chartName" "" (ne .name "")) -}}
 {{- else -}}
 {{- printf "chartFrom(%q%s)" .repoURL (ternary (printf ", %q" .name) "" (ne .name "")) -}}
@@ -77,4 +80,17 @@ The script volume and mount of a check whose script is a ConfigMap.
 */}}
 {{- define "cd-pipeline.scriptVolume" -}}
 {{- toYaml (dict "name" "script" "configMap" (dict "name" .configMap "defaultMode" 365)) -}}
+{{- end -}}
+
+{{/*
+The chart's subscription mode and the repository the promotion names. Returns
+YAML for `fromYaml`: image (bool) and repo (the image repository for an image
+subscription, with any `oci://` dropped; the chart's repoURL otherwise).
+Call with (dict "name" <project> "chart" <chart map>).
+*/}}
+{{- define "cd-pipeline.chartMode" -}}
+{{- $c := .chart -}}
+{{- $image := eq ($c.subscribeAs | default "chart") "image" -}}
+{{- if and $image (or $c.name $c.versionPrefix) -}}{{- fail (printf "cd-pipeline: projects.%s.chart.subscribeAs image takes neither name nor versionPrefix (the tag is written as discovered)" .name) -}}{{- end -}}
+{{- toYaml (dict "image" $image "repo" (ternary (trimPrefix "oci://" ($c.repoURL | default "")) ($c.repoURL | default "") $image)) -}}
 {{- end -}}
