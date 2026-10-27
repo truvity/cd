@@ -18,8 +18,9 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- $mode := $s.mode | default (ternary "pr" "direct" (ne $upstream "")) -}}
 {{- $retry := dict "errorThreshold" $pr.retry.errorThreshold "timeout" $pr.retry.timeout -}}
 {{- $tokens := dict "stage" $s.name "project" $p.name "slug" .slug "pinKey" ($p.pinKey | default "") -}}
-{{- $from := include "cd-pipeline.chartFrom" (dict "name" $chartName "vars" true) -}}
-{{- $version := printf "${{ %s.Version }}" $from -}}
+{{- $chm := include "cd-pipeline.chartMode" (dict "name" $p.name "chart" $chart) | fromYaml -}}
+{{- $from := include "cd-pipeline.chartFrom" (dict "name" $chartName "vars" true "image" $chm.image) -}}
+{{- $version := printf "${{ %s.%s }}" $from (ternary "Tag" "Version" $chm.image) -}}
 {{- $steps := list -}}
 
 {{- /* The gate: before a hop moves a pin, the Applications that the version it
@@ -57,6 +58,6 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- if $s.e2eApplication -}}
 {{- $steps = append $steps (dict "uses" "argocd-update" "as" "e2e" "retry" (dict "timeout" "25m0s") "config" (dict "apps" (list (dict "name" $s.e2eApplication "namespace" $v.argocd.namespace)))) -}}
 {{- end -}}
-{{- $vars := list (dict "name" "gitRepo" "value" $repo) (dict "name" "chartRepo" "value" ($chart.repoURL | default "")) (dict "name" "chartName" "value" $chartName) -}}
+{{- $vars := list (dict "name" "gitRepo" "value" $repo) (dict "name" "chartRepo" "value" $chm.repo) (dict "name" "chartName" "value" $chartName) -}}
 {{- toYaml (dict "vars" $vars "steps" $steps) -}}
 {{- end -}}

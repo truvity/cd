@@ -1,0 +1,24 @@
+# An OCI chart whose tags carry a `v` (Helm's tag listing drops them): the
+# Warehouse subscribes as an image, the pin takes the tag as discovered, and a
+# second, ordinary chart project beside it renders as before.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+projects:
+  - name: platform-hubble
+    slug: hubble
+    pinKey: hubble
+    chart:
+      repoURL: oci://registry.example.com/vendor/charts/hubble
+      semver: ">=1.2.9 <2.0.0"
+      subscribeAs: image
+    stages:
+      - name: dev
+        autoPromote: true
+  - name: plain
+    pinKey: plain
+    chart:
+      repoURL: oci://registry.example.com/charts/plain
+      semver: ">=1.0.0 <2.0.0"
+    stages:
+      - name: dev
+        autoPromote: true
