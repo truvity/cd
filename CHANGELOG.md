@@ -5,7 +5,7 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
-## Unreleased
+## v0.26.3
 
 - **Added:** `cd-pipeline` `projects[].chart.subscribeAs: image`, for an OCI chart whose tags carry a `v` (`v1.2.9`): Helm's tag listing, which Kargo's chart discovery uses, accepts only strict semver and drops every such tag, so the Warehouse never discovers a version. With `image` the Warehouse subscribes to the repository as an image (`imageSelectionStrategy: SemVer`, `strictSemvers: false`, `constraint` from `chart.semver`, `discoveryLimit`), a leading `oci://` is dropped, and the promotion steps and the Stage's `chart-version` argument use `imageFrom(...).Tag`, so the pin keeps the tag's `v`; `chart.name` and `chart.versionPrefix` are refused with it. The default is `chart` and every existing render is byte-identical.
 - **Added:** `cd-company`, a service-allowlisted adapter from company-owned string pins and infra/app/e2e values to the existing `cd-delivery.applications` renderer. Empty pins are dormant; missing pins, unknown services/rings/keys and platform-owned payload overrides fail. The existing cd-delivery application chart is a locked, packaged dependency whose own products are required to stay empty, so it renders no duplicate Applications. Templates have one source tree; strict platform/product schemas are composed from cd-delivery with a drift check, and chart proofs detect stale dependency archives. The chart ships under the existing cd tag with the Go module.
