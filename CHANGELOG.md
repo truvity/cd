@@ -5,6 +5,10 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## v0.27.0
+
+- **Added:** `delivery.ValidateCompanyRepo(branch, writeApp, RepoFacts)`, the rules a company delivery repository must meet for Kargo's write-back: the default branch is the one delivery reads, no human approval is required, the `check` context (`delivery.CompanyCheck`) is required by a default-branch ruleset that names the write-back App as a bypass, and classic protection does not require it (it cannot carry an App bypass). It returns every violation. `RepoFacts` and `BranchRuleset` are plain inputs, so a caller maps its own repository registry onto them.
+
 ## v0.26.3
 
 - **Added:** `cd-pipeline` `projects[].chart.subscribeAs: image`, for an OCI chart whose tags carry a `v` (`v1.2.9`): Helm's tag listing, which Kargo's chart discovery uses, accepts only strict semver and drops every such tag, so the Warehouse never discovers a version. With `image` the Warehouse subscribes to the repository as an image (`imageSelectionStrategy: SemVer`, `strictSemvers: false`, `constraint` from `chart.semver`, `discoveryLimit`), a leading `oci://` is dropped, and the promotion steps and the Stage's `chart-version` argument use `imageFrom(...).Tag`, so the pin keeps the tag's `v`; `chart.name` and `chart.versionPrefix` are refused with it. The default is `chart` and every existing render is byte-identical.
