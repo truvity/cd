@@ -97,18 +97,18 @@ data:
       owners:
       - acme
       - acme-labs
-      secretFile: /etc/webhook-relay/secrets/acme-webhook/secret
+      secretFile: /etc/webhook-relay/keys/acme-webhook/secret
     - name: globex
       owners:
       - globex
-      secretFile: /etc/webhook-relay/secrets/shared-webhooks/globex
+      secretFile: /etc/webhook-relay/keys/shared-webhooks/globex
     - name: initech
       owners:
       - initech
       - some-user
-      secretFile: /etc/webhook-relay/secrets/shared-webhooks/initech
+      secretFile: /etc/webhook-relay/keys/shared-webhooks/initech
     target:
-      secretFile: /etc/webhook-relay/secrets/argocd-webhook/secret
+      secretFile: /etc/webhook-relay/keys/argocd-webhook/secret
       url: http://argocd-server.argocd.svc/api/webhook
     targetTimeout: 15s
     writeTimeout: 20s
@@ -160,7 +160,7 @@ spec:
       annotations:
         # The relay reads its configuration once at start; secrets are re-read
         # on change and need no restart.
-        checksum/config: 1eaf48e5948dda858f616028cc2632041cab7341676ab620e1d15b5afd24dff6
+        checksum/config: e3d04ec587742985723f9978b795f3fb50e412a602caf7a05726ed00560e1ec4
         example.invalid/annotation: "yes"
     spec:
       serviceAccountName: cd-webhook-relay
@@ -214,13 +214,13 @@ spec:
               mountPath: /etc/webhook-relay/config
               readOnly: true
             - name: secret-0
-              mountPath: /etc/webhook-relay/secrets/acme-webhook
+              mountPath: /etc/webhook-relay/keys/acme-webhook
               readOnly: true
             - name: secret-1
-              mountPath: /etc/webhook-relay/secrets/argocd-webhook
+              mountPath: /etc/webhook-relay/keys/argocd-webhook
               readOnly: true
             - name: secret-2
-              mountPath: /etc/webhook-relay/secrets/shared-webhooks
+              mountPath: /etc/webhook-relay/keys/shared-webhooks
               readOnly: true
       volumes:
         - name: config

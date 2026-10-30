@@ -145,7 +145,7 @@ spec:
               readOnly: true
             {{- range $i, $s := keys $secrets | sortAlpha }}
             - name: secret-{{ $i }}
-              mountPath: /etc/webhook-relay/secrets/{{ $s }}
+              mountPath: /etc/webhook-relay/keys/{{ $s }}
               readOnly: true
             {{- end }}
       volumes:
