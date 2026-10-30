@@ -2,6 +2,7 @@ package webhookrelay
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -101,10 +102,14 @@ func pushBody(owner string) []byte {
 		`"html_url":"https://github.com/` + owner + `/app","clone_url":"https://github.com/` + owner + `/app.git","ssh_url":"git@github.com:` + owner + `/app.git"}}`)
 }
 
-func (f *fixture) post(event, signature string, body []byte) *http.Response {
+func (f *fixture) post(event, signature string, body []byte) int {
 	f.t.Helper()
 
-	req, _ := http.NewRequest(http.MethodPost, f.relay.URL+"/api/webhook", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, f.relay.URL+"/api/webhook", bytes.NewReader(body))
+	if err != nil {
+		f.t.Fatal(err)
+	}
+
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "GitHub-Hookshot/abc")
 	req.Header.Set("X-GitHub-Delivery", "d-1")
@@ -123,9 +128,11 @@ func (f *fixture) post(event, signature string, body []byte) *http.Response {
 		f.t.Fatal(err)
 	}
 
-	f.t.Cleanup(func() { resp.Body.Close() })
+	defer func() { _ = resp.Body.Close() }()
 
-	return resp
+	_, _ = io.Copy(io.Discard, resp.Body)
+
+	return resp.StatusCode
 }
 
 func (f *fixture) calls() int {
@@ -152,7 +159,7 @@ func TestSignature(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			f := newFixture(t, nil)
-			if got := f.post("push", c.sig, body).StatusCode; got != c.want {
+			if got := f.post("push", c.sig, body); got != c.want {
 				t.Fatalf("status %d, want %d", got, c.want)
 			}
 
@@ -171,38 +178,38 @@ func TestSenderSelectionAndOwner(t *testing.T) {
 		{"alpha-secret", "alpha-org"}, {"alpha-secret", "ALPHA-ORG"}, {"beta-secret", "beta-org"}, {"beta-secret", "beta-user"},
 	} {
 		b := pushBody(c.owner)
-		if got := f.post("push", sig256(c.secret, b), b).StatusCode; got != http.StatusOK {
+		if got := f.post("push", sig256(c.secret, b), b); got != http.StatusOK {
 			t.Fatalf("%s for %s: %d", c.secret, c.owner, got)
 		}
 	}
 
 	// One organisation's secret cannot trigger another's.
 	b := pushBody("beta-org")
-	if got := f.post("push", sig256("alpha-secret", b), b).StatusCode; got != http.StatusForbidden {
+	if got := f.post("push", sig256("alpha-secret", b), b); got != http.StatusForbidden {
 		t.Fatalf("cross-owner: %d", got)
 	}
 
 	// Nor can it smuggle another owner's URL under its own repository.owner.
 	mixed := []byte(`{"repository":{"owner":{"login":"alpha-org"},"full_name":"alpha-org/x","html_url":"https://github.com/beta-org/x"}}`)
-	if got := f.post("push", sig256("alpha-secret", mixed), mixed).StatusCode; got != http.StatusForbidden {
+	if got := f.post("push", sig256("alpha-secret", mixed), mixed); got != http.StatusForbidden {
 		t.Fatalf("mixed owner: %d", got)
 	}
 
 	// Nor a package event for another namespace.
 	pkg := []byte(`{"package":{"namespace":"beta-org"},"repository":{"owner":{"login":"alpha-org"}}}`)
-	if got := f.post("package", sig256("alpha-secret", pkg), pkg).StatusCode; got != http.StatusForbidden {
+	if got := f.post("package", sig256("alpha-secret", pkg), pkg); got != http.StatusForbidden {
 		t.Fatalf("package: %d", got)
 	}
 
 	// An event naming no owner has nothing to bind to.
 	none := []byte(`{"zen":"x"}`)
-	if got := f.post("push", sig256("alpha-secret", none), none).StatusCode; got != http.StatusForbidden {
+	if got := f.post("push", sig256("alpha-secret", none), none); got != http.StatusForbidden {
 		t.Fatalf("ownerless: %d", got)
 	}
 
 	// organization.login alone is enough to bind (org-level events).
 	org := []byte(`{"organization":{"login":"alpha-org"}}`)
-	if got := f.post("push", sig256("alpha-secret", org), org).StatusCode; got != http.StatusOK {
+	if got := f.post("push", sig256("alpha-secret", org), org); got != http.StatusOK {
 		t.Fatalf("org only: %d", got)
 	}
 }
@@ -211,7 +218,7 @@ func TestPingNotForwarded(t *testing.T) {
 	f := newFixture(t, nil)
 	b := []byte(`{"zen":"Keep it logically awesome."}`)
 
-	if got := f.post("ping", sig256("beta-secret", b), b).StatusCode; got != http.StatusOK {
+	if got := f.post("ping", sig256("beta-secret", b), b); got != http.StatusOK {
 		t.Fatalf("ping: %d", got)
 	}
 
@@ -220,7 +227,7 @@ func TestPingNotForwarded(t *testing.T) {
 	}
 
 	// A bad signature on a ping still fails: a rotation check must see it.
-	if got := f.post("ping", sig256("old", b), b).StatusCode; got != http.StatusUnauthorized {
+	if got := f.post("ping", sig256("old", b), b); got != http.StatusUnauthorized {
 		t.Fatalf("bad ping: %d", got)
 	}
 }
@@ -229,9 +236,8 @@ func TestResign(t *testing.T) {
 	f := newFixture(t, nil)
 	b := pushBody("alpha-org")
 
-	resp := f.post("push", sig256("alpha-secret", b), b)
-	if resp.StatusCode != http.StatusOK {
-		t.Fatal(resp.StatusCode)
+	if got := f.post("push", sig256("alpha-secret", b), b); got != http.StatusOK {
+		t.Fatal(got)
 	}
 
 	h := f.target.header
@@ -265,7 +271,7 @@ func TestRotationWithoutRestart(t *testing.T) {
 	f := newFixture(t, nil)
 	b := pushBody("alpha-org")
 
-	if got := f.post("push", sig256("alpha-secret", b), b).StatusCode; got != http.StatusOK {
+	if got := f.post("push", sig256("alpha-secret", b), b); got != http.StatusOK {
 		t.Fatal(got)
 	}
 
@@ -279,11 +285,11 @@ func TestRotationWithoutRestart(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got := f.post("push", sig256("alpha-secrex", b), b).StatusCode; got != http.StatusOK {
+	if got := f.post("push", sig256("alpha-secrex", b), b); got != http.StatusOK {
 		t.Fatalf("new secret: %d", got)
 	}
 
-	if got := f.post("push", sig256("alpha-secret", b), b).StatusCode; got != http.StatusUnauthorized {
+	if got := f.post("push", sig256("alpha-secret", b), b); got != http.StatusUnauthorized {
 		t.Fatalf("old secret still verifies: %d", got)
 	}
 
@@ -307,7 +313,7 @@ func TestBodyLimit(t *testing.T) {
 	f := newFixture(t, func(c *Config) { c.MaxBodyBytes = 64 })
 	b := append(pushBody("alpha-org"), bytes.Repeat([]byte(" "), 200)...)
 
-	if got := f.post("push", sig256("alpha-secret", b), b).StatusCode; got != http.StatusRequestEntityTooLarge {
+	if got := f.post("push", sig256("alpha-secret", b), b); got != http.StatusRequestEntityTooLarge {
 		t.Fatalf("status %d", got)
 	}
 
@@ -321,12 +327,12 @@ func TestTargetFailures(t *testing.T) {
 	b := pushBody("alpha-org")
 
 	f.target.status = http.StatusInternalServerError
-	if got := f.post("push", sig256("alpha-secret", b), b).StatusCode; got != http.StatusBadGateway {
+	if got := f.post("push", sig256("alpha-secret", b), b); got != http.StatusBadGateway {
 		t.Fatalf("5xx: %d", got)
 	}
 
 	f.target.status = http.StatusBadRequest
-	if got := f.post("push", sig256("alpha-secret", b), b).StatusCode; got != http.StatusBadRequest {
+	if got := f.post("push", sig256("alpha-secret", b), b); got != http.StatusBadRequest {
 		t.Fatalf("4xx: %d", got)
 	}
 
@@ -334,7 +340,7 @@ func TestTargetFailures(t *testing.T) {
 
 	// Unreachable target.
 	g := newFixture(t, func(c *Config) { c.Target.URL = "http://127.0.0.1:1/api/webhook" })
-	if got := g.post("push", sig256("alpha-secret", b), b).StatusCode; got != http.StatusBadGateway {
+	if got := g.post("push", sig256("alpha-secret", b), b); got != http.StatusBadGateway {
 		t.Fatalf("unreachable: %d", got)
 	}
 }
@@ -342,14 +348,33 @@ func TestTargetFailures(t *testing.T) {
 func TestBadRequests(t *testing.T) {
 	f := newFixture(t, nil)
 
-	if got := f.post("", sig256("alpha-secret", pushBody("alpha-org")), pushBody("alpha-org")).StatusCode; got != http.StatusBadRequest {
+	if got := f.post("", sig256("alpha-secret", pushBody("alpha-org")), pushBody("alpha-org")); got != http.StatusBadRequest {
 		t.Fatalf("no event: %d", got)
 	}
 
 	nj := []byte("not json")
-	if got := f.post("push", sig256("alpha-secret", nj), nj).StatusCode; got != http.StatusBadRequest {
+	if got := f.post("push", sig256("alpha-secret", nj), nj); got != http.StatusBadRequest {
 		t.Fatalf("not json: %d", got)
 	}
+}
+
+func httpGet(t *testing.T, url string) (int, string) {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	out, _ := io.ReadAll(resp.Body)
+
+	return resp.StatusCode, string(out)
 }
 
 func TestEndpoints(t *testing.T) {
@@ -359,15 +384,7 @@ func TestEndpoints(t *testing.T) {
 	f.post("push", sig256("nope", b), b)
 
 	get := func(p string) (int, string) {
-		resp, err := http.Get(f.relay.URL + p)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer resp.Body.Close()
-
-		out, _ := io.ReadAll(resp.Body)
-
-		return resp.StatusCode, string(out)
+		return httpGet(t, f.relay.URL+p)
 	}
 
 	if c, _ := get("/healthz"); c != http.StatusOK {
@@ -404,11 +421,8 @@ func TestEndpoints(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, _ := http.Get(g.relay.URL + "/readyz")
-	resp.Body.Close()
-
-	if resp.StatusCode != http.StatusServiceUnavailable {
-		t.Fatalf("readyz with a missing secret: %d", resp.StatusCode)
+	if c, _ := httpGet(t, g.relay.URL+"/readyz"); c != http.StatusServiceUnavailable {
+		t.Fatalf("readyz with a missing secret: %d", c)
 	}
 }
 

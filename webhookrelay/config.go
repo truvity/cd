@@ -129,7 +129,7 @@ func (c *Config) Validate() error {
 		case s.Name == "":
 			errs = append(errs, fmt.Errorf("%s: name is required", where))
 		case !senderName.MatchString(s.Name):
-			errs = append(errs, fmt.Errorf("%s: name %q must be alphanumeric with -_.", where, s.Name))
+			errs = append(errs, fmt.Errorf("%s: name %q must be alphanumeric, with - _ . inside", where, s.Name))
 		case seen[s.Name]:
 			errs = append(errs, fmt.Errorf("%s: duplicate name %q", where, s.Name))
 		}

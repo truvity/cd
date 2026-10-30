@@ -379,7 +379,7 @@ func (r *Relay) forward(w http.ResponseWriter, in *http.Request, d delivery, bod
 		return
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strings"
 	"sync"
 )
 
@@ -56,12 +57,14 @@ func (m *metrics) forward(seconds float64) {
 	}
 }
 
-func (m *metrics) write(w io.Writer) {
+func (m *metrics) write(out io.Writer) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	fmt.Fprintln(w, "# HELP webhook_relay_deliveries_total Webhook deliveries received, by verified sender, event and outcome.")
-	fmt.Fprintln(w, "# TYPE webhook_relay_deliveries_total counter")
+	var w strings.Builder
+
+	fmt.Fprintln(&w, "# HELP webhook_relay_deliveries_total Webhook deliveries received, by verified sender, event and outcome.")
+	fmt.Fprintln(&w, "# TYPE webhook_relay_deliveries_total counter")
 
 	keys := make([][3]string, 0, len(m.deliveries))
 	for k := range m.deliveries {
@@ -79,20 +82,22 @@ func (m *metrics) write(w io.Writer) {
 	})
 
 	for _, k := range keys {
-		fmt.Fprintf(w, "webhook_relay_deliveries_total{sender=%q,event=%q,result=%q} %d\n", k[0], k[1], k[2], m.deliveries[k])
+		fmt.Fprintf(&w, "webhook_relay_deliveries_total{sender=%q,event=%q,result=%q} %d\n", k[0], k[1], k[2], m.deliveries[k])
 	}
 
-	fmt.Fprintln(w, "# HELP webhook_relay_forward_duration_seconds Time to forward a delivery to the target.")
-	fmt.Fprintln(w, "# TYPE webhook_relay_forward_duration_seconds histogram")
+	fmt.Fprintln(&w, "# HELP webhook_relay_forward_duration_seconds Time to forward a delivery to the target.")
+	fmt.Fprintln(&w, "# TYPE webhook_relay_forward_duration_seconds histogram")
 
 	var cum uint64
 
 	for i, b := range durationBuckets {
 		cum += m.counts[i]
-		fmt.Fprintf(w, "webhook_relay_forward_duration_seconds_bucket{le=\"%g\"} %d\n", b, cum)
+		fmt.Fprintf(&w, "webhook_relay_forward_duration_seconds_bucket{le=\"%g\"} %d\n", b, cum)
 	}
 
-	fmt.Fprintf(w, "webhook_relay_forward_duration_seconds_bucket{le=\"+Inf\"} %d\n", m.inf)
-	fmt.Fprintf(w, "webhook_relay_forward_duration_seconds_sum %g\n", m.sum)
-	fmt.Fprintf(w, "webhook_relay_forward_duration_seconds_count %d\n", m.inf)
+	fmt.Fprintf(&w, "webhook_relay_forward_duration_seconds_bucket{le=\"+Inf\"} %d\n", m.inf)
+	fmt.Fprintf(&w, "webhook_relay_forward_duration_seconds_sum %g\n", m.sum)
+	fmt.Fprintf(&w, "webhook_relay_forward_duration_seconds_count %d\n", m.inf)
+
+	_, _ = io.WriteString(out, w.String())
 }
