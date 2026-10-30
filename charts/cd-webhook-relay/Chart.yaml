@@ -1,0 +1,17 @@
+apiVersion: v2
+name: cd-webhook-relay
+description: >-
+  A fan-in relay for GitHub webhooks in front of Argo CD: verifies each
+  delivery against the secret of the organisation that sent it, checks the
+  repository owner, and forwards it re-signed with the one secret Argo CD
+  knows. Renders a Deployment, Service and their companions; creates no Secret.
+type: application
+# Stamped from the tag by the release workflow; never moved by hand.
+version: 0.0.0
+keywords:
+  - argocd
+  - webhook
+  - github
+home: https://github.com/truvity/cd
+sources:
+  - https://github.com/truvity/cd

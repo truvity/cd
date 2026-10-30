@@ -1,0 +1,8 @@
+# expect: minItems
+senders:
+  - name: acme
+    owners: []
+    secret: {name: acme-webhook, key: secret}
+target:
+  url: http://argocd-server.argocd.svc/api/webhook
+  secret: {name: argocd-webhook, key: secret}

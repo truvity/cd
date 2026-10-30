@@ -2,9 +2,11 @@ version: 2
 
 project_name: cd
 
-# goreleaser cuts the GitHub release and its changelog, and builds the one
-# image this repository ships: `promotion-gate` (cmd/promotion-gate, the
-# Kargo verification checks of cd-pipeline), published with ko. The Helm
+# goreleaser cuts the GitHub release and its changelog, and builds the
+# images this repository ships, published with ko: `promotion-gate`
+# (cmd/promotion-gate, the Kargo verification checks of cd-pipeline) and
+# `webhook-relay` (cmd/webhook-relay, the GitHub webhook fan-in of
+# cd-webhook-relay). The Helm
 # charts are packaged and pushed by the shared release workflow after this.
 # chartgate is a `go run` tool, not a release artifact.
 builds:
@@ -19,11 +21,26 @@ builds:
     flags: [-trimpath]
     ldflags: [-s -w]
 
+  - id: webhook-relay
+    main: ./cmd/webhook-relay
+    binary: webhook-relay
+    env: [CGO_ENABLED=0]
+    # linux only: the image is what runs it.
+    goos: [linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s -w]
+
 archives:
   - id: promotion-gate
     ids: [promotion-gate]
     formats: [tar.gz]
     name_template: "promotion-gate_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+  - id: webhook-relay
+    ids: [webhook-relay]
+    formats: [tar.gz]
+    name_template: "webhook-relay_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 kos:
   # base_import_paths appends the cmd directory's basename, so with
@@ -46,6 +63,24 @@ kos:
       org.opencontainers.image.version: "{{ .Version }}"
       org.opencontainers.image.source: https://github.com/truvity/cd
 
+  # The image is ghcr.io/truvity/cd/webhook-relay, the binary at
+  # /ko-app/webhook-relay (cd-webhook-relay's image.repository).
+  - id: webhook-relay
+    build: webhook-relay
+    tags:
+      - "{{ .Version }}"
+      - "{{ if not .IsSnapshot }}latest{{ end }}"
+    platforms: [linux/amd64, linux/arm64]
+    bare: true
+    preserve_import_paths: false
+    base_import_paths: true
+    base_image: gcr.io/distroless/static:nonroot
+    sbom: none
+    labels:
+      org.opencontainers.image.title: webhook-relay
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.source: https://github.com/truvity/cd
+
 changelog:
   use: github-native
 
@@ -55,6 +90,7 @@ release:
 
     | | |
     |---|---|
-    | charts | `oci://ghcr.io/truvity/charts/{cd-argocd,cd-kargo,cd-rollouts,cd-delivery,cd-company,cd-pipeline,cd-cluster-registration}:{{ .Version }}` |
+    | charts | `oci://ghcr.io/truvity/charts/{cd-argocd,cd-kargo,cd-rollouts,cd-delivery,cd-company,cd-pipeline,cd-cluster-registration,cd-webhook-relay}:{{ .Version }}` |
     | promotion-gate image | `ghcr.io/truvity/cd/promotion-gate:{{ .Version }}` |
+    | webhook-relay image | `ghcr.io/truvity/cd/webhook-relay:{{ .Version }}` |
     | Go | `go get github.com/truvity/cd@{{ .Tag }}` |

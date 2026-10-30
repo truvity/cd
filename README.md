@@ -18,6 +18,7 @@ way.
 | `cd-company` — company pins/values adapted to cd-delivery with platform-owned facts and an allowlist | `oci://ghcr.io/truvity/charts/cd-company` |
 | `cd-pipeline` — the Kargo delivery pipeline of a project: Project, Warehouse, Stages, promotion, verification, access; no upstream | `oci://ghcr.io/truvity/charts/cd-pipeline` |
 | `cd-cluster-registration` — Argo CD cluster Secrets from a list of clusters; no upstream | `oci://ghcr.io/truvity/charts/cd-cluster-registration` |
+| `cd-webhook-relay` — a fan-in relay for GitHub webhooks in front of Argo CD, one secret per organisation (see [webhook-relay](docs/webhook-relay.md)); no upstream | `oci://ghcr.io/truvity/charts/cd-webhook-relay`, image `ghcr.io/truvity/cd/webhook-relay` |
 
 The repository is also a Go module (`github.com/truvity/cd`). `chartgate`
 (`go run github.com/truvity/cd/cmd/chartgate -self-repo <your/repo>`) renders every Argo CD Helm

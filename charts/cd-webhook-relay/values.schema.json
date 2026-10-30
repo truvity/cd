@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "cd-webhook-relay",
+  "description": "A GitHub webhook fan-in relay. Strict: a key the chart does not read is refused rather than ignored.",
+  "type": "object",
+  "additionalProperties": false,
+  "definitions": {
+    "secretRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "key"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "pattern": "^[a-z0-9]([-.a-z0-9]*[a-z0-9])?$", "description": "The Secret's name; the installation provides it."},
+        "key": {"type": "string", "minLength": 1, "pattern": "^[-._a-zA-Z0-9]+$", "description": "The key holding the secret."}
+      }
+    },
+    "peers": {
+      "type": "array",
+      "items": {"type": "object", "description": "A NetworkPolicyPeer, verbatim."}
+    },
+    "duration": {"type": "string", "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))*$"}
+  },
+  "properties": {
+    "replicas": {"type": "integer", "minimum": 1},
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "tag": {"type": "string"},
+        "pullPolicy": {"enum": ["Always", "IfNotPresent", "Never"]}
+      }
+    },
+    "imagePullSecrets": {"type": "array", "items": {"type": "object"}},
+    "senders": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "owners", "secret"],
+        "properties": {
+          "name": {"type": "string", "pattern": "^[a-zA-Z0-9]([-_.a-zA-Z0-9]*[a-zA-Z0-9])?$", "description": "The sender's label in metrics and logs; unique."},
+          "owners": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^[-_.a-zA-Z0-9]+$", "description": "A GitHub organisation or user login."}
+          },
+          "secret": {"$ref": "#/definitions/secretRef"}
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "url": {"type": "string", "description": "Argo CD's webhook endpoint, e.g. http://argocd-server.argocd.svc/api/webhook."},
+        "secret": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {"type": "string"},
+            "key": {"type": "string"}
+          }
+        }
+      }
+    },
+    "maxBodyBytes": {"type": "integer", "minimum": 0},
+    "readTimeout": {"$ref": "#/definitions/duration"},
+    "writeTimeout": {"$ref": "#/definitions/duration"},
+    "targetTimeout": {"$ref": "#/definitions/duration"},
+    "service": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "annotations": {"type": "object"}
+      }
+    },
+    "serviceAccount": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {"annotations": {"type": "object"}}
+    },
+    "podAnnotations": {"type": "object"},
+    "podLabels": {"type": "object"},
+    "nodeSelector": {"type": "object"},
+    "tolerations": {"type": "array", "items": {"type": "object"}},
+    "affinity": {"type": "object"},
+    "priorityClassName": {"type": "string"},
+    "resources": {"type": "object"},
+    "topologySpread": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "topologyKey": {"type": "string", "minLength": 1},
+        "maxSkew": {"type": "integer", "minimum": 1}
+      }
+    },
+    "podDisruptionBudget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "maxUnavailable": {"type": ["integer", "string"]}
+      }
+    },
+    "serviceMonitor": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "interval": {"$ref": "#/definitions/duration"},
+        "labels": {"type": "object"}
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "ingress": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {"from": {"$ref": "#/definitions/peers"}}
+        },
+        "egress": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "to": {"$ref": "#/definitions/peers"},
+            "ports": {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 65535}}
+          }
+        },
+        "dns": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {"to": {"$ref": "#/definitions/peers"}}
+        }
+      }
+    }
+  }
+}

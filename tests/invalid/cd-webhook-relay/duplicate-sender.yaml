@@ -1,0 +1,11 @@
+# expect: two senders are named acme
+senders:
+  - name: acme
+    owners: [acme]
+    secret: {name: acme-webhook, key: secret}
+  - name: acme
+    owners: [other]
+    secret: {name: other-webhook, key: secret}
+target:
+  url: http://argocd-server.argocd.svc/api/webhook
+  secret: {name: argocd-webhook, key: secret}

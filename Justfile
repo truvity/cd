@@ -2,7 +2,7 @@
 # check workflow (truvity/ci-workflows) runs each one as its own job, so a
 # laptop and CI run the same thing.
 
-chart_names := "cd-argocd cd-kargo cd-rollouts cd-delivery cd-company cd-pipeline cd-cluster-registration"
+chart_names := "cd-argocd cd-kargo cd-rollouts cd-delivery cd-company cd-pipeline cd-cluster-registration cd-webhook-relay"
 
 # Lint every chart, and prove every refusal still refuses.
 lint:
