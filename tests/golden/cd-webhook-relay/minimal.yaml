@@ -50,9 +50,9 @@ data:
     - name: acme
       owners:
       - acme
-      secretFile: /etc/webhook-relay/secrets/acme-webhook/secret
+      secretFile: /etc/webhook-relay/keys/acme-webhook/secret
     target:
-      secretFile: /etc/webhook-relay/secrets/argocd-webhook/secret
+      secretFile: /etc/webhook-relay/keys/argocd-webhook/secret
       url: http://argocd-server.argocd.svc/api/webhook
 
 ---
@@ -102,7 +102,7 @@ spec:
       annotations:
         # The relay reads its configuration once at start; secrets are re-read
         # on change and need no restart.
-        checksum/config: 8a3bd32ce8347bcea9d1231e5131e1440eebbcf47bb445de2d9be5221021d967
+        checksum/config: aa96bc4f152a07fa48c3b0760fd2234105e5145808e4f40968e351072ad7caae
     spec:
       serviceAccountName: cd-webhook-relay
       automountServiceAccountToken: false
@@ -155,10 +155,10 @@ spec:
               mountPath: /etc/webhook-relay/config
               readOnly: true
             - name: secret-0
-              mountPath: /etc/webhook-relay/secrets/acme-webhook
+              mountPath: /etc/webhook-relay/keys/acme-webhook
               readOnly: true
             - name: secret-1
-              mountPath: /etc/webhook-relay/secrets/argocd-webhook
+              mountPath: /etc/webhook-relay/keys/argocd-webhook
               readOnly: true
       volumes:
         - name: config

@@ -14,9 +14,9 @@ app.kubernetes.io/version: {{ .Chart.Version | quote }}
 helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
 {{- end -}}
 
-{{/* The path a Secret key is mounted at: /etc/webhook-relay/secrets/<secret>/<key>. */}}
+{{/* The path a Secret key is mounted at: /etc/webhook-relay/keys/<secret>/<key>. */}}
 {{- define "cd-webhook-relay.secretPath" -}}
-/etc/webhook-relay/secrets/{{ .name }}/{{ .key }}
+/etc/webhook-relay/keys/{{ .name }}/{{ .key }}
 {{- end -}}
 
 {{/*
