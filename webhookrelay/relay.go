@@ -92,7 +92,7 @@ func New(cfg *Config, client *http.Client, log *slog.Logger) (*Relay, error) {
 func (r *Relay) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/webhook", r.handleWebhook)
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { fmt.Fprintln(w, "ok") })
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "ok\n") })
 	mux.HandleFunc("GET /readyz", r.handleReady)
 	mux.HandleFunc("GET /metrics", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
@@ -115,7 +115,7 @@ func (r *Relay) handleReady(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 
-	fmt.Fprintln(w, "ok")
+	_, _ = io.WriteString(w, "ok\n")
 }
 
 // delivery is one inbound request, for logging and metrics.
