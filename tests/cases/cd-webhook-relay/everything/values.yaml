@@ -1,0 +1,33 @@
+senders:
+  - name: acme
+    owners: [acme, acme-labs]
+    secret: {name: acme-webhook, key: secret}
+  - name: globex
+    owners: [globex]
+    secret: {name: shared-webhooks, key: globex}
+  - name: initech
+    owners: [initech, some-user]
+    secret: {name: shared-webhooks, key: initech}
+target:
+  url: http://argocd-server.argocd.svc/api/webhook
+  secret: {name: argocd-webhook, key: secret}
+maxBodyBytes: 1048576
+readTimeout: 10s
+writeTimeout: 20s
+targetTimeout: 15s
+image:
+  tag: 1.2.3
+serviceMonitor:
+  enabled: true
+  labels: {release: monitoring}
+networkPolicy:
+  enabled: true
+  ingress:
+    from:
+      - namespaceSelector:
+          matchLabels: {kubernetes.io/metadata.name: gateway}
+  egress:
+    to:
+      - podSelector:
+          matchLabels: {app.kubernetes.io/name: argocd-server}
+podAnnotations: {example.invalid/annotation: "yes"}

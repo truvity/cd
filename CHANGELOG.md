@@ -5,6 +5,10 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## Unreleased
+
+- **Added:** `cd-webhook-relay` and the `webhook-relay` image (`ghcr.io/truvity/cd/webhook-relay`, from `cmd/webhook-relay`): a fan-in relay in front of Argo CD's `/api/webhook`, for an installation whose Applications pull from repositories of several GitHub organisations. Argo CD verifies every GitHub delivery against one secret (`webhook.github.secret`); the relay accepts a delivery signed by any configured sender's own secret (one per organisation, rotated independently, re-read from the mounted file when it changes), refuses one whose payload names an owner that sender does not hold (`403`), answers `ping` itself, and forwards the rest with the same body re-signed (`X-Hub-Signature-256`) with the one secret Argo CD knows. The chart renders a two-replica Deployment with its own ServiceAccount, a PDB, a zone spread, a Service on `:80`, and optionally a ServiceMonitor and a NetworkPolicy (both off); it creates no Secret. Nothing existing changes. See [the guide](docs/webhook-relay.md).
+
 ## v0.27.0
 
 - **Added:** `delivery.ValidateCompanyRepo(branch, writeApp, RepoFacts)`, the rules a company delivery repository must meet for Kargo's write-back: the default branch is the one delivery reads, no human approval is required, the `check` context (`delivery.CompanyCheck`) is required by a default-branch ruleset that names the write-back App as a bypass, and classic protection does not require it (it cannot carry an App bypass). It returns every violation. `RepoFacts` and `BranchRuleset` are plain inputs, so a caller maps its own repository registry onto them.

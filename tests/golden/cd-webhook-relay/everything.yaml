@@ -1,0 +1,271 @@
+---
+# Source: cd-webhook-relay/templates/relay.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cd-webhook-relay
+  labels:
+    app.kubernetes.io/name: webhook-relay
+    app.kubernetes.io/instance: cd-webhook-relay
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cd-webhook-relay-0.0.0
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: webhook-relay
+      app.kubernetes.io/instance: cd-webhook-relay
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: gateway
+      ports:
+        - port: 8080
+          protocol: TCP
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: argocd-server
+      ports:
+        - port: 8080
+          protocol: TCP
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+
+---
+# Source: cd-webhook-relay/templates/relay.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cd-webhook-relay
+  labels:
+    app.kubernetes.io/name: webhook-relay
+    app.kubernetes.io/instance: cd-webhook-relay
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cd-webhook-relay-0.0.0
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: webhook-relay
+      app.kubernetes.io/instance: cd-webhook-relay
+
+---
+# Source: cd-webhook-relay/templates/relay.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cd-webhook-relay
+  labels:
+    app.kubernetes.io/name: webhook-relay
+    app.kubernetes.io/instance: cd-webhook-relay
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cd-webhook-relay-0.0.0
+automountServiceAccountToken: false
+
+---
+# Source: cd-webhook-relay/templates/relay.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cd-webhook-relay
+  labels:
+    app.kubernetes.io/name: webhook-relay
+    app.kubernetes.io/instance: cd-webhook-relay
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cd-webhook-relay-0.0.0
+data:
+  config.yaml: |
+    listen: :8080
+    maxBodyBytes: 1048576
+    readTimeout: 10s
+    senders:
+    - name: acme
+      owners:
+      - acme
+      - acme-labs
+      secretFile: /etc/webhook-relay/secrets/acme-webhook/secret
+    - name: globex
+      owners:
+      - globex
+      secretFile: /etc/webhook-relay/secrets/shared-webhooks/globex
+    - name: initech
+      owners:
+      - initech
+      - some-user
+      secretFile: /etc/webhook-relay/secrets/shared-webhooks/initech
+    target:
+      secretFile: /etc/webhook-relay/secrets/argocd-webhook/secret
+      url: http://argocd-server.argocd.svc/api/webhook
+    targetTimeout: 15s
+    writeTimeout: 20s
+
+---
+# Source: cd-webhook-relay/templates/relay.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: cd-webhook-relay
+  labels:
+    app.kubernetes.io/name: webhook-relay
+    app.kubernetes.io/instance: cd-webhook-relay
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cd-webhook-relay-0.0.0
+spec:
+  selector:
+    app.kubernetes.io/name: webhook-relay
+    app.kubernetes.io/instance: cd-webhook-relay
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+
+---
+# Source: cd-webhook-relay/templates/relay.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cd-webhook-relay
+  labels:
+    app.kubernetes.io/name: webhook-relay
+    app.kubernetes.io/instance: cd-webhook-relay
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cd-webhook-relay-0.0.0
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: webhook-relay
+      app.kubernetes.io/instance: cd-webhook-relay
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: webhook-relay
+        app.kubernetes.io/instance: cd-webhook-relay
+      annotations:
+        # The relay reads its configuration once at start; secrets are re-read
+        # on change and need no restart.
+        checksum/config: 1eaf48e5948dda858f616028cc2632041cab7341676ab620e1d15b5afd24dff6
+        example.invalid/annotation: "yes"
+    spec:
+      serviceAccountName: cd-webhook-relay
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: webhook-relay
+              app.kubernetes.io/instance: cd-webhook-relay
+      containers:
+        - name: webhook-relay
+          image: "ghcr.io/truvity/cd/webhook-relay:1.2.3"
+          imagePullPolicy: IfNotPresent
+          args:
+            - -config=/etc/webhook-relay/config/config.yaml
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 20
+          resources:
+            limits:
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: [ALL]
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: config
+              mountPath: /etc/webhook-relay/config
+              readOnly: true
+            - name: secret-0
+              mountPath: /etc/webhook-relay/secrets/acme-webhook
+              readOnly: true
+            - name: secret-1
+              mountPath: /etc/webhook-relay/secrets/argocd-webhook
+              readOnly: true
+            - name: secret-2
+              mountPath: /etc/webhook-relay/secrets/shared-webhooks
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: cd-webhook-relay
+        - name: secret-0
+          secret:
+            secretName: acme-webhook
+            items:
+              - key: secret
+                path: secret
+        - name: secret-1
+          secret:
+            secretName: argocd-webhook
+            items:
+              - key: secret
+                path: secret
+        - name: secret-2
+          secret:
+            secretName: shared-webhooks
+            items:
+              - key: globex
+                path: globex
+              - key: initech
+                path: initech
+
+---
+# Source: cd-webhook-relay/templates/relay.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: cd-webhook-relay
+  labels:
+    app.kubernetes.io/name: webhook-relay
+    app.kubernetes.io/instance: cd-webhook-relay
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "0.0.0"
+    helm.sh/chart: cd-webhook-relay-0.0.0
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: webhook-relay
+      app.kubernetes.io/instance: cd-webhook-relay
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s

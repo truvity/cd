@@ -1,0 +1,91 @@
+# cd-webhook-relay: GitHub webhooks from several organisations, each with its
+# own secret, into one Argo CD. The chart creates NO Secret: the installation
+# provides every Secret named below, in the release namespace.
+
+replicas: 2
+
+image:
+  repository: ghcr.io/truvity/cd/webhook-relay
+  # Empty means the chart's appVersion, or its version when it has none.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# One entry per GitHub organisation (or user) whose hook or App delivers.
+#   name     label of the sender in metrics and logs. Unique.
+#   owners   the logins whose repositories and packages this secret may
+#            trigger Applications for. Never empty.
+#   secret   the Secret and key holding the hook's secret.
+senders: []
+#  - name: acme
+#    owners: [acme]
+#    secret: {name: acme-webhook, key: secret}
+
+# Argo CD's webhook endpoint, and the secret Argo CD verifies against (its
+# webhook.github.secret; give Argo CD a value used by nothing else).
+target:
+  url: ""
+  secret: {name: "", key: secret}
+
+# Optional relay settings; empty keeps the binary's default (25 MiB, 30s, 60s,
+# 30s).
+maxBodyBytes: 0
+readTimeout: ""
+writeTimeout: ""
+targetTimeout: ""
+
+service:
+  port: 80
+  annotations: {}
+
+serviceAccount:
+  annotations: {}
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+priorityClassName: ""
+
+resources:
+  requests: {cpu: 10m, memory: 32Mi}
+  limits: {memory: 64Mi}
+
+# Spread the replicas across zones; a soft constraint, so a single-zone
+# cluster still schedules.
+topologySpread:
+  enabled: true
+  topologyKey: topology.kubernetes.io/zone
+  maxSkew: 1
+
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 1
+
+# Off by default. Needs the ServiceMonitor CRD (Prometheus Operator, or a
+# VictoriaMetrics operator converting it).
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  labels: {}
+
+# Off by default.
+networkPolicy:
+  enabled: false
+  # NetworkPolicyPeer entries allowed to reach port 8080 (the gateway or
+  # route's pods). Required when enabled.
+  ingress:
+    from: []
+  # NetworkPolicyPeer entries of Argo CD's API server, and its pod port.
+  # Required when enabled.
+  egress:
+    to: []
+    ports: [8080]
+  # Where DNS is served; default the kube-system namespace.
+  dns:
+    to:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: kube-system

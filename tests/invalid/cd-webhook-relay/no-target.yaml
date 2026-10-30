@@ -1,0 +1,5 @@
+# expect: target.url is required
+senders:
+  - name: acme
+    owners: [acme]
+    secret: {name: acme-webhook, key: secret}
