@@ -103,6 +103,9 @@ result against their own schemas.
   `repository`, `interface`, `appProject`, `installName`, `availability`,
   `database`, `tls`, `archive`, `otel`, `access`, `identityProviders` or `alerts`.
   `web.faro` and `observability.dashboards` are also platform-owned.
+- A product row of `kind: static-site` is refused by name, with or without a pin:
+  its infrastructure ring carries an IAM role's scope, and the paths a company
+  may not set on it are not reserved here yet.
 - The platform's postgres fields are reserved: `platformOwned`, `instances`,
   `storage`, `runtimeRole`, `runtimePasswordSecret`, `runtimePassword`, `labels`,
   `scheduling`, `backup`, `serverTLS`. Other postgres tuning can be passed through.
