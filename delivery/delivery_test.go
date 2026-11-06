@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"maps"
+	"reflect"
 	"slices"
 	"testing"
 
@@ -137,4 +138,86 @@ func TestProductAndPlatformCharts(t *testing.T) {
 	if !slices.Equal(unowned, []string{"unused"}) {
 		t.Errorf("unowned = %v", unowned)
 	}
+}
+
+// The optional fields of a product's row are carried, not interpreted, and
+// their zero values leave the row exactly what it was before they existed.
+func TestProductCarriesGitPromotionAndKind(t *testing.T) {
+	t.Parallel()
+
+	order := []string{"devel", "prod"}
+	owned := map[string][]string{"devel": {"shopChart"}, "prod": {"shopChart"}}
+
+	t.Run("zero values reproduce the row", func(t *testing.T) {
+		t.Parallel()
+
+		got := Product(ProductInput{Name: "shop", Semver: "^1"}, "oci://reg", order, owned, nil)
+		want := ProductPipeline{
+			Name:        "shop",
+			Key:         "shopChart",
+			RepoURL:     "oci://reg/shop/charts/shop",
+			Semver:      "^1",
+			Clusters:    []string{"devel", "prod"},
+			AppProjects: got.AppProjects,
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("Product = %#v, want %#v", got, want)
+		}
+
+		if got.Kind != "" {
+			t.Errorf("Kind = %q, want it left empty", got.Kind)
+		}
+	})
+
+	t.Run("carried to the row", func(t *testing.T) {
+		t.Parallel()
+
+		in := ProductInput{
+			Name: "shop",
+			Kind: KindChart,
+			Git: Git{
+				RepoURL: "https://git.example.com/acme/delivery.git",
+				Credentials: &GitCredentials{
+					SecretName:     "acme-writeback",
+					SecretStoreRef: StoreRef{Kind: "ClusterSecretStore", Name: "acme"},
+					RemoteKey:      "acme/app",
+					Properties:     GitCredentialProperties{AppID: "app", InstallationID: "inst", PrivateKey: "key"},
+				},
+			},
+			Promotion: Promotion{
+				Branch:   "main",
+				PinFile:  "pins/{stage}.yaml",
+				PRLabels: []string{"promotion"},
+				Retry:    &PromotionRetry{ErrorThreshold: 5, Timeout: "10m0s"},
+				Gate:     &PromotionGate{Timeout: "20m0s"},
+			},
+		}
+		got := Product(in, "oci://reg", order, owned, nil)
+
+		if !reflect.DeepEqual(got.Git, in.Git) || !reflect.DeepEqual(got.Promotion, in.Promotion) || got.Kind != KindChart {
+			t.Errorf("row = %+v, want git, promotion and kind of %+v", got, in)
+		}
+
+		// The row does not share memory with the input: a caller that reuses
+		// its input for the next product cannot change this row.
+		in.Git.Credentials.RemoteKey = "changed"
+		in.Promotion.PRLabels[0] = "changed"
+		in.Promotion.Retry.ErrorThreshold = 99
+		in.Promotion.Gate.Timeout = "changed"
+
+		if got.Git.Credentials.RemoteKey != "acme/app" || got.Promotion.PRLabels[0] != "promotion" ||
+			got.Promotion.Retry.ErrorThreshold != 5 || got.Promotion.Gate.Timeout != "20m0s" {
+			t.Errorf("row aliases its input: %+v", got)
+		}
+	})
+
+	t.Run("no credentials", func(t *testing.T) {
+		t.Parallel()
+
+		got := Product(ProductInput{Name: "shop", Git: Git{NoCredentials: true}}, "oci://reg", order, owned, nil)
+		if !got.Git.NoCredentials || got.Git.Credentials != nil {
+			t.Errorf("Git = %+v", got.Git)
+		}
+	})
 }

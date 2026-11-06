@@ -7,6 +7,14 @@ import (
 	"github.com/truvity/cd/appproject"
 )
 
+// The kinds of product cd-delivery renders. A ProductInput with no Kind is a
+// KindProduct.
+const (
+	KindProduct    = "product"
+	KindChart      = "chart"
+	KindStaticSite = "static-site"
+)
+
 type (
 	// ProductPipeline is one product's Kargo pipeline row: the chart a
 	// Warehouse subscribes to, the clusters its Stages promote through (in
@@ -22,6 +30,13 @@ type (
 		// E2EJobOff is true when the product's e2e Job is not part of delivery.
 		E2EJobOff   bool
 		AppProjects []appproject.AppProject
+		// Git and Promotion are the product's own write-back target and
+		// promotion settings, copied from the input; the zero values override
+		// nothing. Kind is the product's kind, copied as given: empty is a
+		// product.
+		Git       Git
+		Promotion Promotion
+		Kind      string
 	}
 
 	// ProductInput is what a platform declares about a product's delivery.
@@ -41,6 +56,85 @@ type (
 		MetricsGate []string
 		// E2EJob false: the product runs no e2e Job as part of delivery.
 		E2EJob *bool
+		// Git overrides where this product's promotions write and with which
+		// credentials; Promotion overrides how they write. Both lay over the
+		// release's settings in cd-pipeline, and the zero values override
+		// nothing.
+		Git       Git
+		Promotion Promotion
+		// Kind is the product's kind in cd-delivery (KindProduct, KindChart or
+		// KindStaticSite). Empty is a product. It is carried to the row as
+		// given and not checked here.
+		Kind string
+	}
+
+	// Git is a product's override of cd-pipeline's release-wide git settings
+	// (projects[].git). The zero value overrides nothing.
+	Git struct {
+		// RepoURL is the repository this product's promotions write the pin to;
+		// empty keeps the release's.
+		RepoURL string
+		// Credentials replace the release's write-back credentials for this
+		// product's namespace; nil keeps the release's.
+		Credentials *GitCredentials
+		// NoCredentials renders no write-back credentials for this product
+		// (cd-pipeline's `credentials: false`). It wins over Credentials.
+		NoCredentials bool
+	}
+
+	// GitCredentials is an ExternalSecret that produces the git credentials
+	// Kargo writes back with (a GitHub App): the keys of cd-pipeline's
+	// git.credentials.
+	GitCredentials struct {
+		SecretName      string
+		RefreshInterval string
+		SecretStoreRef  StoreRef
+		RemoteKey       string
+		Properties      GitCredentialProperties
+	}
+
+	// StoreRef names the secret store a credential is read from; Kind is
+	// SecretStore or ClusterSecretStore.
+	StoreRef struct {
+		Kind string
+		Name string
+	}
+
+	// GitCredentialProperties names the property of the remote key that each
+	// credential is read from.
+	GitCredentialProperties struct {
+		AppID          string
+		InstallationID string
+		PrivateKey     string
+	}
+
+	// Promotion is a product's override of cd-pipeline's release-wide
+	// promotion settings (projects[].promotion). An empty string, a nil slice
+	// and a nil pointer keep the release's value. The zero value overrides
+	// nothing.
+	Promotion struct {
+		Branch        string
+		PinFile       string
+		PinKey        string
+		CommitMessage string
+		PRTitle       string
+		PRLabels      []string
+		Provider      string
+		Retry         *PromotionRetry
+		Gate          *PromotionGate
+	}
+
+	// PromotionRetry is the retry budget of a promotion step. Zero fields keep
+	// the release's.
+	PromotionRetry struct {
+		ErrorThreshold int
+		Timeout        string
+	}
+
+	// PromotionGate is the budget of the wait on an upstream Application. A
+	// zero field keeps the release's.
+	PromotionGate struct {
+		Timeout string
 	}
 
 	// ChartSpec is a platform chart's pipeline as declared: what its Warehouse
@@ -107,7 +201,37 @@ func Product(in ProductInput, defaultRegistry string, order []string, owned map[
 		MetricsGate: slices.Clone(in.MetricsGate),
 		E2EJobOff:   in.E2EJob != nil && !*in.E2EJob,
 		AppProjects: appproject.ForNamespace(appProjects, in.Name),
+		Git:         in.Git.clone(),
+		Promotion:   in.Promotion.clone(),
+		Kind:        in.Kind,
 	}
+}
+
+// clone copies g so that a row does not share memory with its input.
+func (g Git) clone() Git {
+	if g.Credentials != nil {
+		c := *g.Credentials
+		g.Credentials = &c
+	}
+
+	return g
+}
+
+// clone copies p so that a row does not share memory with its input.
+func (p Promotion) clone() Promotion {
+	p.PRLabels = slices.Clone(p.PRLabels)
+
+	if p.Retry != nil {
+		r := *p.Retry
+		p.Retry = &r
+	}
+
+	if p.Gate != nil {
+		g := *p.Gate
+		p.Gate = &g
+	}
+
+	return p
 }
 
 // PlatformCharts joins the platform charts' specs with the clusters owning
