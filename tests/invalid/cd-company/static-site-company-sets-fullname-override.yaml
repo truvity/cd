@@ -1,0 +1,19 @@
+# expect: values.docs.app.fullnameOverride is platform-owned
+# The chart writes the name that ties the two Applications together; a company cannot set it.
+platform:
+  clusterName: devel
+  argocdNamespace: argocd
+  applicationPrefix: devel-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+products:
+  docs:
+    kind: static-site
+    chartVersion: 3.12.0
+    artifact: {ref: registry.example.com/sites/docs}
+services: [docs]
+pins: {docs: ""}
+values:
+  docs:
+    app:
+      fullnameOverride: other

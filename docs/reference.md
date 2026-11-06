@@ -364,8 +364,8 @@ Application (a gate label and a sync wave, for an installation that gates the
 second on the first); the chart names none. A site that is not yet promoted is
 dormant the way every other kind is: the caller leaves the product out while it
 has no digest. `cd-company` delivers the kind: a company's `values.<service>.{infra,app}`
-may not set the keys the chart writes or the `registry` block (the scope of the
-site's IAM role), and `values.<service>.e2e` is refused by name.
+may not set the keys the chart writes, the `registry` and `identity` blocks (the
+scope of the site's IAM role), `access`, `tier`, `route` or `tls`, and `values.<service>.e2e` is refused by name.
 See `tests/cases/cd-delivery/kind-static-site` and `kind-static-site-minimal`.
 
 ### The interface

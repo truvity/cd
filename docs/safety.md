@@ -197,12 +197,23 @@ artifact.
 
 ## A kind whose ownership is not written down
 
-**Refused by CI:** `tests/invalid/cd-company/static-site-not-delivered-to-companies.yaml`.
+**Refused by CI:** the fixtures `tests/invalid/cd-company/static-site-company-sets-*.yaml`
+(`identity`, `identity-block`, `access`, `tier`, `route`, `tls`, `service-account`,
+`fullname-override`, `install-name`, `registry-app` and `artifact`); the twin case
+`tests/cases/cd-company/kind-static-site` proves that what a site legitimately
+sets (`replicaCount`, `site.notFoundPage`) is still accepted.
 
 **The failure:** the infrastructure ring of a static site carries the scope of
 an IAM role. Company values reach every ring in `cd-company`, so a company that
-could set `registry.ack` there could widen the role. The adapter refuses the
-kind, dormant or not, until the paths a company may not set are reserved.
+could set `registry.ack` or `identity` there could widen the role, and one that
+could set `route`, `tls`, `tier` or `access` could change where and how the site
+is served. A kind has its own ownership list, which replaces the product list
+rather than extending it, so a key left off it is open to a company. The list
+for `static-site` is `fullnameOverride`, `serviceAccount`, `registry`,
+`identity`, `access`, `tier`, `route` and `tls` on both rings, plus
+`installName` on `infra` and `site.artifact` on `app`. It fails closed: a
+company payload on any of them is refused, dormant or not, and a scalar cannot
+replace the map above a reserved path.
 
 ## A platform payload a company overrides
 
