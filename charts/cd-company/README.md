@@ -103,6 +103,9 @@ result against their own schemas.
   `repository`, `interface`, `appProject`, `installName`, `availability`,
   `database`, `tls`, `archive`, `otel`, `access`, `identityProviders` or `alerts`.
   `web.faro` and `observability.dashboards` are also platform-owned.
+- A service whose product row is `kind: chart` has one ring: `values.<service>.infra`
+  and `.e2e` are refused by name, with or without a pin. Its `values.app` keeps
+  the roots above reserved.
 - The platform's postgres fields are reserved: `platformOwned`, `instances`,
   `storage`, `runtimeRole`, `runtimePasswordSecret`, `runtimePassword`, `labels`,
   `scheduling`, `backup`, `serverTLS`. Other postgres tuning can be passed through.

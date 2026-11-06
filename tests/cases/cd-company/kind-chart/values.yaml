@@ -1,0 +1,42 @@
+# A single-chart product and a three-ring product in one company flow. The
+# chart's one ring carries the company's values.app and nothing else; a
+# dormant chart-kind service renders nothing.
+platform:
+  clusterName: east
+  argocdNamespace: argocd
+  applicationPrefix: east-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+  postgres:
+    instances: 1
+    storage: 2Gi
+  events:
+    url: nats://broker.example:4222
+    storage: file
+    replicas: 1
+    maxAge: 24h
+    account: "{product}"
+products:
+  gateway:
+    kind: chart
+    chart: edge-gateway
+    namespace: edge
+    repository: oci://registry.example.com/platform
+  tool:
+    kind: chart
+  shop:
+    interface: 1
+    hostname: shop.example.com
+services: [gateway, tool, shop]
+pins:
+  gateway: "1.0.0"
+  tool: ""
+  shop: "1.2.3"
+values:
+  gateway:
+    app:
+      replicas: 2
+      config: {greeting: hello}
+  shop:
+    app:
+      config: {greeting: hello}
