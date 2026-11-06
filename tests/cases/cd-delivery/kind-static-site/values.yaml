@@ -1,0 +1,63 @@
+# A static site: two Applications, `<prefix><name>-infra` (the identity) and
+# `<prefix><name>` (the server), the same chart release for both, and the
+# artifact digest as the pin. The chart writes the names and the artifact;
+# the registry and identity block, placeholders and policy are the platform's
+# (platformValues). `platform.staticSite` hands ordering metadata through
+# verbatim: a label on the infra Application, an annotation on the site's.
+# `shop`, an ordinary product, renders as before.
+platform:
+  clusterName: east
+  argocdNamespace: argocd
+  applicationPrefix: east-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+  postgres:
+    instances: 1
+    storage: 2Gi
+  events:
+    url: nats://broker.example:4222
+    storage: file
+    replicas: 1
+    maxAge: 24h
+    account: "{product}"
+  staticSite:
+    infraLabels:
+      example.com/sync-gating: "true"
+    siteAnnotations:
+      argocd.argoproj.io/sync-wave: "1"
+products:
+  docs:
+    kind: static-site
+    pin: sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+    chartVersion: 3.12.0
+    namespace: sites
+    artifact:
+      ref: registry.example.com/sites/docs
+    platformValues:
+      infra:
+        registry:
+          auth: ecr
+          ack:
+            enabled: true
+            clusterName: east
+            repositoryArns:
+              - registry-sites-docs
+      app:
+        registry:
+          auth: ecr
+          ack: {enabled: true}
+        replicaCount: 2
+    values:
+      app:
+        site: {notFoundPage: 404.html}
+  blog:
+    kind: static-site
+    pin: sha256:fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210
+    chartVersion: 3.12.0
+    repository: oci://registry.example.com/other
+    artifact:
+      ref: registry.example.com/sites/blog
+  shop:
+    pin: 1.0.0
+    interface: 1
+    hostname: shop.example.com
