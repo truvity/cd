@@ -1,0 +1,21 @@
+# expect: values.gateway.app.serviceAccount is platform-owned
+# A single-chart product keeps the product reserved roots: the platform sets
+# nothing in a chart's values, so what a company may set is decided by the
+# list, not by what the platform wrote.
+platform:
+  clusterName: devel
+  argocdNamespace: argocd
+  applicationPrefix: devel-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+products:
+  gateway:
+    kind: chart
+    chart: edge-gateway
+    namespace: edge
+services: [gateway]
+pins: {gateway: "1.0.0"}
+values:
+  gateway:
+    app:
+      serviceAccount: {name: custom}

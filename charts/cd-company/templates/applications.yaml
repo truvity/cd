@@ -15,6 +15,9 @@
     {{- fail (printf "cd-company: pins.%s must be a string" $service) -}}
   {{- end -}}
   {{- $values := index $.Values.values $service | default dict -}}
+  {{- /* The kind of product decides which rings exist and which roots are
+         reserved. A service without product facts yet is a product. */ -}}
+  {{- $kind := dig "kind" "product" (index $.Values.products $service | default dict) -}}
   {{- /* What the platform sets through the product's platformValues and its
          open layers is reserved too, beside the fixed list. The pin is the
          company's, so the layers are resolved here, at render. */ -}}
@@ -28,7 +31,10 @@
     {{- if not (has $ring (list "infra" "app" "e2e")) -}}
       {{- fail (printf "cd-company: values.%s: unknown ring %q" $service $ring) -}}
     {{- end -}}
-    {{- include "cd-company.assertOwnership" (dict "path" (printf "values.%s.%s" $service $ring) "payload" $payload "owned" (include "cd-company.owned" $ring | fromYaml)) -}}
+    {{- if not (has $ring (splitList " " (include "cd-company.kindRings" $kind))) -}}
+      {{- fail (printf "cd-company: values.%s.%s: kind %s takes values.app only" $service $ring $kind) -}}
+    {{- end -}}
+    {{- include "cd-company.assertOwnership" (dict "path" (printf "values.%s.%s" $service $ring) "payload" $payload "owned" (include "cd-company.owned" (dict "kind" $kind "ring" $ring) | fromYaml)) -}}
     {{- range $reserved := $trees -}}
       {{- if eq $reserved.ring $ring -}}
         {{- include "cd-company.assertOwnership" (dict "path" (printf "values.%s.%s" $service $ring) "payload" $payload "owned" $reserved.tree) -}}

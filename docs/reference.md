@@ -409,6 +409,12 @@ Company ring values cannot override platform-owned delivery paths (and, per serv
 (sizing, scheduling, labels, roles/passwords, TLS, backup and ownership).
 Generated connection, identity and install paths are also reserved; see the
 [chart README](../charts/cd-company/README.md#refusals) for the full path list.
+A product of `kind: chart` (see [Kinds](#kinds)) has one ring: a company
+payload under `values.<service>.infra` or `.e2e` is refused by name whether or
+not the service has a pin, because the shape of the kind does not depend on the
+pin. Its `values.app` keeps the same reserved roots as a product's: the
+platform writes nothing into a single chart's values, so the list is what keeps
+a company out of the Application's own fields.
 Business configuration merges using cd-delivery's existing semantics. The
 adapter uses the existing cd-delivery application chart as a locked, packaged
 dependency (`file://../cd-delivery`). Its own `cd-delivery.products` map must
