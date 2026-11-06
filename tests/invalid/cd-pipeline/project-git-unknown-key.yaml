@@ -1,0 +1,13 @@
+# expect: additional properties 'branch' not allowed
+git:
+  repoURL: https://git.example.com/acme/environments.git
+projects:
+  - name: shop
+    pinKey: shop
+    git:
+      branch: main
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0"
+    stages:
+      - name: dev
