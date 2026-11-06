@@ -1,0 +1,11 @@
+# expect: projects.shop: git.repoURL is required
+projects:
+  - name: shop
+    pinKey: shop
+    git:
+      credentials: false
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0"
+    stages:
+      - name: dev
