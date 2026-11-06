@@ -163,3 +163,16 @@ company value could replace a path a platform layer sets, the guarantee would
 hold until someone overrode it. The reserved paths follow the open layers, so
 they move with the pin: a pin that moves up closes a path to the company
 without any edit to the company's files, and the next render says which.
+
+## A single chart that is given a product's facts
+
+**Refused by CI:** `tests/invalid/cd-delivery/unknown-kind.yaml`,
+`chart-with-rings.yaml`, `chart-with-interface.yaml`, `chart-with-e2e.yaml`,
+`chart-without-pin.yaml` and `chart-without-repository.yaml`.
+
+**The failure:** the product keys (`interface`, `postgres`, `e2e`, `faro`,
+`bucketSlug`, the infrastructure and end-to-end rings) each make the chart
+compose something for a product's charts. A single chart that was handed one by
+mistake would render without error and never read it, so the operator would
+believe the chart had a database role, a route or an end-to-end run. A
+`chart` product takes a short list of keys and refuses the rest by name.

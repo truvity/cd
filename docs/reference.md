@@ -260,6 +260,8 @@ required below must be present, and a key the chart does not read is refused.
 | `products.<name>.ignoreDifferences.{infra,app,e2e}` | `ignoreDifferences` entries for the ring's Application, verbatim. |
 | `products.<name>.platformValues.{infra,app,e2e}` | The platform's own payload per ring, merged over what the chart composed and under `layers` and `values`. In `cd-company` the paths it sets are reserved against the company's `values`. See [Platform values and layers](#platform-values-and-layers). |
 | `products.<name>.layers[]` | Ordered `{name, since, required, values.{infra,app,e2e}}`: a payload the platform sets only for a pin at or above `since`. |
+| `products.<name>.kind` | `product` (default) or `chart`: see [Kinds](#kinds). |
+| `products.<name>.namespace` | Kind `chart` only: the destination namespace (default the product's name). |
 
 ### Platform values and layers
 
@@ -286,6 +288,27 @@ version (a golden sentinel, a dormant `""`) never does, so every layer is off.
 without the payload. Choosing between clusters stays with the platform: it
 passes each cluster's `layers` and `platformValues`, and the chart never sees a
 cluster list. `tests/cases/cd-delivery/layers` shows four pins on the same layers.
+
+### Kinds
+
+A product is the three-ring shape above unless it says `kind: chart`. A chart
+is one chart delivered as one Application, for a component that has no
+infrastructure or end-to-end ring and reads none of the product facts:
+`products.<name>` takes `kind`, `pin` (the chart version, required),
+`repository` (default `platform.chartRegistry`), `chart` (default the name),
+`namespace` (default the name) and `values.app`. Everything else, including
+`interface`, `hostname`, `postgres`, `e2e`, `faro`, `bucketSlug`, and
+`values.infra` or `values.e2e`, is refused, with a message that names the kind.
+Nothing is composed for it from `platform`: what the chart needs is in
+`values.app`. The Application is named `<applicationPrefix><name>` (with
+`applicationSuffixes.app`, if set), and its sync policy, finalizer, AppProject,
+labels and retry come from `platform` exactly as for a product ring.
+
+A `repository` that starts with `oci://` is the base the chart is published
+under (`repoURL: <repository>/<chart>`, `path: .`); any other is a chart
+index (`repoURL: <repository>`, `chart: <chart>`). See
+`tests/cases/cd-delivery/kind-chart-oci` and `kind-chart-index`. `platform`
+still requires `postgres` and `events` whenever there is any product.
 
 ### The interface
 

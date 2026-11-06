@@ -801,11 +801,43 @@
               }
             },
             "description": "Ordered, pin-gated payloads owned by the platform: a chart's closed schema rejects a key an older release does not read, and the pin moves without the platform rendering anything, so the comparison is made here. Merged after `platformValues` in list order, before `values`."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "product",
+              "chart"
+            ],
+            "description": "`product` (default): the three-ring product. `chart`: one chart, one Application named after the product, no rings, no composed platform facts; takes only `pin`, `repository`, `chart`, `namespace` and `values.app`. A `repository` that starts with `oci://` renders `repoURL: <repository>/<chart>`; any other renders `repoURL: <repository>` with `chart: <chart>`."
+          },
+          "namespace": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 63,
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "description": "Kind `chart` only: the destination namespace (default the product's name)."
           }
         },
-        "required": [
-          "interface",
-          "hostname"
+        "required": [],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "chart"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "else": {
+              "required": [
+                "interface",
+                "hostname"
+              ]
+            }
+          }
         ]
       }
     },
