@@ -21,8 +21,18 @@ that passes its own dict gets the same refusal of an unknown key from
 {{- include "cd-delivery.assertKeys" (dict "what" "platform" "got" $plat "allowed" (list "tier" "finalizer" "sync" "syncRetry" "clusterName" "argocdNamespace" "applicationPrefix" "applicationSuffixes" "appProject" "applicationLabels" "waves" "chartRegistry" "cloud" "postgres" "events" "database" "identity" "telemetry" "e2e" "availability" "alerts" "dashboards")) -}}
 {{- range $name := (keys $products | sortAlpha) -}}
 {{- $p := get $products $name -}}
-{{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s" $name) "got" $p "allowed" (list "pin" "interface" "repository" "chart" "hostname" "parentRef" "surfaces" "bucketSlug" "workloadIdentity" "natsIdentity" "mtls" "postgres" "e2e" "faro" "alerts" "dashboards" "identityProviders" "access" "product" "values" "ignoreDifferences" "platformValues" "layers")) -}}
+{{- $kind := $p.kind | default "product" -}}
+{{- if not (has $kind (list "product" "chart")) -}}
+{{- fail (printf "cd-delivery: products.%s.kind %q is not a kind of product (product, chart)" $name $kind) -}}
+{{- end -}}
+{{- if eq $kind "chart" -}}
+{{- /* One chart, one Application: no rings, no platform facts handed down. */ -}}
+{{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s (kind chart)" $name) "got" $p "allowed" (list "kind" "pin" "repository" "chart" "namespace" "values")) -}}
+{{- $docs = append $docs (include "cd-delivery.chartProduct" (dict "plat" $plat "name" $name "p" $p)) -}}
+{{- else -}}
+{{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s" $name) "got" $p "allowed" (list "kind" "pin" "interface" "repository" "chart" "hostname" "parentRef" "surfaces" "bucketSlug" "workloadIdentity" "natsIdentity" "mtls" "postgres" "e2e" "faro" "alerts" "dashboards" "identityProviders" "access" "product" "values" "ignoreDifferences" "platformValues" "layers")) -}}
 {{- $docs = append $docs (include "cd-delivery.product" (dict "plat" $plat "name" $name "p" $p)) -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 {{- join "\n" $docs -}}
@@ -51,6 +61,23 @@ Call with (dict "plat" <platform> "name" <product> "p" <product map>).
 {{- $docs = append $docs (include "cd-delivery.application" (dict "ctx" $ctx "ring" "e2e" "values" (include "cd-delivery.e2eValues" $ctx | fromYaml))) -}}
 {{- end -}}
 {{- join "\n" $docs -}}
+{{- end -}}
+
+{{/*
+A product of kind `chart`: one chart, one Application (the application ring's
+skeleton, named `<prefix><product>`), with only `values.app` as its payload and
+nothing composed from the platform's facts. Call with
+(dict "plat" <platform> "name" <product> "p" <product map>).
+*/}}
+{{- define "cd-delivery.chartProduct" -}}
+{{- $p := .p -}}
+{{- range $ring := (keys ($p.values | default dict)) -}}
+{{- if ne $ring "app" -}}
+{{- fail (printf "cd-delivery: products.%s (kind chart): kind chart takes values.app only, got values.%s" $.name $ring) -}}
+{{- end -}}
+{{- end -}}
+{{- $ctx := dict "plat" .plat "name" .name "p" $p "i" 0 -}}
+{{- include "cd-delivery.application" (dict "ctx" $ctx "ring" "app" "values" (dict)) -}}
 {{- end -}}
 
 {{/*
@@ -125,7 +152,11 @@ ring composed. Call with (dict "ctx" <product ctx> "ring" infra|app|e2e
        set of charts. */ -}}
 {{- $chart := $p.chart | default $name -}}
 {{- $source := dict "repoURL" (printf "%s/%s%s" $repo $chart $suffix) "path" "." "targetRevision" (toString $p.pin) "helm" (dict "releaseName" (printf "%s%s" $name $suffix) "valuesObject" $values) -}}
-{{- $spec := dict "project" (include "cd-delivery.fill" (dict "s" (required "cd-delivery: platform.appProject is required" $plat.appProject) "product" $name "cluster" $cluster)) "sources" (list $source) "destination" (dict "name" $cluster "namespace" $name) "syncPolicy" $syncPolicy -}}
+{{- /* A chart-kind product from an index repository names the chart; from an OCI one the chart is part of the address. */ -}}
+{{- if and (eq ($p.kind | default "product") "chart") (not (hasPrefix "oci://" $repo)) -}}
+{{- $source = dict "repoURL" $repo "chart" $chart "targetRevision" (toString $p.pin) "helm" (dict "releaseName" (printf "%s%s" $name $suffix) "valuesObject" $values) -}}
+{{- end -}}
+{{- $spec := dict "project" (include "cd-delivery.fill" (dict "s" (required "cd-delivery: platform.appProject is required" $plat.appProject) "product" $name "cluster" $cluster)) "sources" (list $source) "destination" (dict "name" $cluster "namespace" ($p.namespace | default $name)) "syncPolicy" $syncPolicy -}}
 {{- $ignore := dig "ignoreDifferences" $ring (list) $p -}}
 {{- /* The platform's ignoreDifferences for alert rules (platform.alerts), on
        the application ring of a product whose alerts reach its chart: the
