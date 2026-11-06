@@ -21,7 +21,7 @@ that passes its own dict gets the same refusal of an unknown key from
 {{- include "cd-delivery.assertKeys" (dict "what" "platform" "got" $plat "allowed" (list "tier" "finalizer" "sync" "syncRetry" "clusterName" "argocdNamespace" "applicationPrefix" "applicationSuffixes" "appProject" "applicationLabels" "waves" "chartRegistry" "cloud" "postgres" "events" "database" "identity" "telemetry" "e2e" "availability" "alerts" "dashboards")) -}}
 {{- range $name := (keys $products | sortAlpha) -}}
 {{- $p := get $products $name -}}
-{{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s" $name) "got" $p "allowed" (list "pin" "interface" "repository" "chart" "hostname" "parentRef" "surfaces" "bucketSlug" "workloadIdentity" "natsIdentity" "mtls" "postgres" "e2e" "faro" "alerts" "dashboards" "identityProviders" "access" "product" "values" "ignoreDifferences")) -}}
+{{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s" $name) "got" $p "allowed" (list "pin" "interface" "repository" "chart" "hostname" "parentRef" "surfaces" "bucketSlug" "workloadIdentity" "natsIdentity" "mtls" "postgres" "e2e" "faro" "alerts" "dashboards" "identityProviders" "access" "product" "values" "ignoreDifferences" "platformValues" "layers")) -}}
 {{- $docs = append $docs (include "cd-delivery.product" (dict "plat" $plat "name" $name "p" $p)) -}}
 {{- end -}}
 {{- end -}}
@@ -38,7 +38,9 @@ Call with (dict "plat" <platform> "name" <product> "p" <product map>).
 {{- $name := .name -}}
 {{- $p := .p -}}
 {{- $i := int (include "cd-delivery.interface" (dict "name" $name "p" $p)) -}}
-{{- $ctx := dict "plat" $plat "name" $name "p" $p "i" $i -}}
+{{- /* The platform's pin-gated layers that apply to this pin; a required one that does not is a refusal. */ -}}
+{{- $layers := (include "cd-delivery.activeLayers" (dict "name" $name "p" $p) | fromYaml).layers -}}
+{{- $ctx := dict "plat" $plat "name" $name "p" $p "i" $i "layers" $layers -}}
 {{- $docs := list -}}
 {{- $docs = append $docs (include "cd-delivery.application" (dict "ctx" $ctx "ring" "infra" "values" (include "cd-delivery.infraValues" $ctx | fromYaml))) -}}
 {{- $docs = append $docs (include "cd-delivery.application" (dict "ctx" $ctx "ring" "app" "values" (include "cd-delivery.appValues" $ctx | fromYaml))) -}}
@@ -107,9 +109,16 @@ ring composed. Call with (dict "ctx" <product ctx> "ring" infra|app|e2e
        itself: the Kargo Stage that runs it writes the sync operation. */ -}}
 {{- if and (eq $ring "e2e") (eq ($e2eOpts.sync | default "auto") "manual") -}}{{- $_ := unset $syncPolicy "automated" -}}{{- end -}}
 {{- $repo := required (printf "cd-delivery: products.%s.repository or platform.chartRegistry is required" $name) ($p.repository | default $plat.chartRegistry) -}}
-{{- /* Merged last, so a product's own payload wins. A value that is empty (an
-       empty string, zero, false) cannot override one the chart composed. */ -}}
-{{- $values := mustMergeOverwrite (deepCopy .values) (deepCopy (dig "values" $ring (dict) $p)) -}}
+{{- /* The payload channels, in order: what the chart composed, the platform's
+       own payload (platformValues), the platform's layers whose pin gate is
+       open, in list order, and last the product's own `values`, so that
+       wins. A value that is empty (an empty string, zero, false) cannot
+       override one an earlier step set. */ -}}
+{{- $values := mustMergeOverwrite (deepCopy .values) (deepCopy (dig "platformValues" $ring (dict) $p)) -}}
+{{- range $layer := $c.layers -}}
+{{- $values = mustMergeOverwrite $values (deepCopy (dig "values" $ring (dict) $layer)) -}}
+{{- end -}}
+{{- $values = mustMergeOverwrite $values (deepCopy (dig "values" $ring (dict) $p)) -}}
 {{- /* The charts a product installs are its own unless it names another
        product's (`chart`): one product installed as several tenants, each
        its own product here (namespace, release, Applications), all from one

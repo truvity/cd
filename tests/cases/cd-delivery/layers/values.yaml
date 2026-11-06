@@ -1,0 +1,142 @@
+# Pin-gated layers: the same platform payload and layers on four products that
+# differ only by pin. A layer applies when the pin is at or above `since`
+# (a prerelease of it counts, a leading `v` is ignored); a pin that is not a
+# version turns every layer off. Merge order: what the chart composed, then
+# platformValues, then the open layers in list order, then the product's own
+# `values`.
+platform:
+  clusterName: east
+  argocdNamespace: argocd
+  applicationPrefix: east-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+  postgres:
+    instances: 1
+    storage: 2Gi
+  events:
+    url: nats://broker.example:4222
+    storage: file
+    replicas: 1
+    maxAge: 24h
+    account: "{product}"
+products:
+  shop-applied:
+    pin: 1.12.0
+    interface: 1
+    hostname: shop.example.com
+    platformValues:
+      app:
+        replicaCount: 1
+        tuning: {mode: platform, a: platform}
+    layers:
+      - name: replicas
+        since: 1.12.0
+        values:
+          app:
+            replicaCount: 2
+            tuning: {mode: layer-one}
+      - name: never
+        since: 9.0.0
+        values:
+          app:
+            unreachable: true
+      - name: second
+        since: 1.12.0
+        values:
+          app:
+            tuning: {mode: layer-two}
+          infra:
+            layered: true
+    values:
+      app:
+        tuning: {a: product}
+  shop-skipped:
+    pin: 1.11.9
+    interface: 1
+    hostname: shop.example.com
+    platformValues:
+      app:
+        replicaCount: 1
+        tuning: {mode: platform, a: platform}
+    layers:
+      - name: replicas
+        since: 1.12.0
+        values:
+          app:
+            replicaCount: 2
+            tuning: {mode: layer-one}
+      - name: never
+        since: 9.0.0
+        values:
+          app:
+            unreachable: true
+      - name: second
+        since: 1.12.0
+        values:
+          app:
+            tuning: {mode: layer-two}
+          infra:
+            layered: true
+    values:
+      app:
+        tuning: {a: product}
+  shop-prerelease:
+    pin: v1.12.0-rc.1
+    interface: 1
+    hostname: shop.example.com
+    platformValues:
+      app:
+        replicaCount: 1
+        tuning: {mode: platform, a: platform}
+    layers:
+      - name: replicas
+        since: 1.12.0
+        values:
+          app:
+            replicaCount: 2
+            tuning: {mode: layer-one}
+      - name: never
+        since: 9.0.0
+        values:
+          app:
+            unreachable: true
+      - name: second
+        since: 1.12.0
+        values:
+          app:
+            tuning: {mode: layer-two}
+          infra:
+            layered: true
+    values:
+      app:
+        tuning: {a: product}
+  shop-sentinel:
+    pin: 0.0.0-golden
+    interface: 1
+    hostname: shop.example.com
+    platformValues:
+      app:
+        replicaCount: 1
+        tuning: {mode: platform, a: platform}
+    layers:
+      - name: replicas
+        since: 1.12.0
+        values:
+          app:
+            replicaCount: 2
+            tuning: {mode: layer-one}
+      - name: never
+        since: 9.0.0
+        values:
+          app:
+            unreachable: true
+      - name: second
+        since: 1.12.0
+        values:
+          app:
+            tuning: {mode: layer-two}
+          infra:
+            layered: true
+    values:
+      app:
+        tuning: {a: product}

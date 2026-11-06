@@ -132,3 +132,34 @@ promoted. With a digest on one side the check can never pass, and a Stage that
 waits on it never promotes. A version prefix would be written in front of a
 digest, and a chart subscription has no digest to write. The chart refuses the
 combinations instead of rendering a pipeline that stalls at its first hop.
+
+## A payload the pin cannot take
+
+**Refused by CI:** `tests/invalid/cd-delivery/layer-required-below-since.yaml`,
+`layer-without-since.yaml`, `layer-since-not-semver.yaml`,
+`layer-since-two-parts.yaml`, `layer-unknown-ring.yaml`, `layer-unknown-key.yaml`
+and `platform-values-unknown-ring.yaml`.
+
+**The failure:** a product chart's schema is closed. A platform that sends a
+key to a release that does not read yet makes Argo CD fail the sync with the
+chart's schema error, and Argo CD caches that failure. The pin is written by
+the delivery tool, so the platform cannot know at its own render which release
+the Application will install. A layer is compared with the pin at render, and a
+`required` one refuses a pin below it instead of rendering a payload the chart
+cannot take or silently leaving out one it cannot run without. `since` must be
+a three-part version: `1.12` would compare as something else than it reads.
+
+## A platform payload a company overrides
+
+**Refused by CI:** `tests/invalid/cd-company/company-overrides-platform-layer.yaml`,
+`company-overrides-platform-values.yaml` and
+`company-replaces-platform-subtree-with-scalar.yaml`; the twin case
+`tests/cases/cd-company/layers` proves that a layer whose gate is closed
+reserves nothing.
+
+**The failure:** the company owns the pin and `values`, and the platform owns
+the payload that makes a release safe to run (a replica spread, say). If a
+company value could replace a path a platform layer sets, the guarantee would
+hold until someone overrode it. The reserved paths follow the open layers, so
+they move with the pin: a pin that moves up closes a path to the company
+without any edit to the company's files, and the next render says which.

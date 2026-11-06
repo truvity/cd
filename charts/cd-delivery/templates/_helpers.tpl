@@ -53,3 +53,51 @@ Call with (dict "name" <product> "p" <product map>).
 {{- end -}}
 {{- $i -}}
 {{- end -}}
+
+{{/*
+Whether a pin is at or above a first release: "true", or nothing. The pin is a
+version with an optional leading `v`; one that is not a version (a sentinel, an
+empty pin of a dormant product) never gates true. The comparison is
+`>=<since>-0`, so a prerelease of `since` counts. The pin is moved by the
+delivery tool without the platform rendering anything, which is why the chart
+compares it, not the platform. Call with (dict "what" <path for the message>
+"pin" <pin> "since" <x.y.z>).
+*/}}
+{{- define "cd-delivery.pinAtLeast" -}}
+{{- $pin := toString .pin | trimPrefix "v" -}}
+{{- $since := toString (.since | default "") -}}
+{{- if not (regexMatch "^[0-9]+\\.[0-9]+\\.[0-9]+$" $since) -}}
+{{- fail (printf "cd-delivery: %s.since must be a version x.y.z, got %q" .what $since) -}}
+{{- end -}}
+{{- if and (regexMatch "^[0-9]+\\.[0-9]+\\.[0-9]+" $pin) (semverCompare (printf ">=%s-0" $since) $pin) -}}true{{- end -}}
+{{- end -}}
+
+{{/*
+The layers of a product (`layers`: ordered `{name, since, required, values}`)
+whose pin gate is open, as YAML for `fromYaml` (`layers`, a list in the order
+written). A layer with `required: true` whose gate is closed is a refusal
+instead of a silent skip. Call with (dict "name" <product> "p" <product map>).
+*/}}
+{{- define "cd-delivery.activeLayers" -}}
+{{- $name := .name -}}
+{{- $p := .p -}}
+{{- $active := list -}}
+{{- $seen := dict -}}
+{{- $rings := list "infra" "app" "e2e" -}}
+{{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s.platformValues" $name) "got" ($p.platformValues | default dict) "allowed" $rings) -}}
+{{- range $i, $layer := ($p.layers | default list) -}}
+{{- $what := printf "products.%s.layers[%d]" $name $i -}}
+{{- include "cd-delivery.assertKeys" (dict "what" $what "got" $layer "allowed" (list "name" "since" "required" "values")) -}}
+{{- $lname := required (printf "cd-delivery: %s.name is required" $what) $layer.name -}}
+{{- if hasKey $seen $lname -}}{{- fail (printf "cd-delivery: products.%s has two layers named %q" $name $lname) -}}{{- end -}}
+{{- $_ := set $seen $lname true -}}
+{{- include "cd-delivery.assertKeys" (dict "what" (printf "%s.values" $what) "got" ($layer.values | default dict) "allowed" $rings) -}}
+{{- $since := required (printf "cd-delivery: %s.since is required" $what) $layer.since -}}
+{{- if include "cd-delivery.pinAtLeast" (dict "what" $what "pin" $p.pin "since" $since) -}}
+{{- $active = append $active $layer -}}
+{{- else if $layer.required -}}
+{{- fail (printf "cd-delivery: products.%s needs a pin >= %s, got %q (layer %q)" $name (toString $since) (toString $p.pin) $lname) -}}
+{{- end -}}
+{{- end -}}
+{{- toYaml (dict "layers" $active) -}}
+{{- end -}}

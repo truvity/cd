@@ -1,0 +1,27 @@
+# expect: layers/0/since
+platform:
+  clusterName: east
+  argocdNamespace: argocd
+  applicationPrefix: east-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+  postgres:
+    instances: 1
+    storage: 2Gi
+  events:
+    url: nats://broker.example:4222
+    storage: file
+    replicas: 1
+    maxAge: 24h
+    account: "{product}"
+products:
+  shop:
+    pin: 1.11.9
+    interface: 1
+    hostname: shop.example.com
+    layers:
+      - name: replicas
+        since: latest
+        values:
+          app:
+            replicaCount: 2

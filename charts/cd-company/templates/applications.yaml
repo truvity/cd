@@ -15,11 +15,25 @@
     {{- fail (printf "cd-company: pins.%s must be a string" $service) -}}
   {{- end -}}
   {{- $values := index $.Values.values $service | default dict -}}
+  {{- /* What the platform sets through the product's platformValues and its
+         open layers is reserved too, beside the fixed list. The pin is the
+         company's, so the layers are resolved here, at render. */ -}}
+  {{- $trees := list -}}
+  {{- if hasKey $.Values.products $service -}}
+    {{- $facts := deepCopy (index $.Values.products $service) -}}
+    {{- $_ := set $facts "pin" $pin -}}
+    {{- $trees = (include "cd-company.platformPayloadTrees" (dict "name" $service "product" $facts) | fromYaml).trees -}}
+  {{- end -}}
   {{- range $ring, $payload := $values -}}
     {{- if not (has $ring (list "infra" "app" "e2e")) -}}
       {{- fail (printf "cd-company: values.%s: unknown ring %q" $service $ring) -}}
     {{- end -}}
     {{- include "cd-company.assertOwnership" (dict "path" (printf "values.%s.%s" $service $ring) "payload" $payload "owned" (include "cd-company.owned" $ring | fromYaml)) -}}
+    {{- range $reserved := $trees -}}
+      {{- if eq $reserved.ring $ring -}}
+        {{- include "cd-company.assertOwnership" (dict "path" (printf "values.%s.%s" $service $ring) "payload" $payload "owned" $reserved.tree) -}}
+      {{- end -}}
+    {{- end -}}
   {{- end -}}
   {{- if ne $pin "" -}}
     {{- if not (hasKey $.Values.products $service) -}}

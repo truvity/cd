@@ -110,6 +110,14 @@ result against their own schemas.
   `job.annotations`, `job.ttlSecondsAfterFinished`, `prober.enabled`,
   `prober.interval` and `prober.serviceAccount`.
 
+- Whatever the platform sets for a service through `products.<service>.platformValues`
+  and its open `layers` is reserved in that ring as well. The company's pin
+  decides which layers are open (`since` against the pin, as cd-delivery
+  decides), so the check is made at render time: a layer whose gate is closed
+  reserves nothing, and a company may set the same path until its pin reaches
+  it. A dormant service resolves no layer. A `required` layer above the pin is
+  refused by cd-delivery.
+
 Replacing a reserved subtree with a scalar or array also fails. These checks
 are path-based: `app.config.cloud` is application configuration, not a delivery
 cloud override. New delivery-owned fields must be reflected in the ownership

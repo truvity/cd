@@ -258,6 +258,34 @@ required below must be present, and a key the chart does not read is refused.
 | `products.<name>.e2e.{kargoStage,sync,hook,ttlSecondsAfterFinished}` | Opt-in, for an end-to-end run that a Kargo Stage triggers. `kargoStage` (`<project>:<stage>`) renders the `kargo.akuity.io/authorized-stage` annotation on the `-e2e` Application only. `sync: manual` (default `auto`) drops `syncPolicy.automated` from it; it never carries `retry`. `hook: true` renders the suite's Job as an Argo CD Sync hook (BeforeHookCreation, sync-wave 1) with `ttlSecondsAfterFinished` (default 86400, at least 120) instead of Force and Replace. Switch a product over with the Stage's `e2eApplication` and `sync: manual` plus `hook: true` in ONE change per cluster: a tracked (non-hook) Job never reports health in the Application status, so the check cannot pass in between. The Job it replaces is deleted once afterwards, only after the Application shows manual sync. All unset: no change to the render. |
 | `products.<name>.values.{infra,app,e2e}` | A payload per ring, merged over what the chart composed, last. An empty value (an empty string, zero, false) cannot override one the chart composed. |
 | `products.<name>.ignoreDifferences.{infra,app,e2e}` | `ignoreDifferences` entries for the ring's Application, verbatim. |
+| `products.<name>.platformValues.{infra,app,e2e}` | The platform's own payload per ring, merged over what the chart composed and under `layers` and `values`. In `cd-company` the paths it sets are reserved against the company's `values`. See [Platform values and layers](#platform-values-and-layers). |
+| `products.<name>.layers[]` | Ordered `{name, since, required, values.{infra,app,e2e}}`: a payload the platform sets only for a pin at or above `since`. |
+
+### Platform values and layers
+
+`products.<name>.values` is the product's own payload and wins over everything
+else. Two further channels belong to the platform:
+
+- `platformValues.{infra,app,e2e}`: always applied.
+- `layers[]`: `{name, since, required, values.{infra,app,e2e}}`, applied when the
+  product's `pin` is at or above `since` (`x.y.z`).
+
+The merge order is: what the chart composed, `platformValues`, the open layers
+in list order, then `values`. As everywhere in the chart, an empty value (an
+empty string, zero, false) does not override an earlier one.
+
+A layer exists because a chart's schema is closed: a release that does not read
+a key rejects it, and Argo CD caches the failure. The pin is moved by the
+delivery tool without the platform rendering anything, so the platform cannot
+decide at its own render whether a key is safe to send; the chart decides, with
+the pin it renders. The rule is `>=since-0`: a leading `v` on the pin is
+ignored, a prerelease of `since` counts as reaching it, and a pin that is not a
+version (a golden sentinel, a dormant `""`) never does, so every layer is off.
+`required: true` turns a pin below `since` into a refusal
+(`products.<name> needs a pin >= X, got Y`) for a product that cannot run
+without the payload. Choosing between clusters stays with the platform: it
+passes each cluster's `layers` and `platformValues`, and the chart never sees a
+cluster list. `tests/cases/cd-delivery/layers` shows four pins on the same layers.
 
 ### The interface
 
@@ -336,7 +364,7 @@ keys and rings fail. `values.<service>` accepts only `infra`, `app`, `e2e`.
 Company files contain only their indicated envelope; the caller enforces those
 file boundaries and supplies authoritative platform facts.
 
-Company ring values cannot override platform-owned delivery paths: `cloud`,
+Company ring values cannot override platform-owned delivery paths (and, per service, any path the platform sets through `platformValues` or an open layer of its `products` row; a layer whose pin gate is closed reserves nothing): `cloud`,
 `events`, `identity`, `route`, `serviceAccount`, `tier`, `pin`, `chart`,
 `repository`, `interface`, `appProject`, or the platform's postgres fields
 (sizing, scheduling, labels, roles/passwords, TLS, backup and ownership).

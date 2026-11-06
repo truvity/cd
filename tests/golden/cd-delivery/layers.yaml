@@ -1,0 +1,417 @@
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-shop-applied-infra
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shop-applied
+  project: shop-applied-east
+  sources:
+  - helm:
+      releaseName: shop-applied-infra
+      valuesObject:
+        events:
+          account: shop-applied
+          maxAge: 24h
+          replicas: 1
+          storage: file
+        layered: true
+        postgres:
+          instances: 1
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: shop-applied-pg-runtime
+          runtimeRole: shop_applied_app
+          storage: 2Gi
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/shop-applied-infra
+    targetRevision: 1.12.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-shop-applied
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shop-applied
+  project: shop-applied-east
+  sources:
+  - helm:
+      releaseName: shop-applied
+      valuesObject:
+        database:
+          app:
+            passwordSecret: shop-applied-pg-runtime
+            role: shop_applied_app
+          host: shop-applied-infra-pg-rw
+          owner:
+            passwordSecret: shop-applied-infra-pg-app
+        events:
+          url: nats://broker.example:4222
+        replicaCount: 2
+        route:
+          enabled: true
+          hostname: shop.example.com
+        serviceAccount:
+          app:
+            name: shop-applied
+        tuning:
+          a: product
+          mode: layer-two
+    path: .
+    repoURL: oci://registry.example.com/charts/shop-applied
+    targetRevision: 1.12.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-shop-prerelease-infra
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shop-prerelease
+  project: shop-prerelease-east
+  sources:
+  - helm:
+      releaseName: shop-prerelease-infra
+      valuesObject:
+        events:
+          account: shop-prerelease
+          maxAge: 24h
+          replicas: 1
+          storage: file
+        layered: true
+        postgres:
+          instances: 1
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: shop-prerelease-pg-runtime
+          runtimeRole: shop_prerelease_app
+          storage: 2Gi
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/shop-prerelease-infra
+    targetRevision: v1.12.0-rc.1
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-shop-prerelease
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shop-prerelease
+  project: shop-prerelease-east
+  sources:
+  - helm:
+      releaseName: shop-prerelease
+      valuesObject:
+        database:
+          app:
+            passwordSecret: shop-prerelease-pg-runtime
+            role: shop_prerelease_app
+          host: shop-prerelease-infra-pg-rw
+          owner:
+            passwordSecret: shop-prerelease-infra-pg-app
+        events:
+          url: nats://broker.example:4222
+        replicaCount: 2
+        route:
+          enabled: true
+          hostname: shop.example.com
+        serviceAccount:
+          app:
+            name: shop-prerelease
+        tuning:
+          a: product
+          mode: layer-two
+    path: .
+    repoURL: oci://registry.example.com/charts/shop-prerelease
+    targetRevision: v1.12.0-rc.1
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-shop-sentinel-infra
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shop-sentinel
+  project: shop-sentinel-east
+  sources:
+  - helm:
+      releaseName: shop-sentinel-infra
+      valuesObject:
+        events:
+          account: shop-sentinel
+          maxAge: 24h
+          replicas: 1
+          storage: file
+        postgres:
+          instances: 1
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: shop-sentinel-pg-runtime
+          runtimeRole: shop_sentinel_app
+          storage: 2Gi
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/shop-sentinel-infra
+    targetRevision: 0.0.0-golden
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-shop-sentinel
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shop-sentinel
+  project: shop-sentinel-east
+  sources:
+  - helm:
+      releaseName: shop-sentinel
+      valuesObject:
+        database:
+          app:
+            passwordSecret: shop-sentinel-pg-runtime
+            role: shop_sentinel_app
+          host: shop-sentinel-infra-pg-rw
+          owner:
+            passwordSecret: shop-sentinel-infra-pg-app
+        events:
+          url: nats://broker.example:4222
+        replicaCount: 1
+        route:
+          enabled: true
+          hostname: shop.example.com
+        serviceAccount:
+          app:
+            name: shop-sentinel
+        tuning:
+          a: product
+          mode: platform
+    path: .
+    repoURL: oci://registry.example.com/charts/shop-sentinel
+    targetRevision: 0.0.0-golden
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-shop-skipped-infra
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shop-skipped
+  project: shop-skipped-east
+  sources:
+  - helm:
+      releaseName: shop-skipped-infra
+      valuesObject:
+        events:
+          account: shop-skipped
+          maxAge: 24h
+          replicas: 1
+          storage: file
+        postgres:
+          instances: 1
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: shop-skipped-pg-runtime
+          runtimeRole: shop_skipped_app
+          storage: 2Gi
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/shop-skipped-infra
+    targetRevision: 1.11.9
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-shop-skipped
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shop-skipped
+  project: shop-skipped-east
+  sources:
+  - helm:
+      releaseName: shop-skipped
+      valuesObject:
+        database:
+          app:
+            passwordSecret: shop-skipped-pg-runtime
+            role: shop_skipped_app
+          host: shop-skipped-infra-pg-rw
+          owner:
+            passwordSecret: shop-skipped-infra-pg-app
+        events:
+          url: nats://broker.example:4222
+        replicaCount: 1
+        route:
+          enabled: true
+          hostname: shop.example.com
+        serviceAccount:
+          app:
+            name: shop-skipped
+        tuning:
+          a: product
+          mode: platform
+    path: .
+    repoURL: oci://registry.example.com/charts/shop-skipped
+    targetRevision: 1.11.9
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
