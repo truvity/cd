@@ -66,17 +66,26 @@ prober:
 {{- end -}}
 
 {{/* Paths owned by the platform in a static site's rings (kind `static-site`).
-     The chart writes the names that tie the two Applications together and
-     the artifact (`fullnameOverride`, `installName`, `serviceAccount`,
-     `site.artifact`); the registry and identity block, which carries the
-     scope of the site's IAM role, is the platform's. A company keeps the
-     rest of the site (its pages, replicas, placeholders). A key is reserved
-     whole where it is a leaf here, so a scalar cannot replace the map above
-     it. Call with (dict "kind" <kind> "ring" <ring>). */}}
+     The list is the site's own, not the product list: a site has two rings
+     and no delivery interface, so it keeps a company out of what it needs to
+     be kept out of and no more. The chart writes the names that tie the two
+     Applications together and the artifact (`fullnameOverride`,
+     `installName`, `serviceAccount`, `site.artifact`). The registry and the
+     identity block, which carries the scope of the site's IAM role, and
+     `access` are the platform's, as are `tier`, `route` and `tls` (where the
+     site is served and with which certificate). A company keeps the rest of
+     the site (its pages, replicas, placeholders). A key is reserved whole
+     where it is a leaf here, so a scalar cannot replace the map above it.
+     Call with (dict "kind" <kind> "ring" <ring>). */}}
 {{- define "cd-company.ownedStaticSite" -}}
 fullnameOverride: true
 serviceAccount: true
 registry: true
+identity: true
+access: true
+tier: true
+route: true
+tls: true
 {{ if eq .ring "infra" }}
 installName: true
 {{ else }}
