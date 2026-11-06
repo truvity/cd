@@ -1,0 +1,24 @@
+# expect: (kind static-site): unknown key "layers"
+platform:
+  clusterName: east
+  argocdNamespace: argocd
+  applicationPrefix: east-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+  postgres:
+    instances: 1
+    storage: 2Gi
+  events:
+    url: nats://broker.example:4222
+    storage: file
+    replicas: 1
+    maxAge: 24h
+    account: "{product}"
+products:
+  docs:
+    kind: static-site
+    pin: sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+    chartVersion: 3.12.0
+    artifact: {ref: registry.example.com/sites/docs}
+    layers:
+      - {name: x, since: 1.0.0}

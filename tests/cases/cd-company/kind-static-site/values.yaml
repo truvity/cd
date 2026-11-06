@@ -1,0 +1,44 @@
+# A static site in a company flow: the company's values.app carries the site's
+# own settings (pages, replicas); the identity block and the artifact stay the
+# platform's. A dormant site renders nothing.
+platform:
+  clusterName: east
+  argocdNamespace: argocd
+  applicationPrefix: east-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+  postgres:
+    instances: 1
+    storage: 2Gi
+  events:
+    url: nats://broker.example:4222
+    storage: file
+    replicas: 1
+    maxAge: 24h
+    account: "{product}"
+products:
+  docs:
+    kind: static-site
+    chartVersion: 3.12.0
+    artifact: {ref: registry.example.com/sites/docs}
+    platformValues:
+      infra:
+        registry: {auth: ecr}
+      app:
+        registry: {auth: ecr}
+  blog:
+    kind: static-site
+    chartVersion: 3.12.0
+    artifact: {ref: registry.example.com/sites/blog}
+services: [docs, blog]
+pins:
+  docs: sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+  blog: ""
+values:
+  docs:
+    app:
+      replicaCount: 2
+      site: {notFoundPage: 404.html}
+  blog:
+    app:
+      replicaCount: 1

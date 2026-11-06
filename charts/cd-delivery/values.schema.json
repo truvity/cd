@@ -399,6 +399,27 @@
         "dashboards": {
           "type": "object",
           "description": "Passed to the application ring as `observability.dashboards`, verbatim, for every product with `dashboards: true` (the folder and data sources of this cluster's dashboards). Unset: nothing is passed."
+        },
+        "staticSite": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "infraLabels": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Labels the infrastructure Application of every `static-site` product gets, verbatim. Ordering that must hold between the two Applications of a site (a sync gate, say) is the platform's, and is handed through here; the chart names none. Unset: none."
+            },
+            "siteAnnotations": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Annotations the site Application of every `static-site` product gets, verbatim (a sync wave, say). Unset: none."
+            }
+          },
+          "description": "What the platform adds to the Applications of a `static-site` product."
         }
       }
     },
@@ -411,7 +432,7 @@
           "pin": {
             "type": "string",
             "minLength": 1,
-            "description": "The chart version, the same for all three charts of the product."
+            "description": "The chart version, the same for all three charts of the product. Kind `static-site`: the digest of the site artifact (`sha256:` and 64 hex digits)."
           },
           "interface": {
             "type": "integer",
@@ -822,16 +843,34 @@
             "type": "string",
             "enum": [
               "product",
-              "chart"
+              "chart",
+              "static-site"
             ],
-            "description": "`product` (default): the three-ring product. `chart`: one chart, one Application named after the product, no rings, no composed platform facts; takes only `pin`, `repository`, `chart`, `namespace` and `values.app`. A `repository` that starts with `oci://` renders `repoURL: <repository>/<chart>`; any other renders `repoURL: <repository>` with `chart: <chart>`."
+            "description": "`product` (default): the three-ring product. `chart`: one chart, one Application named after the product, no rings, no composed platform facts; takes only `pin`, `repository`, `chart`, `namespace` and `values.app`. A `repository` that starts with `oci://` renders `repoURL: <repository>/<chart>`; any other renders `repoURL: <repository>` with `chart: <chart>`. `static-site`: two Applications, `<name>-infra` and `<name>`, of the same chart release, pinned by the digest of the site artifact; takes `pin` (a `sha256:` digest), `chartVersion`, `artifact.ref`, `repository`, `namespace`, `values.{infra,app}` and `platformValues.{infra,app}`."
           },
           "namespace": {
             "type": "string",
             "minLength": 1,
             "maxLength": 63,
             "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
-            "description": "Kind `chart` only: the destination namespace (default the product's name)."
+            "description": "Kinds `chart` and `static-site` only: the destination namespace (default the product's name)."
+          },
+          "chartVersion": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Kind `static-site` only: the release of the `static-site` and `static-site-infra` charts, the targetRevision of both Applications."
+          },
+          "artifact": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ref": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The repository of the site artifact, without a tag or digest. The chart is given this and `pin`."
+              }
+            },
+            "description": "Kind `static-site` only: the site artifact."
           }
         },
         "required": [
@@ -842,7 +881,10 @@
             "if": {
               "properties": {
                 "kind": {
-                  "const": "chart"
+                  "enum": [
+                    "chart",
+                    "static-site"
+                  ]
                 }
               },
               "required": [

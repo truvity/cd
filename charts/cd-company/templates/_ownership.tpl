@@ -3,7 +3,7 @@
      others whether or not the service has a pin: the refusal is about the
      shape of the kind, not about what is rendered today. Call with the kind. */}}
 {{- define "cd-company.kindRings" -}}
-{{- if eq . "chart" -}}app{{- else -}}infra app e2e{{- end -}}
+{{- if eq . "chart" -}}app{{- else if eq . "static-site" -}}infra app{{- else -}}infra app e2e{{- end -}}
 {{- end -}}
 
 {{/* Paths owned by the platform, including conditional delivery-interface keys.
@@ -62,6 +62,26 @@ prober:
   enabled: true
   interval: true
   serviceAccount: true
+{{ end }}
+{{- end -}}
+
+{{/* Paths owned by the platform in a static site's rings (kind `static-site`).
+     The chart writes the names that tie the two Applications together and
+     the artifact (`fullnameOverride`, `installName`, `serviceAccount`,
+     `site.artifact`); the registry and identity block, which carries the
+     scope of the site's IAM role, is the platform's. A company keeps the
+     rest of the site (its pages, replicas, placeholders). A key is reserved
+     whole where it is a leaf here, so a scalar cannot replace the map above
+     it. Call with (dict "kind" <kind> "ring" <ring>). */}}
+{{- define "cd-company.ownedStaticSite" -}}
+fullnameOverride: true
+serviceAccount: true
+registry: true
+{{ if eq .ring "infra" }}
+installName: true
+{{ else }}
+site:
+  artifact: true
 {{ end }}
 {{- end -}}
 

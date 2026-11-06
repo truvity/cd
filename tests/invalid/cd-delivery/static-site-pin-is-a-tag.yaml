@@ -1,0 +1,23 @@
+# expect: must be a digest
+# The pin of a static site is the digest of the artifact that runs; a tag can move.
+platform:
+  clusterName: east
+  argocdNamespace: argocd
+  applicationPrefix: east-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+  postgres:
+    instances: 1
+    storage: 2Gi
+  events:
+    url: nats://broker.example:4222
+    storage: file
+    replicas: 1
+    maxAge: 24h
+    account: "{product}"
+products:
+  docs:
+    kind: static-site
+    pin: 1.2.3
+    chartVersion: 3.12.0
+    artifact: {ref: registry.example.com/sites/docs}

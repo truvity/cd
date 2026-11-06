@@ -106,6 +106,11 @@ result against their own schemas.
 - A service whose product row is `kind: chart` has one ring: `values.<service>.infra`
   and `.e2e` are refused by name, with or without a pin. Its `values.app` keeps
   the roots above reserved.
+- A service whose product row is `kind: static-site` has two rings: `values.<service>.e2e`
+  is refused by name, with or without a pin. In `infra` and `app`, the keys the chart
+  writes (`fullnameOverride`, `serviceAccount`; `installName` on `infra`;
+  `site.artifact` on `app`) and the registry and identity block (`registry`, which carries
+  the scope of the site's IAM role) are platform-owned.
 - The platform's postgres fields are reserved: `platformOwned`, `instances`,
   `storage`, `runtimeRole`, `runtimePasswordSecret`, `runtimePassword`, `labels`,
   `scheduling`, `backup`, `serverTLS`. Other postgres tuning can be passed through.
