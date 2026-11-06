@@ -5,6 +5,10 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## Unreleased
+
+- **Added:** `delivery.ProductInput` and `delivery.ProductPipeline` carry optional `Git` (`RepoURL`, `Credentials`, `NoCredentials`), `Promotion` (`Branch`, `PinFile`, `PinKey`, `CommitMessage`, `PRTitle`, `PRLabels`, `Provider`, `Retry`, `Gate`) and `Kind`, the per-project overrides of `cd-pipeline` and the product kinds of `cd-delivery` (constants `KindProduct`, `KindChart`, `KindStaticSite`), so a platform's generator can pass them on. The values are copied, not interpreted or checked; the zero values leave every row exactly as before. No chart changes.
+
 ## v0.29.0
 
 - **Added:** `cd-pipeline` per-project `projects[].git` (`repoURL`, `credentials`, or `credentials: false` for none) and `projects[].promotion` (the keys of `promotion`): a project lays its own repository, branch, pin file, pin key, commit and pull-request wording, provider, retry and gate budgets, and write-back credentials over the release's, which stay the defaults (`retry` and `gate` merge key by key, every other key replaces). The `ExternalSecret`, `vars.gitRepo` and the promotion steps of a project follow its effective values. A project that sets neither renders byte-identically (new golden `per-project-git`; no existing golden moves).

@@ -148,7 +148,11 @@ Application's `destination.name` resolves through it.
 from facts the caller passes in; they read no files. `delivery.PinKey`,
 `KargoProject` and `KargoProjects` name a pin and its Kargo Project;
 `delivery.Product` and `PlatformCharts` build cd-pipeline's project rows from
-the clusters that own each pin, in the caller's promotion order;
+the clusters that own each pin, in the caller's promotion order. A
+`ProductInput` may also carry `Git`, `Promotion` and `Kind`, which the row
+repeats for the generator to write as the project's `git` and `promotion`
+overrides and the product's `kind`; they are copied, not interpreted, and
+unset they leave the row what it was;
 `delivery.ProberGranted` answers cd-delivery's `e2e.proberGranted`;
 `appproject.Deployer` builds the `<product>-<cluster>` AppProject whose
 deployer role one group holds.
