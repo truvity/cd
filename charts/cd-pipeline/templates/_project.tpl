@@ -27,7 +27,7 @@ Stages, as YAML documents. Call with (dict "root" . "p" <project map>).
 {{- $mode := include "cd-pipeline.chartMode" (dict "name" $name "chart" $chart) | fromYaml -}}
 {{- if $mode.image -}}
 {{- /* An OCI chart whose tags carry a `v`: Helm's tag listing drops them, so subscribe as an image. */ -}}
-{{- $sub = dict "repoURL" $mode.repo "imageSelectionStrategy" "SemVer" "strictSemvers" false "constraint" $chart.semver "discoveryLimit" ($chart.discoveryLimit | default 20) -}}
+{{- $sub = dict "repoURL" $mode.repo "imageSelectionStrategy" "SemVer" "strictSemvers" $mode.strict "constraint" $chart.semver "discoveryLimit" ($chart.discoveryLimit | default 20) -}}
 {{- $subs = list (dict "image" $sub) -}}
 {{- else -}}
 {{- $subs = list (dict "chart" $sub) -}}
@@ -109,6 +109,7 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 
 {{- /* The promoted-version check: that the Applications of this Stage render the promoted chart. */ -}}
 {{- if $verif.promotedVersion -}}
+{{- if $mode.digest -}}{{- fail (printf "cd-pipeline: projects.%s.stages.%s.verification.promotedVersion: a digest pin has no chart version to compare with the Application's" $name $s.name) -}}{{- end -}}
 {{- $pv := $v.promotedVersion -}}
 {{- $apps := required (printf "cd-pipeline: projects.%s.stages.%s.applications is required for the promoted-version check" $name $s.name) $s.applications -}}
 {{- $sa := printf "kargo-verify-%s" $s.name -}}

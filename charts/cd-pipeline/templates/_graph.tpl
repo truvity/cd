@@ -60,7 +60,8 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- if has $st ($p.e2eStages | default list) -}}
 {{- $_ := set $s "e2eApplication" (include "cd-pipeline.fill" (dict "s" $appName "tokens" (dict "stage" $st "app" $e2eApp))) -}}
 {{- end -}}
-{{- $verif := dict "promotedVersion" ($g.promotedVersion | default false) -}}
+{{- /* A digest pin has no chart version for the check to compare: the Stage omits it. */ -}}
+{{- $verif := dict "promotedVersion" (and ($g.promotedVersion | default false) (ne (($p.chart | default dict).pin | default "tag") "digest")) -}}
 {{- if has $st ($p.metricsGateStages | default list) -}}{{- $_ := set $verif "metricsGate" true -}}{{- end -}}
 {{- $_ := set $s "verification" $verif -}}
 {{- $stages = append $stages $s -}}

@@ -1,0 +1,43 @@
+# An artifact that is deployed by its digest: the Warehouse watches an image
+# repository, the pin written to the repository is the Freight's digest, and
+# the tag it was discovered under is only wording. `site` spells its Stages
+# out; `blog` derives them, and its derived Stages leave out the
+# promoted-version check that `graph.promotedVersion` turns on for the
+# release (a digest has no chart version in the Application to compare).
+git:
+  repoURL: https://git.example.com/acme/environments.git
+promotion:
+  branch: main
+  pinFile: "versions/{stage}.yaml"
+  pinKey: "versions.{pinKey}"
+  commitMessage: "chore(versions): promote {slug} {tag} to {stage}"
+  prTitle: "chore(versions): promote {slug} {tag} to {stage}"
+graph:
+  upstreams:
+    prod: [dev]
+  promotedVersion: true
+projects:
+  - name: site
+    pinKey: site
+    annotations:
+      kargo.akuity.io/keep-namespace: "true"
+    chart:
+      repoURL: oci://registry.example.com/sites/web
+      semver: ">=1.0.0"
+      subscribeAs: image
+      pin: digest
+      strictSemvers: true
+    stages:
+      - name: dev
+        autoPromote: true
+        applications: [dev-site]
+      - name: prod
+        from: dev
+  - name: blog
+    pinKey: blog
+    stageOrder: [dev, prod]
+    chart:
+      repoURL: oci://registry.example.com/sites/blog
+      semver: ">=1.0.0"
+      subscribeAs: image
+      pin: digest

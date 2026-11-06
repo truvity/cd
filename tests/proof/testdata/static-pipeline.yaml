@@ -1,0 +1,128 @@
+# A hand-spelled Kargo pipeline for an artifact promoted by digest, as a
+# platform writes one before the chart can: an image subscription, the first
+# Stage pushing to the branch, the next one gated on the first one's
+# Application and opening a pull request. The chart renders the same objects
+# for tests/cases/cd-pipeline/digest-pin (project `site`); only the names of
+# the promotion's variables differ (`imageRepo` here, `chartRepo` there).
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: site
+  namespace: site
+spec:
+  freightCreationPolicy: Automatic
+  interval: 5m0s
+  subscriptions:
+    - image:
+        repoURL: registry.example.com/sites/web
+        imageSelectionStrategy: SemVer
+        constraint: ">=1.0.0"
+        strictSemvers: true
+        discoveryLimit: 20
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: dev
+  namespace: site
+spec:
+  requestedFreight:
+    - origin: {kind: Warehouse, name: site}
+      sources: {direct: true}
+  promotionTemplate:
+    spec:
+      vars:
+        - {name: gitRepo, value: https://git.example.com/acme/environments.git}
+        - {name: imageRepo, value: registry.example.com/sites/web}
+        - {name: chartName, value: ""}
+      steps:
+        - uses: git-clone
+          retry: {errorThreshold: 3, timeout: 5m0s}
+          config:
+            repoURL: ${{ vars.gitRepo }}
+            checkout:
+              - {branch: main, path: ./repo}
+        - uses: yaml-update
+          config:
+            path: ./repo/versions/dev.yaml
+            updates:
+              - key: versions.site
+                value: ${{ imageFrom(vars.imageRepo).Digest }}
+        - uses: git-commit
+          as: commit
+          retry: {errorThreshold: 3, timeout: 5m0s}
+          config:
+            path: ./repo
+            message: "chore(versions): promote site ${{ imageFrom(vars.imageRepo).Tag }} to dev"
+        - uses: git-push
+          retry: {errorThreshold: 3, timeout: 5m0s}
+          config:
+            path: ./repo
+            targetBranch: main
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prod
+  namespace: site
+spec:
+  requestedFreight:
+    - origin: {kind: Warehouse, name: site}
+      sources: {stages: [dev]}
+  promotionTemplate:
+    spec:
+      vars:
+        - {name: gitRepo, value: https://git.example.com/acme/environments.git}
+        - {name: imageRepo, value: registry.example.com/sites/web}
+        - {name: chartName, value: ""}
+      steps:
+        - uses: argocd-wait
+          as: gate
+          retry: {timeout: 10m0s}
+          config:
+            apps:
+              - name: dev-site
+                namespace: argocd
+                waitFor: [health, sync, operation]
+        - uses: git-clone
+          retry: {errorThreshold: 3, timeout: 5m0s}
+          config:
+            repoURL: ${{ vars.gitRepo }}
+            checkout:
+              - {branch: main, path: ./repo}
+        - uses: yaml-update
+          config:
+            path: ./repo/versions/prod.yaml
+            updates:
+              - key: versions.site
+                value: ${{ imageFrom(vars.imageRepo).Digest }}
+        - uses: git-commit
+          as: commit
+          retry: {errorThreshold: 3, timeout: 5m0s}
+          config:
+            path: ./repo
+            message: "chore(versions): promote site ${{ imageFrom(vars.imageRepo).Tag }} to prod"
+        - uses: git-push
+          as: push
+          if: ${{ status('commit') == 'Succeeded' }}
+          retry: {errorThreshold: 3, timeout: 5m0s}
+          config:
+            path: ./repo
+            generateTargetBranch: true
+        - uses: git-open-pr
+          as: open-pr
+          if: ${{ status('commit') == 'Succeeded' }}
+          retry: {errorThreshold: 3, timeout: 5m0s}
+          config:
+            repoURL: ${{ vars.gitRepo }}
+            provider: github
+            sourceBranch: ${{ outputs.push.branch }}
+            targetBranch: main
+            title: "chore(versions): promote site ${{ imageFrom(vars.imageRepo).Tag }} to prod"
+        - uses: git-wait-for-pr
+          if: ${{ status('commit') == 'Succeeded' }}
+          retry: {errorThreshold: 3}
+          config:
+            repoURL: ${{ vars.gitRepo }}
+            provider: github
+            prNumber: ${{ outputs['open-pr'].pr.id }}

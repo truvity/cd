@@ -1,0 +1,16 @@
+# expect: takes neither name nor versionPrefix
+git:
+  repoURL: https://git.example.com/acme/environments.git
+projects:
+  - name: site
+    pinKey: site
+    chart:
+      repoURL: oci://registry.example.com/sites/web
+      semver: ">=1.0.0"
+      subscribeAs: image
+      pin: digest
+      versionPrefix: v
+    stages:
+      - name: dev
+        autoPromote: true
+

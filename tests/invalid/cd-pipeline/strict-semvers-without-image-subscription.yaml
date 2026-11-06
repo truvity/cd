@@ -1,0 +1,14 @@
+# expect: chart.strictSemvers needs subscribeAs image
+git:
+  repoURL: https://git.example.com/acme/environments.git
+projects:
+  - name: site
+    pinKey: site
+    chart:
+      repoURL: oci://registry.example.com/sites/web
+      semver: ">=1.0.0"
+      strictSemvers: true
+    stages:
+      - name: dev
+        autoPromote: true
+

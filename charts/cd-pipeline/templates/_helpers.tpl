@@ -84,15 +84,20 @@ The script volume and mount of a check whose script is a ConfigMap.
 
 {{/*
 The chart's subscription mode and the repository the promotion names. Returns
-YAML for `fromYaml`: image (bool) and repo (the image repository for an image
-subscription, with any `oci://` dropped; the chart's repoURL otherwise).
+YAML for `fromYaml`: image (bool), digest (bool: the pin is the artifact's
+digest, not its tag), strict (the subscription's `strictSemvers`) and repo (the
+image repository for an image subscription, with any `oci://` dropped; the
+chart's repoURL otherwise).
 Call with (dict "name" <project> "chart" <chart map>).
 */}}
 {{- define "cd-pipeline.chartMode" -}}
 {{- $c := .chart -}}
 {{- $image := eq ($c.subscribeAs | default "chart") "image" -}}
+{{- $digest := eq ($c.pin | default "tag") "digest" -}}
 {{- if and $image (or $c.name $c.versionPrefix) -}}{{- fail (printf "cd-pipeline: projects.%s.chart.subscribeAs image takes neither name nor versionPrefix (the tag is written as discovered)" .name) -}}{{- end -}}
-{{- toYaml (dict "image" $image "repo" (ternary (trimPrefix "oci://" ($c.repoURL | default "")) ($c.repoURL | default "") $image)) -}}
+{{- if and $digest (not $image) -}}{{- fail (printf "cd-pipeline: projects.%s.chart.pin digest needs subscribeAs image (only an image subscription discovers a digest)" .name) -}}{{- end -}}
+{{- if and (hasKey $c "strictSemvers") (not $image) -}}{{- fail (printf "cd-pipeline: projects.%s.chart.strictSemvers needs subscribeAs image" .name) -}}{{- end -}}
+{{- toYaml (dict "image" $image "digest" $digest "strict" ($c.strictSemvers | default false) "repo" (ternary (trimPrefix "oci://" ($c.repoURL | default "")) ($c.repoURL | default "") $image)) -}}
 {{- end -}}
 
 {{/*
