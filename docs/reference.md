@@ -418,6 +418,8 @@ and per project `name`, `stages` (or `stageOrder`, see [Derived Stages](#derived
 | `git.repoURL` | The repository a promotion writes the new pin to. |
 | `git.credentials` | `secretStoreRef`, `remoteKey` and `properties` (`appID`, `installationID`, `privateKey`) of a GitHub App; renders an `ExternalSecret` per project namespace, `secretName` (default `kargo-git-writeback`), `refreshInterval` (default `1h`). |
 | `promotion.*` | What a promotion writes: `branch`, `pinFile` and `pinKey` (tokens `{stage}`, `{project}`, `{slug}`, `{pinKey}`), `commitMessage` (also `{version}`), `prTitle`, `prLabels`, `provider`, and the `retry` and `gate` budgets. All have neutral defaults. |
+| `projects[].git` | A per-project override of `git`: `repoURL` replaces the release's, and `credentials` replaces the release's `git.credentials` for this project's namespace (`false` renders no `ExternalSecret` for it). A project without it renders exactly as before. See [Per-project git and promotion](#per-project-git-and-promotion). |
+| `projects[].promotion` | A per-project override of `promotion`, with the same keys: what the project sets replaces the release's value, except that `retry` and `gate` merge key by key. |
 | `waves` | The Argo CD sync-wave of each kind of object: `project`, `warehouse`, `credentials`, `config`, `stage` (0 to 4). |
 | `argocd.namespace` | Where the Stages' Applications live (`argocd`). |
 | `jobs`, `promotedVersion` | What the verification Jobs run as (`runAsUser`, `runAsGroup`, TTL, headroom) and the built-in check's `image`, `jqImage`, `waitSeconds`, `pollSeconds`, optional replacement `script`, and `gateImage` (empty by default): the `promotion-gate` image, which runs the check as Go instead of the script (see [Verification](#verification)). |
@@ -486,6 +488,28 @@ never waits on the Applications it is about to update); then `git-clone`,
 `yaml-update` of `pinFile` at `pinKey`, `git-commit`; then either `git-push`
 to the branch, or `git-push` to a generated branch, `git-open-pr` and
 `git-wait-for-pr`, the last three only when the commit changed something.
+
+### Per-project git and promotion
+
+`git` and `promotion` are the release's defaults. A project may lay its own
+`git` (`repoURL`, `credentials`) and `promotion` (the same keys as the
+release's) over them, so projects of one release can write their pins to
+different repositories, branches, pin files and keys, with different GitHub
+Apps, without a release per repository. The effective value is the release's
+with the project's keys replacing it; the one exception is the `retry` and
+`gate` maps of `promotion`, which merge key by key. `git.credentials: false`
+renders no `ExternalSecret` for that project's namespace. The Warehouse,
+Stage and access objects of a project, and every object of a project that sets
+nothing, are unchanged, so a release can start giving one project its own
+repository without renaming or recreating a Kargo object (which would delete
+its Freight); `tests/proof/pipeline_test.go` proves it on
+`tests/cases/cd-pipeline/per-project-git`.
+
+Refused: a `pinFile`, at the release or in a project, that is absolute or
+contains `..` (the file is written inside the repository the promotion
+cloned); a project with neither its own nor the release's `git.repoURL`,
+once the chart needs one; `git.credentials` without `properties`; any key the
+chart does not read.
 
 ### Verification
 

@@ -498,6 +498,169 @@
             "minLength": 1,
             "description": "Fills {pinKey}: the key the promoted version is written under."
           },
+          "git": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "repoURL": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The repository this project's promotions write the pin to; replaces the release's `git.repoURL`."
+              },
+              "credentials": {
+                "oneOf": [
+                  {
+                    "type": "boolean",
+                    "enum": [
+                      false
+                    ],
+                    "description": "`false`: no write-back credentials for this project's namespace."
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "secretName": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "The Secret each project namespace gets (default `kargo-git-writeback`)."
+                      },
+                      "refreshInterval": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "secretStoreRef": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "SecretStore",
+                              "ClusterSecretStore"
+                            ]
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "name"
+                        ]
+                      },
+                      "remoteKey": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "The key in the store that holds the GitHub App's credentials."
+                      },
+                      "properties": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "appID": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "installationID": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "privateKey": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "appID",
+                          "installationID",
+                          "privateKey"
+                        ],
+                        "description": "The property of that key each credential is read from."
+                      }
+                    },
+                    "required": [
+                      "secretStoreRef",
+                      "remoteKey",
+                      "properties"
+                    ],
+                    "description": "An ExternalSecret in each project namespace that produces the git credentials Kargo writes back with (a GitHub App)."
+                  }
+                ],
+                "description": "This project's write-back credentials (an ExternalSecret in its namespace); replaces the release's `git.credentials`. `false` renders none for this project."
+              }
+            },
+            "description": "Per-project override of the release's `git`: a project may write to its own repository with its own credentials."
+          },
+          "promotion": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "branch": {
+                "type": "string",
+                "minLength": 1
+              },
+              "pinFile": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The file the pin is written to, relative to the repository; tokens {stage}, {project}, {slug}, {pinKey}."
+              },
+              "pinKey": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The key written in it; the same tokens."
+              },
+              "commitMessage": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The same tokens and {version}, the Kargo expression for the promoted version."
+              },
+              "prTitle": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The same tokens."
+              },
+              "prLabels": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "provider": {
+                "type": "string",
+                "minLength": 1
+              },
+              "retry": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "errorThreshold": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "timeout": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^([0-9]+h[0-5]?[0-9]m[0-5]?[0-9]s|[0-5]?[0-9]m[0-5]?[0-9]s|[0-5]?[0-9]s)$"
+                  }
+                }
+              },
+              "gate": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "timeout": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^([0-9]+h[0-5]?[0-9]m[0-5]?[0-9]s|[0-5]?[0-9]m[0-5]?[0-9]s|[0-5]?[0-9]s)$"
+                  }
+                }
+              }
+            },
+            "description": "Per-project override of the release's `promotion`, with the same keys: a key set here replaces the release's (`retry` and `gate` merge key by key)."
+          },
           "chart": {
             "type": "object",
             "additionalProperties": false,
