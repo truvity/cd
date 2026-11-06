@@ -1,0 +1,18 @@
+# expect: values.gateway.e2e: kind chart takes values.app only
+platform:
+  clusterName: devel
+  argocdNamespace: argocd
+  applicationPrefix: devel-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+products:
+  gateway:
+    kind: chart
+    chart: edge-gateway
+    namespace: edge
+services: [gateway]
+pins: {gateway: ""}
+values:
+  gateway:
+    e2e:
+      config: {timeout: 30s}

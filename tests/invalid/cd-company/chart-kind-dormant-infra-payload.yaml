@@ -1,0 +1,20 @@
+# expect: values.gateway.infra: kind chart takes values.app only
+# A single-chart product has one Application and one ring. The refusal does
+# not wait for a pin: a dormant service's payload is checked all the same.
+platform:
+  clusterName: devel
+  argocdNamespace: argocd
+  applicationPrefix: devel-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+products:
+  gateway:
+    kind: chart
+    chart: edge-gateway
+    namespace: edge
+services: [gateway]
+pins: {gateway: ""}
+values:
+  gateway:
+    infra:
+      replicas: 2
