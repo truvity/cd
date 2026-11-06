@@ -24,9 +24,18 @@
           "description": "The suffix of each ring's Application NAME (infra, app, e2e); default -infra, none, -e2e. The chart, repository and release keep their names.",
           "additionalProperties": false,
           "properties": {
-            "infra": { "type": "string", "pattern": "^(-[a-z0-9]+)*$" },
-            "app": { "type": "string", "pattern": "^(-[a-z0-9]+)*$" },
-            "e2e": { "type": "string", "pattern": "^(-[a-z0-9]+)*$" }
+            "infra": {
+              "type": "string",
+              "pattern": "^(-[a-z0-9]+)*$"
+            },
+            "app": {
+              "type": "string",
+              "pattern": "^(-[a-z0-9]+)*$"
+            },
+            "e2e": {
+              "type": "string",
+              "pattern": "^(-[a-z0-9]+)*$"
+            }
           }
         },
         "applicationPrefix": {
@@ -748,6 +757,66 @@
           "dashboards": {
             "type": "boolean",
             "description": "The product's chart renders dashboards: it is handed `platform.dashboards` as `observability.dashboards` where the platform states one."
+          },
+          "platformValues": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "infra": {
+                "type": "object"
+              },
+              "app": {
+                "type": "object"
+              },
+              "e2e": {
+                "type": "object"
+              }
+            },
+            "description": "The platform's own payload per ring, merged over what the chart composed and before `layers` and `values`. In `cd-company` it is platform-owned: a company cannot override a path it sets."
+          },
+          "layers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "since"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "The layer's name, unique in the product."
+                },
+                "since": {
+                  "type": "string",
+                  "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+                  "description": "The first release whose chart reads these values, `x.y.z`. The layer applies when the product's `pin` (a leading `v` is ignored) is at or above it, counting a prerelease of it (`>=since-0`); a pin that is not a version turns it off."
+                },
+                "required": {
+                  "type": "boolean",
+                  "description": "With `true`, a pin below `since` is a render failure instead of a silent skip."
+                },
+                "values": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "infra": {
+                      "type": "object"
+                    },
+                    "app": {
+                      "type": "object"
+                    },
+                    "e2e": {
+                      "type": "object"
+                    }
+                  },
+                  "description": "Merged like `platformValues`, when the layer's pin gate is open."
+                }
+              }
+            },
+            "description": "Ordered, pin-gated payloads owned by the platform: a chart's closed schema rejects a key an older release does not read, and the pin moves without the platform rendering anything, so the comparison is made here. Merged after `platformValues` in list order, before `values`."
           }
         },
         "required": [

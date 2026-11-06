@@ -1,0 +1,53 @@
+# platformValues and layers in a company flow. `example-service` pins a
+# release at which the layer is open, so the paths it sets are the platform's.
+# `example-worker` pins one below it: the layer is dormant, reserves nothing,
+# and the company may set the same paths.
+platform:
+  clusterName: east
+  argocdNamespace: argocd
+  applicationPrefix: east-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+  postgres:
+    instances: 1
+    storage: 2Gi
+  events:
+    url: nats://broker.example:4222
+    storage: file
+    replicas: 1
+    maxAge: 24h
+    account: "{product}"
+products:
+  example-service:
+    interface: 1
+    hostname: example-service.example.com
+    platformValues:
+      app:
+        greeting: platform
+    layers:
+      - name: tuning
+        since: 1.0.0
+        values:
+          app:
+            tuning: {replicas: 3}
+  example-worker:
+    interface: 1
+    hostname: example-worker.example.com
+    layers:
+      - name: tuning
+        since: 1.0.0
+        values:
+          app:
+            tuning: {replicas: 3}
+services: [example-service, example-worker]
+pins:
+  example-service: "1.2.3"
+  example-worker: "0.9.0"
+values:
+  example-service:
+    app:
+      tuning: {burst: 5}
+      config: {greeting: hello}
+  example-worker:
+    app:
+      tuning: {replicas: 7}
