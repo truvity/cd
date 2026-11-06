@@ -94,3 +94,48 @@ Call with (dict "name" <project> "chart" <chart map>).
 {{- if and $image (or $c.name $c.versionPrefix) -}}{{- fail (printf "cd-pipeline: projects.%s.chart.subscribeAs image takes neither name nor versionPrefix (the tag is written as discovered)" .name) -}}{{- end -}}
 {{- toYaml (dict "image" $image "repo" (ternary (trimPrefix "oci://" ($c.repoURL | default "")) ($c.repoURL | default "") $image)) -}}
 {{- end -}}
+
+{{/*
+What a project promotes with: the release's `git` and `promotion` with the
+project's own laid over them, as YAML for `fromYaml` (`git`, `promotion`).
+A project's key replaces the release's, except that the `retry` and `gate`
+maps of `promotion` merge key by key; `git.credentials: false` removes the
+credentials for that project's namespace. Refuses a project `pinFile` that
+leaves the repository; a missing `git.repoURL` is refused where it is used.
+Call with (dict "root" . "p" <project map>).
+*/}}
+{{- define "cd-pipeline.effective" -}}
+{{- $v := .root.Values -}}
+{{- $p := .p -}}
+{{- $git := deepCopy ($v.git | default dict) -}}
+{{- range $k, $x := ($p.git | default dict) -}}
+{{- if and (eq $k "credentials") (kindIs "bool" $x) -}}
+{{- $_ := unset $git "credentials" -}}
+{{- else -}}
+{{- $_ := set $git $k $x -}}
+{{- end -}}
+{{- end -}}
+{{- $pr := deepCopy $v.promotion -}}
+{{- range $k, $x := ($p.promotion | default dict) -}}
+{{- if and (kindIs "map" $x) (kindIs "map" (get $pr $k)) -}}
+{{- $cur := get $pr $k -}}
+{{- range $k2, $x2 := $x -}}{{- $_ := set $cur $k2 $x2 -}}{{- end -}}
+{{- else -}}
+{{- $_ := set $pr $k $x -}}
+{{- end -}}
+{{- end -}}
+{{- if hasKey ($p.promotion | default dict) "pinFile" -}}
+{{- include "cd-pipeline.checkPinFile" (dict "where" (printf "projects.%s: promotion.pinFile" $p.name) "file" $pr.pinFile) -}}
+{{- end -}}
+{{- toYaml (dict "git" $git "promotion" $pr) -}}
+{{- end -}}
+
+{{/*
+A pin file is written inside the repository a promotion clones: it is not
+absolute and does not climb out with `..`. Call with (dict "where" .. "file" ..).
+*/}}
+{{- define "cd-pipeline.checkPinFile" -}}
+{{- if or (hasPrefix "/" .file) (contains ".." .file) -}}
+{{- fail (printf "cd-pipeline: %s must be a path inside the repository (not absolute, no ..), got %q" .where .file) -}}
+{{- end -}}
+{{- end -}}

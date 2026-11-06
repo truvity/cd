@@ -1,0 +1,75 @@
+# One release, three projects that write to different places: `shop` takes
+# the release's repository, pin file and credentials; `ledger` writes to its
+# own repository, branch, pin file and key, with its own credentials and a
+# longer retry budget (the `retry` map merges key by key, so its timeout
+# stays the release's); `notes` shares the repository but carries no
+# write-back credentials of its own namespace.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+  credentials:
+    secretStoreRef:
+      kind: ClusterSecretStore
+      name: secrets
+    remoteKey: pipeline/acme-app
+    properties:
+      appID: app-id
+      installationID: installation-id
+      privateKey: private-key
+promotion:
+  branch: main
+  pinFile: "versions/{stage}.yaml"
+  pinKey: "{pinKey}"
+  retry:
+    errorThreshold: 3
+    timeout: 5m0s
+projects:
+  - name: shop
+    pinKey: shop
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0"
+    stages:
+      - name: dev
+        autoPromote: true
+      - name: prod
+        from: dev
+  - name: ledger
+    pinKey: ledger
+    git:
+      repoURL: https://git.example.com/globex/deployments.git
+      credentials:
+        secretName: globex-writeback
+        secretStoreRef:
+          kind: ClusterSecretStore
+          name: globex-secrets
+        remoteKey: pipeline/globex-app
+        properties:
+          appID: app-id
+          installationID: installation-id
+          privateKey: private-key
+    promotion:
+      branch: deploy
+      pinFile: "env/{stage}/pins.yaml"
+      pinKey: "pins.{pinKey}"
+      prLabels: [promotion]
+      commitMessage: "chore(pins): {slug} {version} to {stage}"
+      retry:
+        errorThreshold: 5
+    chart:
+      repoURL: oci://registry.example.com/charts/ledger
+      semver: ">=1.0.0"
+    stages:
+      - name: dev
+        autoPromote: true
+      - name: prod
+        from: dev
+  - name: notes
+    pinKey: notes
+    git:
+      credentials: false
+    chart:
+      repoURL: oci://registry.example.com/charts/notes
+      semver: ">=1.0.0"
+    stages:
+      - name: dev
+        autoPromote: true

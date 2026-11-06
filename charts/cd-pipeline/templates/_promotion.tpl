@@ -2,18 +2,18 @@
 A Stage's promotion: write the promoted pin to the repository's values file,
 by pull request on every hop after the project's first Stage and straight to
 the branch on the first. As YAML for `fromYaml`: the promotion template's spec.
-Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slug" ..).
+Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slug" .. "eff" <cd-pipeline.effective>).
 */}}
 {{- define "cd-pipeline.promotion" -}}
 {{- $r := .root -}}
 {{- $v := $r.Values -}}
-{{- $pr := $v.promotion -}}
+{{- $pr := .eff.promotion -}}
 {{- $p := .p -}}
 {{- $s := .s -}}
 {{- $chart := $p.chart | default dict -}}
 {{- $chartName := $chart.name | default "" -}}
 {{- $prefix := $chart.versionPrefix | default "" -}}
-{{- $repo := required "cd-pipeline: git.repoURL is required" ($v.git).repoURL -}}
+{{- $repo := required (printf "cd-pipeline: projects.%s: git.repoURL is required (the release's git.repoURL, or the project's own)" $p.name) .eff.git.repoURL -}}
 {{- $upstream := $s.from | default "" -}}
 {{- $mode := $s.mode | default (ternary "pr" "direct" (ne $upstream "")) -}}
 {{- $retry := dict "errorThreshold" $pr.retry.errorThreshold "timeout" $pr.retry.timeout -}}

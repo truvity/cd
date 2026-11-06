@@ -13,6 +13,7 @@ Stages, as YAML documents. Call with (dict "root" . "p" <project map>).
 {{- $repoURL := $chart.repoURL | default "" -}}
 {{- $chartName := $chart.name | default "" -}}
 {{- $wh := $p.warehouse | default dict -}}
+{{- $eff := include "cd-pipeline.effective" (dict "root" $r "p" $p) | fromYaml -}}
 {{- $whName := $wh.name | default $name -}}
 
 {{- /* Project. */ -}}
@@ -35,7 +36,7 @@ Stages, as YAML documents. Call with (dict "root" . "p" <project map>).
 {{- include "cd-pipeline.doc" (dict "apiVersion" "kargo.akuity.io/v1alpha1" "kind" "Warehouse" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $whName "ns" $name "wave" $w.warehouse) | fromYaml) "spec" (dict "interval" ($wh.interval | default "5m0s") "freightCreationPolicy" ($wh.freightCreationPolicy | default "Automatic") "subscriptions" $subs)) -}}
 
 {{- /* The credentials a promotion writes back with: one ExternalSecret per project namespace. */ -}}
-{{- $cred := ($v.git).credentials -}}
+{{- $cred := $eff.git.credentials -}}
 {{- if $cred -}}
 {{- $secret := $cred.secretName | default "kargo-git-writeback" -}}
 {{- $props := required "cd-pipeline: git.credentials.properties is required" $cred.properties -}}
@@ -43,7 +44,7 @@ Stages, as YAML documents. Call with (dict "root" . "p" <project map>).
 {{- range $pair := (list (list "githubAppID" $props.appID) (list "githubInstallationID" $props.installationID) (list "githubPrivateKey" $props.privateKey)) -}}
 {{- $data = append $data (dict "secretKey" (index $pair 0) "remoteRef" (dict "key" (required "cd-pipeline: git.credentials.remoteKey is required" $cred.remoteKey) "property" (index $pair 1) "conversionStrategy" "Default" "decodingStrategy" "None" "metadataPolicy" "None" "nullBytePolicy" "Ignore")) -}}
 {{- end -}}
-{{- $tmplData := dict "repoURL" (required "cd-pipeline: git.repoURL is required" $v.git.repoURL) "githubAppID" `{{ .githubAppID }}` "githubAppInstallationID" `{{ .githubInstallationID }}` "githubAppPrivateKey" `{{ .githubPrivateKey }}` -}}
+{{- $tmplData := dict "repoURL" (required (printf "cd-pipeline: projects.%s: git.repoURL is required (the release's git.repoURL, or the project's own)" $name) $eff.git.repoURL) "githubAppID" `{{ .githubAppID }}` "githubAppInstallationID" `{{ .githubInstallationID }}` "githubAppPrivateKey" `{{ .githubPrivateKey }}` -}}
 {{- $es := dict "apiVersion" "external-secrets.io/v1" "kind" "ExternalSecret" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" "kargo-git-writeback" "ns" $name "wave" $w.credentials) | fromYaml) -}}
 {{- $_ := set $es.metadata "name" $secret -}}
 {{- $_ := set $es "spec" (dict "refreshInterval" ($cred.refreshInterval | default "1h") "secretStoreRef" (dict "kind" $cred.secretStoreRef.kind "name" $cred.secretStoreRef.name) "target" (dict "name" $secret "creationPolicy" "Owner" "template" (dict "metadata" (dict "labels" (dict "kargo.akuity.io/cred-type" "git")) "data" $tmplData)) "data" $data) -}}
@@ -80,13 +81,13 @@ Stages, as YAML documents. Call with (dict "root" . "p" <project map>).
 {{- range $s := $p.stages -}}{{- $_ := set $stages $s.name $s -}}{{- end -}}
 {{- range $s := $p.stages -}}
 {{- if and $s.from (not (hasKey $stages $s.from)) -}}{{- fail (printf "cd-pipeline: projects.%s.stages.%s.from names %q, which is not a stage of the project" $name $s.name $s.from) -}}{{- end -}}
-{{- include "cd-pipeline.stage" (dict "root" $r "p" $p "s" $s "stages" $stages "slug" $slug "whName" $whName) -}}
+{{- include "cd-pipeline.stage" (dict "root" $r "p" $p "s" $s "stages" $stages "slug" $slug "whName" $whName "eff" $eff) -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
 One Stage and the objects its verification needs.
-Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slug" .. "whName" ..).
+Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slug" .. "whName" .. "eff" <cd-pipeline.effective>).
 */}}
 {{- define "cd-pipeline.stage" -}}
 {{- $r := .root -}}
@@ -196,7 +197,7 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- if $s.promotionTemplate -}}
 {{- $_ := set $spec "promotionTemplate" $s.promotionTemplate -}}
 {{- else -}}
-{{- $_ := set $spec "promotionTemplate" (dict "spec" (include "cd-pipeline.promotion" (dict "root" $r "p" $p "s" $s "stages" .stages "slug" $slug) | fromYaml)) -}}
+{{- $_ := set $spec "promotionTemplate" (dict "spec" (include "cd-pipeline.promotion" (dict "root" $r "p" $p "s" $s "stages" .stages "slug" $slug "eff" .eff) | fromYaml)) -}}
 {{- end -}}
 {{- include "cd-pipeline.doc" (dict "apiVersion" "kargo.akuity.io/v1alpha1" "kind" "Stage" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $s.name "ns" $name "wave" $w.stage) | fromYaml) "spec" $spec) -}}
 {{- end -}}

@@ -93,3 +93,28 @@ sync time. And an empty value in `products.<name>.values` (an empty string,
 zero, false) does not override a value the chart composed, which is how Helm
 merges maps; a payload that needs to switch a composed key off says so with a
 non-empty value, or the input that composed it is changed.
+
+## A pin file that leaves the repository
+
+**Refused by CI:** `tests/invalid/cd-pipeline/pinfile-dotdot-release.yaml`,
+`pinfile-dotdot-project.yaml`, `pinfile-absolute-release.yaml` and
+`pinfile-absolute-project.yaml`.
+
+**The failure:** `promotion.pinFile` is joined to the path of the clone and
+handed to `yaml-update`, which writes it. A value such as `../outside/pins.yaml`
+or `/etc/pins.yaml` pointed the write outside the repository the promotion
+had cloned. Once a project can set
+its own `pinFile`, the value is no longer the platform's alone, so both levels
+refuse it.
+
+## A project with nowhere to write
+
+**Refused by CI:** `tests/invalid/cd-pipeline/project-git-without-repo.yaml`,
+`project-git-unknown-key.yaml`, `project-promotion-unknown-key.yaml` and
+`project-credentials-without-properties.yaml`.
+
+**The failure:** a project that overrides `git` but has neither its own nor
+the release's `repoURL` would promote to nothing; one that spells an override
+key wrongly (`pinfile`) would silently use the release's, and write its pin to
+another project's repository. The project-level `git` and `promotion` are
+strict like the release's, and a repository is required wherever it is used.
