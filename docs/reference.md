@@ -430,7 +430,7 @@ and per project `name`, `stages` (or `stageOrder`, see [Derived Stages](#derived
 | `appProjects` | Argo CD `AppProject`s by name, each `{labels, annotations, spec}` with `spec` verbatim, rendered in `argocd.namespace` beside the pipeline. The chart-wide `labels` and `annotations` (the Kargo objects' guard) are not put on them. None by default. |
 | `projects[].annotations` | Annotations on the Project object alone, for instance Kargo's `kargo.akuity.io/keep-namespace: "true"`: deleting a Project then leaves its namespace, and the Freight in it. |
 | `projects[].name`, `.slug`, `.pinKey` | The Project and namespace; the short name used in check names and tokens (default the name); the key the version is written under. |
-| `projects[].chart` | `repoURL`, `name` (index repositories), `semver`, `versionPrefix` (repositories whose tags carry one), `discoveryLimit`, `subscribeAs` (`chart`, the default, or `image`: an image subscription with SemVer selection and `strictSemvers: false`, for an OCI chart whose `v`-prefixed tags Helm's tag listing drops; `oci://` is dropped from the repository, the pin takes the discovered tag as it is, `name` and `versionPrefix` are refused). |
+| `projects[].chart` | `repoURL`, `name` (index repositories), `semver`, `versionPrefix` (repositories whose tags carry one), `discoveryLimit`, `subscribeAs` (`chart`, the default, or `image`: an image subscription with SemVer selection and `strictSemvers: false`, for an OCI chart whose `v`-prefixed tags Helm's tag listing drops; `oci://` is dropped from the repository, the pin takes the discovered tag as it is, `name` and `versionPrefix` are refused). `pin` (`tag`, the default, or `digest`: the promotion writes the Freight image's digest; see [Promoting a digest](#promoting-a-digest)), `strictSemvers` (an image subscription's own setting; unset keeps `false`). |
 | `projects[].warehouse` | `name` (default the project's), `interval` (`5m0s`), `freightCreationPolicy` (`Automatic`), `subscriptions`. |
 | `projects[].access.subjects[]` | `name`, `claims`, `stages`, `approve`. |
 | `projects[].access.approvers`, `.admins` | With `stageOrder`: derive one approver subject per Stage after the first, or one admin subject (see [Derived Stages](#derived-stages)). |
@@ -510,6 +510,33 @@ contains `..` (the file is written inside the repository the promotion
 cloned); a project with neither its own nor the release's `git.repoURL`,
 once the chart needs one; `git.credentials` without `properties`; any key the
 chart does not read.
+
+### Promoting a digest
+
+An artifact that is deployed by what it is rather than by what it is called
+(a static site published as an image, say) is pinned by digest.
+`chart.pin: digest`, with `subscribeAs: image`, makes the promotion write
+`imageFrom(...).Digest` where it would write the tag, and adds a `{tag}`
+token (the tag the Freight was discovered under) to `promotion.commitMessage`
+and `promotion.prTitle`. Set `chart.strictSemvers: true` when the live
+Warehouse has Kargo's own default, so the spec does not differ from the stored
+object forever.
+
+A digest is not a chart version, so there is nothing for the promoted-version
+check to compare with the Application's: a Stage of a digest project that asks
+for `verification.promotedVersion` is refused, and a derived Stage leaves the
+check out even when `graph.promotedVersion` turns it on for the release.
+`versionPrefix` and `name` are refused with `subscribeAs: image` already.
+Everything else (the gate on the upstream Stage's Applications, a push to the
+branch for the first Stage, a pull request for the rest) is unchanged.
+
+`tests/proof/pipeline_digest_test.go` renders `tests/cases/cd-pipeline/digest-pin`
+and compares its Warehouse and Stages with a hand-spelled pipeline of the same
+shape (`tests/proof/testdata/static-pipeline.yaml`): the objects are equal, so
+a platform that spells such a pipeline out can switch to the chart without
+renaming, and so losing the Freight of, any object. The one difference is
+the name of the promotion's variable that holds the repository (`chartRepo`
+here).
 
 ### Verification
 

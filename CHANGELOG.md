@@ -9,6 +9,7 @@ release it wraps is named in each entry.
 
 - **Added:** `cd-pipeline` per-project `projects[].git` (`repoURL`, `credentials`, or `credentials: false` for none) and `projects[].promotion` (the keys of `promotion`): a project lays its own repository, branch, pin file, pin key, commit and pull-request wording, provider, retry and gate budgets, and write-back credentials over the release's, which stay the defaults (`retry` and `gate` merge key by key, every other key replaces). The `ExternalSecret`, `vars.gitRepo` and the promotion steps of a project follow its effective values. A project that sets neither renders byte-identically (new golden `per-project-git`; no existing golden moves).
 - **Added:** `cd-pipeline` refuses a `promotion.pinFile` that is absolute or contains `..`, at the release and in a project. A render that used one wrote outside the cloned repository; no value in use by the goldens is affected.
+- **Added:** `cd-pipeline` `projects[].chart.pin: digest` (with `subscribeAs: image`): the promotion writes the Freight image's digest where it would write the tag, and `promotion.commitMessage` and `promotion.prTitle` gain a `{tag}` token. `projects[].chart.strictSemvers` sets the image subscription's `strictSemvers` (unset keeps `false`). A digest project refuses `versionPrefix`, `name` and a Stage's `verification.promotedVersion`, and its derived Stages leave the promoted-version check out. Unset, every existing render is byte-identical (new golden `digest-pin`; no existing golden moves).
 
 ## v0.28.1
 

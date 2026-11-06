@@ -118,3 +118,17 @@ the release's `repoURL` would promote to nothing; one that spells an override
 key wrongly (`pinfile`) would silently use the release's, and write its pin to
 another project's repository. The project-level `git` and `promotion` are
 strict like the release's, and a repository is required wherever it is used.
+
+## A digest pin the chart cannot check
+
+**Refused by CI:** `tests/invalid/cd-pipeline/digest-without-image-subscription.yaml`,
+`digest-with-version-prefix.yaml`, `digest-with-promoted-version.yaml`,
+`strict-semvers-without-image-subscription.yaml` and
+`digest-pin-unknown-value.yaml`.
+
+**The failure:** a digest is written to the pin, while the promoted-version
+check compares the chart version an Application pins with the version being
+promoted. With a digest on one side the check can never pass, and a Stage that
+waits on it never promotes. A version prefix would be written in front of a
+digest, and a chart subscription has no digest to write. The chart refuses the
+combinations instead of rendering a pipeline that stalls at its first hop.

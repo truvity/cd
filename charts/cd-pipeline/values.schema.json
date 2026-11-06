@@ -693,6 +693,18 @@
                   "image"
                 ],
                 "description": "How the Warehouse discovers the chart. `chart` (default) is a chart subscription. `image` is an image subscription with SemVer selection and `strictSemvers: false`, for an OCI chart whose tags carry a `v` (Helm's tag listing drops them, so a chart subscription finds nothing). A leading `oci://` is dropped from `repoURL` for the subscription, the promotion steps write the discovered tag as it is (the `v` stays), and `name` and `versionPrefix` are refused."
+              },
+              "pin": {
+                "type": "string",
+                "enum": [
+                  "tag",
+                  "digest"
+                ],
+                "description": "What the promotion writes as the pin. `tag` (default) is the discovered version or tag. `digest` is the artifact's digest (`imageFrom(...).Digest`), for an artifact that is deployed by what it is rather than by what it is called; it needs `subscribeAs: image`, refuses `versionPrefix`, `name` and any promoted-version check (there is no chart version in the Application to compare), and adds a `{tag}` token to `promotion.commitMessage` and `promotion.prTitle`."
+              },
+              "strictSemvers": {
+                "type": "boolean",
+                "description": "The image subscription's `strictSemvers`, with `subscribeAs: image`. Unset keeps `false`; a Warehouse whose live object has Kargo's own default (`true`) sets it, so the spec does not differ from the stored object forever."
               }
             },
             "required": [

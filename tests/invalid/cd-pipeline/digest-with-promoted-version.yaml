@@ -1,0 +1,17 @@
+# expect: a digest pin has no chart version to compare
+git:
+  repoURL: https://git.example.com/acme/environments.git
+projects:
+  - name: site
+    pinKey: site
+    chart:
+      repoURL: oci://registry.example.com/sites/web
+      semver: ">=1.0.0"
+      subscribeAs: image
+      pin: digest
+    stages:
+      - name: dev
+        autoPromote: true
+        applications: [dev-site]
+        verification:
+          promotedVersion: true
