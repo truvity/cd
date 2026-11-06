@@ -7,6 +7,7 @@ toolchain go1.27.3
 require (
 	github.com/aws/aws-sdk-go-v2 v1.47.1
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.79.0
+	github.com/pulumi/pulumi-aws/sdk/v7 v7.50.0
 	github.com/pulumi/pulumi/sdk/v3 v3.268.0
 	github.com/truvity/k8s v0.28.0
 	go.yaml.in/yaml/v3 v3.0.5
@@ -63,7 +64,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kevinburke/ssh_config v1.6.0 // indirect
-	github.com/klauspost/compress v1.19.2 // indirect
+	github.com/klauspost/compress v1.20.3 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
@@ -82,7 +83,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/term v1.1.0 // indirect
 	github.com/pulumi/appdash v0.0.0-20231130102222-75f619a67231 // indirect
-	github.com/pulumi/pulumi-aws/sdk/v7 v7.50.0 // indirect
 	github.com/pulumi/pulumi-cloud-sdk/go v1.20260918.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
