@@ -149,6 +149,61 @@ the Application will install. A layer is compared with the pin at render, and a
 cannot take or silently leaving out one it cannot run without. `since` must be
 a three-part version: `1.12` would compare as something else than it reads.
 
+## A site that runs a digest nobody pinned
+
+**Refused by CI:** `tests/invalid/cd-delivery/static-site-pin-is-a-tag.yaml`,
+`static-site-pin-is-a-short-digest.yaml`, `static-site-without-artifact.yaml`,
+`static-site-without-chart-version.yaml` and
+`static-site-artifact-ref-has-a-tag.yaml`.
+
+**The failure:** the server pulls the artifact when it starts. With a tag in
+the pin, or a tag left on the repository, a later push to the same tag changes
+what the next pod serves without any change in the delivery repository. The
+pin must be the digest the delivery tool promoted, and the repository carries no
+tag that could outvote it.
+
+## A payload that moves the site's identity
+
+**Refused by CI:** `tests/invalid/cd-delivery/static-site-platform-values-set-artifact.yaml`,
+`static-site-values-set-service-account.yaml`,
+`static-site-platform-values-set-install-name.yaml` and
+`static-site-platform-values-replace-site.yaml`; the same checks guard
+`values`, not only `platformValues`.
+
+**The failure:** the two Applications of a site agree on the ServiceAccount, the
+install name and the artifact only because the chart writes the same value into
+both. A payload that set one of those paths, or replaced `site` with a scalar,
+would split the server from the identity that was created for it (the pod is
+admitted as a ServiceAccount the identity does not bind), or run an artifact
+other than the pinned one, and each Application would still render. The paths
+are refused where they are set instead.
+
+## A ring a site does not have
+
+**Refused by CI:** `tests/invalid/cd-delivery/static-site-with-e2e-ring.yaml`,
+`static-site-platform-values-e2e-ring.yaml`, `static-site-with-interface.yaml`
+and `static-site-with-layers.yaml`.
+
+**The failure:** a site has two rings and no interface, and its pin is not a
+version, so a layer's `since` could never be compared. A key from another kind
+would render without error and never be read.
+
+In a company flow the same shape is enforced before a pin exists:
+`tests/invalid/cd-company/static-site-dormant-e2e-payload.yaml` refuses an
+end-to-end payload, and `static-site-company-sets-identity.yaml` and
+`static-site-company-sets-artifact.yaml` refuse a company value on the registry
+and identity block (the scope of the site's IAM role) and on the pinned
+artifact.
+
+## A kind whose ownership is not written down
+
+**Refused by CI:** `tests/invalid/cd-company/static-site-not-delivered-to-companies.yaml`.
+
+**The failure:** the infrastructure ring of a static site carries the scope of
+an IAM role. Company values reach every ring in `cd-company`, so a company that
+could set `registry.ack` there could widen the role. The adapter refuses the
+kind, dormant or not, until the paths a company may not set are reserved.
+
 ## A platform payload a company overrides
 
 **Refused by CI:** `tests/invalid/cd-company/company-overrides-platform-layer.yaml`,

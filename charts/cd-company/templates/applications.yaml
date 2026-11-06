@@ -31,10 +31,11 @@
     {{- if not (has $ring (list "infra" "app" "e2e")) -}}
       {{- fail (printf "cd-company: values.%s: unknown ring %q" $service $ring) -}}
     {{- end -}}
-    {{- if not (has $ring (splitList " " (include "cd-company.kindRings" $kind))) -}}
-      {{- fail (printf "cd-company: values.%s.%s: kind %s takes values.app only" $service $ring $kind) -}}
+    {{- $rings := splitList " " (include "cd-company.kindRings" $kind) -}}
+    {{- if not (has $ring $rings) -}}
+      {{- fail (printf "cd-company: values.%s.%s: kind %s takes values.%s only" $service $ring $kind (join " and values." $rings)) -}}
     {{- end -}}
-    {{- include "cd-company.assertOwnership" (dict "path" (printf "values.%s.%s" $service $ring) "payload" $payload "owned" (include "cd-company.owned" (dict "kind" $kind "ring" $ring) | fromYaml)) -}}
+    {{- include "cd-company.assertOwnership" (dict "path" (printf "values.%s.%s" $service $ring) "payload" $payload "owned" (include (ternary "cd-company.ownedStaticSite" "cd-company.owned" (eq $kind "static-site")) (dict "kind" $kind "ring" $ring) | fromYaml)) -}}
     {{- range $reserved := $trees -}}
       {{- if eq $reserved.ring $ring -}}
         {{- include "cd-company.assertOwnership" (dict "path" (printf "values.%s.%s" $service $ring) "payload" $payload "owned" $reserved.tree) -}}

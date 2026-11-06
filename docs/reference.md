@@ -276,8 +276,10 @@ required below must be present, and a key the chart does not read is refused.
 | `products.<name>.ignoreDifferences.{infra,app,e2e}` | `ignoreDifferences` entries for the ring's Application, verbatim. |
 | `products.<name>.platformValues.{infra,app,e2e}` | The platform's own payload per ring, merged over what the chart composed and under `layers` and `values`. In `cd-company` the paths it sets are reserved against the company's `values`. See [Platform values and layers](#platform-values-and-layers). |
 | `products.<name>.layers[]` | Ordered `{name, since, required, values.{infra,app,e2e}}`: a payload the platform sets only for a pin at or above `since`. |
-| `products.<name>.kind` | `product` (default) or `chart`: see [Kinds](#kinds). |
-| `products.<name>.namespace` | Kind `chart` only: the destination namespace (default the product's name). |
+| `products.<name>.kind` | `product` (default), `chart` or `static-site`: see [Kinds](#kinds). |
+| `products.<name>.namespace` | Kinds `chart` and `static-site` only: the destination namespace (default the product's name). |
+| `products.<name>.chartVersion`, `.artifact.ref` | Kind `static-site` only: the release of the two charts, and the repository of the site artifact without a tag. Both required. |
+| `platform.staticSite.{infraLabels,siteAnnotations}` | Labels for the infrastructure Application and annotations for the site Application of every `static-site` product, verbatim. Unset: none. |
 
 ### Platform values and layers
 
@@ -325,6 +327,42 @@ under (`repoURL: <repository>/<chart>`, `path: .`); any other is a chart
 index (`repoURL: <repository>`, `chart: <chart>`). See
 `tests/cases/cd-delivery/kind-chart-oci` and `kind-chart-index`. `platform`
 still requires `postgres` and `events` whenever there is any product.
+
+### Static sites
+
+`kind: static-site` is a site served from an OCI artifact: two Applications of
+one release of two charts, `static-site-infra` (the site's cloud identity) and
+`static-site` (the server). They are named `<applicationPrefix><name>-infra` and
+`<applicationPrefix><name>` (with `applicationSuffixes`, if set), both are
+installed as the Helm release `<name>`, and both take `chartVersion` as their
+`targetRevision` from `repository` (default `platform.chartRegistry`; an
+`oci://` repository carries the chart in its address, any other is a chart
+index). `products.<name>` takes `kind`, `pin`, `chartVersion`, `artifact.ref`,
+`repository`, `namespace`, `values.{infra,app}` and `platformValues.{infra,app}`;
+anything else, `layers` and the end-to-end ring included, is refused by name.
+
+`pin` is the digest of the artifact (`sha256:` and 64 lower-case hex digits).
+A tag is refused: the digest is what runs, and a tag can move. `artifact.ref` is
+the repository without a tag or digest. The chart writes these keys, and no
+`platformValues` or `values` may set them or replace a map on the way to them:
+
+| Ring | Keys the chart writes |
+| --- | --- |
+| `infra` | `fullnameOverride`, `installName`, `serviceAccount.name` (each the product's name) |
+| `app` | `fullnameOverride`, `serviceAccount.name` (the product's name), `site.artifact.ref`, `site.artifact.digest` |
+
+Everything else the two charts read (the registry and identity block,
+placeholders, network policy, replicas) is the platform's `platformValues` or the
+product's `values`, merged in that order over the keys above. Ordering between
+the two Applications is the platform's: `platform.staticSite.infraLabels` and
+`.siteAnnotations` are copied verbatim onto the infrastructure and the site
+Application (a gate label and a sync wave, for an installation that gates the
+second on the first); the chart names none. A site that is not yet promoted is
+dormant the way every other kind is: the caller leaves the product out while it
+has no digest. `cd-company` delivers the kind: a company's `values.<service>.{infra,app}`
+may not set the keys the chart writes or the `registry` block (the scope of the
+site's IAM role), and `values.<service>.e2e` is refused by name.
+See `tests/cases/cd-delivery/kind-static-site` and `kind-static-site-minimal`.
 
 ### The interface
 

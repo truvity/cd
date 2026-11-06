@@ -1,0 +1,21 @@
+# expect: values.docs.infra.registry is platform-owned
+# A static site's infrastructure ring carries the scope of an IAM role: the
+# registry and identity block is the platform's, so a company value on it is
+# refused, dormant or not, even when no platformValues set it.
+platform:
+  clusterName: devel
+  argocdNamespace: argocd
+  applicationPrefix: devel-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+products:
+  docs:
+    kind: static-site
+    chartVersion: 3.12.0
+    artifact: {ref: registry.example.com/sites/docs}
+services: [docs]
+pins: {docs: ""}
+values:
+  docs:
+    infra:
+      registry: {ack: {repositoryArns: [registry-sites-other]}}
