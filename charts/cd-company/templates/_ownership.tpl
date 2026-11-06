@@ -1,7 +1,20 @@
+{{/* The rings a company may put values in, by kind of product. A kind that
+     has fewer rings than the three of a product refuses a payload for the
+     others whether or not the service has a pin: the refusal is about the
+     shape of the kind, not about what is rendered today. Call with the kind. */}}
+{{- define "cd-company.kindRings" -}}
+{{- if eq . "chart" -}}app{{- else -}}infra app e2e{{- end -}}
+{{- end -}}
+
 {{/* Paths owned by the platform, including conditional delivery-interface keys.
      Only delivery-value paths are reserved: config.cloud, for example, is
      ordinary application configuration. A parent scalar/list/null cannot
-     replace a reserved subtree. Non-platform postgres tuning remains allowed. */}}
+     replace a reserved subtree. Non-platform postgres tuning remains allowed.
+     Kind-aware: call with (dict "kind" <kind of product> "ring" <ring>). A
+     single-chart product (kind `chart`) keeps the product list on its one
+     ring: the platform writes nothing into such a chart's values, so the
+     list is what keeps a company out of the Application's own fields, and a
+     key that list reserves is not available to it. */}}
 {{- define "cd-company.owned" -}}
 cloud: true
 events: true
@@ -38,7 +51,7 @@ postgres:
   scheduling: true
   backup: true
   serverTLS: true
-{{ if eq . "e2e" }}
+{{ if eq .ring "e2e" }}
 appRelease: true
 mode: true
 traces: true

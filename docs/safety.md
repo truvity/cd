@@ -176,3 +176,17 @@ compose something for a product's charts. A single chart that was handed one by
 mistake would render without error and never read it, so the operator would
 believe the chart had a database role, a route or an end-to-end run. A
 `chart` product takes a short list of keys and refuses the rest by name.
+
+## A ring a single chart does not have
+
+**Refused by CI:** `tests/invalid/cd-company/chart-kind-dormant-infra-payload.yaml`
+and `chart-kind-dormant-e2e-payload.yaml`; `chart-kind-company-sets-reserved-root.yaml`
+and the case `tests/cases/cd-company/kind-chart` pin what a single chart keeps.
+
+**The failure:** `cd-company` checked a dormant service's payload against the
+product rings only, and the single-chart refusal lived in `cd-delivery`, which
+a dormant service never reaches. A company could commit `values.<service>.infra`
+for a chart that has no infrastructure ring and see no error until the first
+promotion wrote a pin, at which point the sync of every service in the flow
+broke on a file nobody had touched. The refusal now follows the kind and does
+not wait for a pin.
