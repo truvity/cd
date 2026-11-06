@@ -171,6 +171,22 @@ with `WithNames`, `WithImports`, `WithIgnoreAssociationTags` and
 `WithResourceOptions`. ARNs are built from
 `Args.Partition` (default `aws`).
 
+One registry is `RegistryAccountID` and `RegistryRegion`; several are
+`Args.Registries`, each `{AccountID, Region, Repositories}` (no repositories:
+every repository of the account), and the two forms together are refused.
+`PolicyDocumentFor(partition, registries, discover)` builds the policy; it
+gives one registry with every repository the document `PolicyDocument` has
+always given, byte for byte (the policy is compared with the live one), and
+otherwise one statement whose `Resource` is a sorted, de-duplicated list. The
+token statement stays on `*`; no other statement is, and no action but the
+read ones is ever granted. Refused: no registry, an empty region or account
+ID, a registry listed twice, an account or region with a wildcard, separator
+or whitespace (a wildcard account would widen the grant), a repository pattern
+that is empty, rooted, has whitespace or `..`, and a policy over the 6144
+non-whitespace characters IAM allows a managed policy. The registry token
+Argo CD uses is refreshed by argocd-ecr-updater in one region; reading a
+registry in another region needs that tool to be told so as well.
+
 ## genesis
 
 `genesis.Run` seeds the repository credentials Secret, installs cd-argocd
