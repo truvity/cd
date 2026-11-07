@@ -1,0 +1,10 @@
+# expect: values.example-service.app.route is platform-owned
+# Where a product is served is the platform's; a company cannot steer the route.
+services: [example-service]
+pins: {example-service: ""}
+products:
+  example-service: {kind: product, interface: 15, hostname: example-service.example.com}
+values:
+  example-service:
+    app:
+      route: {host: svc.example.com}
