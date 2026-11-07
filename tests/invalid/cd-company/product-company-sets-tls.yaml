@@ -1,0 +1,10 @@
+# expect: values.example-service.app.tls is platform-owned
+# The certificate a product is served with is the platform's; a company cannot set it.
+services: [example-service]
+pins: {example-service: ""}
+products:
+  example-service: {kind: product, interface: 15, hostname: example-service.example.com}
+values:
+  example-service:
+    app:
+      tls: {enabled: true}

@@ -1,0 +1,10 @@
+# expect: values.example-service.app.identity is platform-owned
+# The identity block of a product carries the scope of its IAM role; a company cannot set it.
+services: [example-service]
+pins: {example-service: ""}
+products:
+  example-service: {kind: product, interface: 15, hostname: example-service.example.com}
+values:
+  example-service:
+    app:
+      identity: {enabled: true}

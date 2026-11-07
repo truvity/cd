@@ -1,0 +1,10 @@
+# expect: values.example-service.app.tier is platform-owned
+# The tier of a product is the platform's; a company cannot set it.
+services: [example-service]
+pins: {example-service: ""}
+products:
+  example-service: {kind: product, interface: 15, hostname: example-service.example.com}
+values:
+  example-service:
+    app:
+      tier: "gold"

@@ -1,0 +1,10 @@
+# expect: values.example-service.app.identityProviders is platform-owned
+# The identity providers a product trusts are the platform's; a company cannot set them.
+services: [example-service]
+pins: {example-service: ""}
+products:
+  example-service: {kind: product, interface: 15, hostname: example-service.example.com}
+values:
+  example-service:
+    app:
+      identityProviders: {example: {issuer: "https://idp.example.com"}}
