@@ -1,0 +1,20 @@
+# expect: values.gateway.app.route.parentRef is platform-owned
+# A single-chart product shares the product list: its route's hostname and
+# paths are the company's, the listener it attaches to is not.
+platform:
+  clusterName: devel
+  argocdNamespace: argocd
+  applicationPrefix: devel-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+products:
+  gateway:
+    kind: chart
+    chart: edge-gateway
+    namespace: edge
+services: [gateway]
+pins: {gateway: "1.0.0"}
+values:
+  gateway:
+    app:
+      route: {parentRef: {name: other}}

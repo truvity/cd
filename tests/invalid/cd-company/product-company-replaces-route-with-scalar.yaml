@@ -1,0 +1,10 @@
+# expect: values.example-service.app.route is platform-owned
+# A scalar cannot replace the route map and so drop the reserved attachment under it.
+services: [example-service]
+pins: {example-service: ""}
+products:
+  example-service: {kind: product, interface: 15, hostname: example-service.example.com}
+values:
+  example-service:
+    app:
+      route: off

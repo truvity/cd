@@ -5,6 +5,10 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## v0.31.0
+
+- **Added:** `cd-company` leaves the hostname and paths of a route to the company. `route` was reserved whole in a company's `values.<service>.{infra,app,e2e}` of a `product` and a `chart`; it is now reserved by its attachment: `route.parentRef`, `route.parentRefs`, `route.sectionName`, `route.enabled`, `route.surfaces` and `route.faro` are refused as platform-owned, and anything else under `route` (`hostname`, and the hostnames, paths or rules a product chart reads) is the company's and merges over what the platform composed. A scalar in place of `route` is still refused. A `static-site` keeps `route` reserved whole. What the platform sets through `platformValues` or an open layer stays reserved path by path, as before. The fixture `product-company-sets-route` now refuses `route.parentRef`; new fixtures refuse each reserved route key and a scalar `route`, and the case `cd-company/route` (golden) shows a company hostname and paths with the platform's parent kept. Existing renders do not move.
+
 ## v0.30.1
 
 - Dependency updates.

@@ -181,7 +181,7 @@ func TestCompanyPayloadMergesOnlyBusinessConfiguration(t *testing.T) {
 func TestCompanyRefusesPlatformOwnedPathsEvenForDormantServices(t *testing.T) {
 	helm := parity.RequireHelm(t)
 	paths := []string{
-		"cloud", "events", "identity", "route", "serviceAccount", "tier", "pin", "chart", "repository", "interface", "appProject", "installName", "availability", "database", "tls", "archive", "otel", "access", "identityProviders", "alerts",
+		"cloud", "events", "identity", "route.enabled", "route.parentRef", "route.parentRefs", "route.sectionName", "route.surfaces", "route.faro", "serviceAccount", "tier", "pin", "chart", "repository", "interface", "appProject", "installName", "availability", "database", "tls", "archive", "otel", "access", "identityProviders", "alerts",
 		"postgres.platformOwned", "postgres.instances", "postgres.storage", "postgres.runtimeRole", "postgres.runtimePasswordSecret", "postgres.runtimePassword", "postgres.labels", "postgres.scheduling", "postgres.backup", "postgres.serverTLS",
 		"web.faro", "observability.dashboards",
 	}
@@ -194,4 +194,33 @@ func TestCompanyRefusesPlatformOwnedPathsEvenForDormantServices(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCompanyMayRefineItsRouteButNotItsAttachment(t *testing.T) {
+	helm := parity.RequireHelm(t)
+	for _, path := range []string{"route.hostname", "route.hostnames", "route.paths", "route.rules"} {
+		t.Run(path, func(t *testing.T) {
+			cmd := exec.CommandContext(t.Context(), helm, "template", "company", "../../charts/cd-company", "--set", "services[0]=example-service", "--set-string", "pins.example-service=", "--set", fmt.Sprintf("values.example-service.app.%s=ok", path))
+			if out, err := cmd.CombinedOutput(); err != nil {
+				t.Fatalf("an unreserved route key was refused: %v\n%s", err, out)
+			}
+		})
+	}
+	values := companyValues(t, "../cases/cd-company/route/values.yaml")
+	apps, err := chartgate.ParseApplications(parity.Template(t, helm, "company", "../../charts/cd-company", values))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, app := range apps {
+		if app.Name != "devel-example-service" {
+			continue
+		}
+		route := app.Sources[0].Helm.ValuesObject["route"].(map[string]any)
+		parent, _ := route["parentRef"].(map[string]any)
+		if route["hostname"] != "shop.example.com" || route["enabled"] != true || parent["name"] != "example" || route["paths"] == nil {
+			t.Fatalf("route merge: %+v", route)
+		}
+		return
+	}
+	t.Fatal("application ring missing")
 }

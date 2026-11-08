@@ -446,8 +446,10 @@ Company files contain only their indicated envelope; the caller enforces those
 file boundaries and supplies authoritative platform facts.
 
 Company ring values cannot override platform-owned delivery paths (and, per service, any path the platform sets through `platformValues` or an open layer of its `products` row; a layer whose pin gate is closed reserves nothing): `cloud`,
-`events`, `identity`, `route`, `serviceAccount`, `tier`, `pin`, `chart`,
-`repository`, `interface`, `appProject`, or the platform's postgres fields
+`events`, `identity`, `serviceAccount`, `tier`, `pin`, `chart`,
+`repository`, `interface`, `appProject`, the route's attachment (`route.parentRef`,
+`route.parentRefs`, `route.sectionName`, `route.enabled`, `route.surfaces`,
+`route.faro`; the hostname and paths under `route` are the company's), or the platform's postgres fields
 (sizing, scheduling, labels, roles/passwords, TLS, backup and ownership).
 Generated connection, identity and install paths are also reserved; see the
 [chart README](../charts/cd-company/README.md#refusals) for the full path list.

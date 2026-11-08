@@ -1,0 +1,34 @@
+# A company sets the hostname and the paths of its route; the parent listener
+# the platform wrote stays, and the platform's other route keys are unchanged.
+platform:
+  clusterName: devel
+  argocdNamespace: argocd
+  applicationPrefix: devel-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+  postgres: {instances: 1, storage: 2Gi}
+  events:
+    url: nats://broker.example.com:4222
+    storage: file
+    replicas: 1
+    maxAge: 24h
+    account: "{product}"
+products:
+  example-service:
+    interface: 15
+    hostname: example-service.example.com
+    parentRef:
+      group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: example
+      namespace: gateways
+services: [example-service]
+pins: {example-service: "1.2.3"}
+values:
+  example-service:
+    app:
+      route:
+        hostname: shop.example.com
+        paths:
+          - {path: /api, type: PathPrefix}
+          - {path: /, type: PathPrefix}
