@@ -99,10 +99,20 @@ result against their own schemas.
 - The dependency's `cd-delivery.products` must remain empty. Product composition
   belongs to the parent adapter inputs; setting subchart products is refused.
 - At each ring's delivery-value root, company payloads cannot set `cloud`,
-  `events`, `identity`, `route`, `serviceAccount`, `tier`, `pin`, `chart`,
+  `events`, `identity`, `serviceAccount`, `tier`, `pin`, `chart`,
   `repository`, `interface`, `appProject`, `installName`, `availability`,
   `database`, `tls`, `archive`, `otel`, `access`, `identityProviders` or `alerts`.
   `web.faro` and `observability.dashboards` are also platform-owned.
+- `route` is reserved by its attachment only. A company sets where its product
+  is served (`route.hostname`, and whatever hostnames, paths or rules the product
+  chart reads under `route`), through its own values. The platform keeps the
+  listener the route attaches to and the route's existence: `route.parentRef`,
+  `route.parentRefs`, `route.sectionName`, `route.enabled`, `route.surfaces`
+  (extra routes, each with a parent of its own) and `route.faro` (the telemetry
+  route). Replacing `route` with a scalar or array fails. The same holds for a
+  `kind: chart` service. A `kind: static-site` service keeps `route` reserved whole.
+  A hostname the company sets still has to match the hostname of the platform's
+  listener, or the route does not attach.
 - A service whose product row is `kind: chart` has one ring: `values.<service>.infra`
   and `.e2e` are refused by name, with or without a pin. Its `values.app` keeps
   the roots above reserved.

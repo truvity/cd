@@ -1,0 +1,10 @@
+# expect: values.example-service.app.route.sectionName is platform-owned
+# A section name picks a listener of the parent: reserved with it.
+services: [example-service]
+pins: {example-service: ""}
+products:
+  example-service: {kind: product, interface: 15, hostname: example-service.example.com}
+values:
+  example-service:
+    app:
+      route: {sectionName: other}

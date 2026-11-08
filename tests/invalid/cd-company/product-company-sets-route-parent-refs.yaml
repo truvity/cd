@@ -1,0 +1,10 @@
+# expect: values.example-service.app.route.parentRefs is platform-owned
+# The plural form of the attachment is reserved as well.
+services: [example-service]
+pins: {example-service: ""}
+products:
+  example-service: {kind: product, interface: 15, hostname: example-service.example.com}
+values:
+  example-service:
+    app:
+      route: {parentRefs: [{name: other}]}

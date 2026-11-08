@@ -1,5 +1,5 @@
-# expect: values.example-service.app.route is platform-owned
-# Where a product is served is the platform's; a company cannot steer the route.
+# expect: values.example-service.app.route.parentRef is platform-owned
+# A company sets where its route is served (hostname, paths) but not the listener the route attaches to: the parent stays the platform's.
 services: [example-service]
 pins: {example-service: ""}
 products:
@@ -7,4 +7,4 @@ products:
 values:
   example-service:
     app:
-      route: {host: svc.example.com}
+      route: {parentRef: {group: gateway.networking.k8s.io, kind: ListenerSet, name: other, namespace: elsewhere}}

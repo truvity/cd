@@ -1,0 +1,10 @@
+# expect: values.example-service.app.route.surfaces is platform-owned
+# Extra routes carry a parent each, so they are the platform's whole.
+services: [example-service]
+pins: {example-service: ""}
+products:
+  example-service: {kind: product, interface: 15, hostname: example-service.example.com}
+values:
+  example-service:
+    app:
+      route: {surfaces: [{name: extra, hostname: extra.example.com, parentRef: {name: other}}]}

@@ -14,12 +14,24 @@
      single-chart product (kind `chart`) keeps the product list on its one
      ring: the platform writes nothing into such a chart's values, so the
      list is what keeps a company out of the Application's own fields, and a
-     key that list reserves is not available to it. */}}
+     key that list reserves is not available to it.
+     `route` is reserved by its attachment, not whole: which listener the route
+     hangs on (`parentRef`, `parentRefs`, `sectionName`), the extra routes the
+     platform declares (`surfaces`, each with its own parent), the telemetry
+     route (`faro`) and whether the route exists at all (`enabled`). The rest
+     of `route` (the hostname and the paths or rules a product chart reads) is
+     the company's. A scalar in place of `route` is still refused. */}}
 {{- define "cd-company.owned" -}}
 cloud: true
 events: true
 identity: true
-route: true
+route:
+  enabled: true
+  parentRef: true
+  parentRefs: true
+  sectionName: true
+  surfaces: true
+  faro: true
 serviceAccount: true
 tier: true
 pin: true

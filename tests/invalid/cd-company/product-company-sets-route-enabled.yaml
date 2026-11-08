@@ -1,0 +1,10 @@
+# expect: values.example-service.app.route.enabled is platform-owned
+# Whether the product has a route at all is the platform's.
+services: [example-service]
+pins: {example-service: ""}
+products:
+  example-service: {kind: product, interface: 15, hostname: example-service.example.com}
+values:
+  example-service:
+    app:
+      route: {enabled: false}
