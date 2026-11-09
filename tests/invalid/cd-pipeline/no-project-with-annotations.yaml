@@ -1,0 +1,13 @@
+# expect: createProject: false renders no Project
+git:
+  repoURL: https://git.example.com/acme/environments.git
+projects:
+  - name: shop
+    createProject: false
+    annotations:
+      kargo.akuity.io/keep-namespace: "true"
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    stages:
+      - name: dev
