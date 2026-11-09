@@ -1,0 +1,33 @@
+# A project whose cluster-scoped Project is rendered by another party
+# (createProject: false): everything else of the project renders in its
+# namespace, with the write-back credentials there, and the promoted-version
+# check reads Applications from a namespace other than `argocd`.
+argocd:
+  namespace: team-apps
+git:
+  repoURL: https://git.example.com/acme/environments.git
+  credentials:
+    secretStoreRef:
+      kind: ClusterSecretStore
+      name: secrets
+    remoteKey: pipeline/github-app
+    properties:
+      appID: app-id
+      installationID: installation-id
+      privateKey: private-key
+promotedVersion:
+  image: registry.example.com/tools/curl:8
+  jqImage: registry.example.com/tools/jq:1
+projects:
+  - name: shop
+    pinKey: shop
+    createProject: false
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    stages:
+      - name: dev
+        autoPromote: true
+        applications: [dev-shop]
+        verification:
+          promotedVersion: true

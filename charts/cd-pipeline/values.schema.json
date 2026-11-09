@@ -986,6 +986,11 @@
             },
             "minItems": 1
           },
+          "createProject": {
+            "type": "boolean",
+            "default": true,
+            "description": "Render the project's cluster-scoped `Project` (default). `false` renders everything else of the project in its namespace and no `Project`: for an installation where one party owns the Project (and so the namespace) and another the Warehouse, Stages and access in it. `annotations` are refused with it."
+          },
           "annotations": {
             "type": "object",
             "additionalProperties": {

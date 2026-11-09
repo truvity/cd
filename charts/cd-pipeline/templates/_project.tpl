@@ -16,8 +16,13 @@ Stages, as YAML documents. Call with (dict "root" . "p" <project map>).
 {{- $eff := include "cd-pipeline.effective" (dict "root" $r "p" $p) | fromYaml -}}
 {{- $whName := $wh.name | default $name -}}
 
-{{- /* Project. */ -}}
+{{- /* Project: cluster-scoped, so an installation that hands the rest of the
+pipeline to another party may render it elsewhere (createProject: false). */ -}}
+{{- if ne $p.createProject false -}}
 {{- include "cd-pipeline.doc" (dict "apiVersion" "kargo.akuity.io/v1alpha1" "kind" "Project" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $name "wave" $w.project "annotations" $p.annotations) | fromYaml)) -}}
+{{- else if $p.annotations -}}
+{{- fail (printf "cd-pipeline: projects.%s.annotations are the Project's own, and createProject: false renders no Project" $name) -}}
+{{- end -}}
 
 {{- /* Warehouse: one chart subscription unless the project lists its own. */ -}}
 {{- $subs := $wh.subscriptions -}}

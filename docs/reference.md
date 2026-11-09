@@ -512,7 +512,7 @@ own: `labels` and `annotations` are empty unless you set them.
 A project is a chart delivered through a list of Stages. Per project the chart
 renders:
 
-- a `Project`, and a `Warehouse` subscribed to the project's chart (or to
+- a `Project` (unless `createProject: false`), and a `Warehouse` subscribed to the project's chart (or to
   `warehouse.subscriptions`, verbatim);
 - the `ExternalSecret` that produces the git credentials a promotion writes
   back with, in the project's namespace, when `git.credentials` is set;
@@ -545,6 +545,7 @@ and per project `name`, `stages` (or `stageOrder`, see [Derived Stages](#derived
 | `viewer` | `namespace`, `serviceAccount`, `role` and `bindingName` of the shared read-only ServiceAccount each project binds; `global.claims` also renders its namespace and ServiceAccount. |
 | `labels`, `annotations` | Labels and annotations on every object, beside the sync-wave. None by default; a consumer adopting objects that already exist sets Argo CD's `argocd.argoproj.io/sync-options: Prune=false,Delete=false` here to guard them. |
 | `appProjects` | Argo CD `AppProject`s by name, each `{labels, annotations, spec}` with `spec` verbatim, rendered in `argocd.namespace` beside the pipeline. The chart-wide `labels` and `annotations` (the Kargo objects' guard) are not put on them. None by default. |
+| `projects[].createProject` | `true` (default) renders the project's `Project`. `false` renders none and everything else of the project as before, in its namespace: for an installation where one party owns the cluster-scoped Project (and so the namespace) and another owns the Warehouse, Stages, access and credentials in it. With `argocd.namespace` set, the verification's Roles read Applications from that namespace. `annotations` are refused with it (`tests/cases/cd-pipeline/no-project`). |
 | `projects[].annotations` | Annotations on the Project object alone, for instance Kargo's `kargo.akuity.io/keep-namespace: "true"`: deleting a Project then leaves its namespace, and the Freight in it. |
 | `projects[].name`, `.slug`, `.pinKey` | The Project and namespace; the short name used in check names and tokens (default the name); the key the version is written under. |
 | `projects[].chart` | `repoURL`, `name` (index repositories), `semver`, `versionPrefix` (repositories whose tags carry one), `discoveryLimit`, `subscribeAs` (`chart`, the default, or `image`: an image subscription with SemVer selection and `strictSemvers: false`, for an OCI chart whose `v`-prefixed tags Helm's tag listing drops; `oci://` is dropped from the repository, the pin takes the discovered tag as it is, `name` and `versionPrefix` are refused). `pin` (`tag`, the default, or `digest`: the promotion writes the Freight image's digest; see [Promoting a digest](#promoting-a-digest)), `strictSemvers` (an image subscription's own setting; unset keeps `false`). |
