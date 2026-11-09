@@ -1,0 +1,20 @@
+# One company project per release (docs/reference.md#cd-project). No
+# installation fact has a default; with these empty values the chart refuses
+# to render, because a project names itself and its clusters.
+
+# Company-owned: the files of the company's repository.
+# The project: its charts, its clusters and its promotion order.
+project: {}
+# Ring payloads per cluster: values.<cluster>.{infra,app,e2e}.
+values: {}
+# The version per cluster, written by Kargo; "" is dormant.
+pins: {}
+
+# Platform-owned: the valuesObject of the platform's Application for this
+# project. Kept empty here on purpose: platformDigest is computed over these
+# four keys as the platform passes them, so a default would break it.
+clusters: []
+platform: {}
+products: {}
+pipeline: {}
+platformDigest: ""

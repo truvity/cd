@@ -1,0 +1,26 @@
+apiVersion: v2
+name: cd-project
+description: >-
+  One company project as delivery objects: per cluster of the project the
+  Argo CD Applications cd-company renders for it, and the project's Kargo
+  Warehouse, Stages and ProjectConfig. The cluster-scoped Project, the
+  write-back credentials, verification and access are the platform's and are
+  never rendered here.
+type: application
+# Stamped from the same release tag as the other cd charts; never moved by hand.
+version: 0.0.0
+keywords:
+  - argocd
+  - kargo
+  - gitops
+  - delivery
+home: https://github.com/truvity/cd
+sources:
+  - https://github.com/truvity/cd
+dependencies:
+  - name: cd-company
+    version: 0.0.0
+    repository: file://../cd-company
+  - name: cd-pipeline
+    version: 0.0.0
+    repository: file://../cd-pipeline

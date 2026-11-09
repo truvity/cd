@@ -11,9 +11,20 @@ fail=0
 for chart_dir in "$root"/charts/*/; do
   chart="$(basename "$chart_dir")"
   # A chart with no vendored upstream (cd-delivery) records no upstream
-  # release in appVersion.
+  # release in appVersion; nor does one that only packages its siblings
+  # (cd-company, cd-project), which has no appVersion to hold.
   ls "$chart_dir"charts/*.tgz >/dev/null 2>&1 || continue
   want="$(yq '.appVersion' "$chart_dir/Chart.yaml")"
+  if [ "$want" = null ]; then
+    for archive in "$chart_dir"charts/*.tgz; do
+      top="$(tar -tzf "$archive" | sed -n 1p | cut -d/ -f1)"
+      if [ "$(tar -xzOf "$archive" "$top/Chart.yaml" | yq '.appVersion')" != null ]; then
+        echo "$chart: no appVersion, but the vendored $top records an upstream release" >&2
+        fail=1
+      fi
+    done
+    continue
+  fi
   archive="$(ls "$chart_dir"charts/*.tgz)"
   # The archive's own top-level Chart.yaml, not a subchart's (argo-cd
   # vendors redis-ha, which has an appVersion of its own).

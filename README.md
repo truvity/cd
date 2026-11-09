@@ -17,6 +17,7 @@ way.
 | `cd-delivery` — the Argo CD Applications that deliver a product's charts to a cluster; no upstream | `oci://ghcr.io/truvity/charts/cd-delivery` |
 | `cd-company` — company pins/values adapted to cd-delivery with platform-owned facts and an allowlist | `oci://ghcr.io/truvity/charts/cd-company` |
 | `cd-pipeline` — the Kargo delivery pipeline of a project: Project, Warehouse, Stages, promotion, verification, access; no upstream | `oci://ghcr.io/truvity/charts/cd-pipeline` |
+| `cd-project` — one company project: its per-cluster Applications (through cd-company) and its Warehouse, Stages and ProjectConfig (through cd-pipeline), with platform facts sealed against company files | `oci://ghcr.io/truvity/charts/cd-project` |
 | `cd-cluster-registration` — Argo CD cluster Secrets from a list of clusters; no upstream | `oci://ghcr.io/truvity/charts/cd-cluster-registration` |
 | `cd-webhook-relay` — a fan-in relay for GitHub webhooks in front of Argo CD, one secret per organisation (see [webhook-relay](docs/webhook-relay.md)); no upstream | `oci://ghcr.io/truvity/charts/cd-webhook-relay`, image `ghcr.io/truvity/cd/webhook-relay` |
 
@@ -154,7 +155,8 @@ just charts     # chart renders and adapter composition proofs
 just golden     # regenerate tests/golden/ after an intended change; read the diff
 just vendor cd-argocd   # re-vendor the upstream archive after moving its pin
 just vendor cd-company  # package the sibling cd-delivery chart dependency
-python3 hack/company-schema.py  # refresh the adapter's composed schema
+just vendor cd-project  # package the sibling cd-company and cd-pipeline charts
+python3 hack/company-schema.py  # refresh the adapters' composed schemas
 ```
 
 ## Releasing

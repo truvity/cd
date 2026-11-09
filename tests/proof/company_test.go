@@ -76,10 +76,22 @@ func TestCompanyAdapterEqualsDeliveryComposition(t *testing.T) {
 // cannot catch a stale archive after delivery templates or schemas change.
 // Check the actual packaged application chart against its single source tree.
 func TestCompanyDependencyMatchesDeliverySource(t *testing.T) {
-	source := "../../charts/cd-delivery"
-	archives, err := filepath.Glob("../../charts/cd-company/charts/cd-delivery-*.tgz")
+	assertPackaged(t, "../../charts/cd-company/charts/cd-delivery-*.tgz", "just vendor cd-company", map[string]string{
+		"cd-delivery/": "../../charts/cd-delivery",
+	})
+}
+
+// assertPackaged holds the one archive matching pattern to its source trees:
+// every regular file under an archive prefix (the longest that matches) is
+// byte-identical to the file at the same path of that prefix's source tree,
+// Chart.yaml equal as metadata, and every source file is packaged, except a
+// source's own vendored charts/ (Helm packages a dependency as a directory,
+// which is a prefix of its own).
+func assertPackaged(t *testing.T, pattern, hint string, roots map[string]string) {
+	t.Helper()
+	archives, err := filepath.Glob(pattern)
 	if err != nil || len(archives) != 1 {
-		t.Fatalf("want one packaged cd-delivery dependency, got %v: %v", archives, err)
+		t.Fatalf("want one packaged dependency matching %s, got %v: %v", pattern, archives, err)
 	}
 	f, err := os.Open(archives[0])
 	if err != nil {
@@ -92,7 +104,10 @@ func TestCompanyDependencyMatchesDeliverySource(t *testing.T) {
 	}
 	defer func() { _ = zr.Close() }()
 	tr := tar.NewReader(zr)
-	seen := map[string]bool{}
+	seen := map[string]map[string]bool{}
+	for prefix := range roots {
+		seen[prefix] = map[string]bool{}
+	}
 	for {
 		header, err := tr.Next()
 		if errors.Is(err, io.EOF) {
@@ -104,21 +119,29 @@ func TestCompanyDependencyMatchesDeliverySource(t *testing.T) {
 		if header.Typeflag != tar.TypeReg {
 			t.Fatalf("unexpected archive entry %s", header.Name)
 		}
-		path, ok := strings.CutPrefix(header.Name, "cd-delivery/")
-		if !ok || !filepath.IsLocal(path) || seen[path] {
+		prefix := ""
+		for candidate := range roots {
+			if strings.HasPrefix(header.Name, candidate) && len(candidate) > len(prefix) {
+				prefix = candidate
+			}
+		}
+		path, ok := strings.CutPrefix(header.Name, prefix)
+		if prefix == "" || !ok || !filepath.IsLocal(path) || seen[prefix][path] {
 			t.Fatalf("unexpected or duplicate archive path %q", header.Name)
 		}
-		seen[path] = true
+		seen[prefix][path] = true
+		source := roots[prefix]
 		want, err := os.ReadFile(filepath.Join(source, path))
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("%s: %v; run %s", header.Name, err, hint)
 		}
 		got, err := io.ReadAll(tr)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if path == "Chart.yaml" {
-			// Helm normalizes chart metadata when packaging it.
+		if path == "Chart.yaml" || path == "Chart.lock" {
+			// Helm normalizes chart metadata when packaging it, and stamps a
+			// packaged lock file's `generated` with a fixed time.
 			var wantMetadata, gotMetadata map[string]any
 			if err := yaml.Unmarshal(want, &wantMetadata); err != nil {
 				t.Fatal(err)
@@ -126,30 +149,39 @@ func TestCompanyDependencyMatchesDeliverySource(t *testing.T) {
 			if err := yaml.Unmarshal(got, &gotMetadata); err != nil {
 				t.Fatal(err)
 			}
+			if path == "Chart.lock" {
+				delete(wantMetadata, "generated")
+				delete(gotMetadata, "generated")
+			}
 			if !parity.Equal(wantMetadata, gotMetadata) {
-				t.Fatal("packaged chart metadata differs from cd-delivery; run just vendor cd-company")
+				t.Fatalf("packaged %s metadata differs from %s; run %s", header.Name, source, hint)
 			}
 		} else if !bytes.Equal(want, got) {
-			t.Errorf("packaged %s differs from cd-delivery; run just vendor cd-company", path)
+			t.Errorf("packaged %s differs from %s; run %s", header.Name, source, hint)
 		}
 	}
-	if err := filepath.WalkDir(source, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() {
+	for prefix, source := range roots {
+		if err := filepath.WalkDir(source, func(path string, entry fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			rel, err := filepath.Rel(source, path)
+			if err != nil {
+				return err
+			}
+			if entry.IsDir() {
+				if rel == "charts" {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if !seen[prefix][filepath.ToSlash(rel)] {
+				t.Errorf("%s file %s missing from the packaged dependency; run %s", source, rel, hint)
+			}
 			return nil
+		}); err != nil {
+			t.Fatal(err)
 		}
-		rel, err := filepath.Rel(source, path)
-		if err != nil {
-			return err
-		}
-		if !seen[filepath.ToSlash(rel)] {
-			t.Errorf("cd-delivery file %s missing from dependency; run just vendor cd-company", rel)
-		}
-		return nil
-	}); err != nil {
-		t.Fatal(err)
 	}
 }
 

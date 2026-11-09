@@ -106,15 +106,18 @@ site:
 {{ end }}
 {{- end -}}
 
+{{/* Refuses a payload that sets a path of an ownership tree (a map for each
+     subtree, a leaf for each reserved key). Call with (dict "path" <where the
+     payload is> "payload" .. "owned" <tree> "chart" <refusal prefix, default cd-company>). */}}
 {{- define "cd-company.assertOwnership" -}}
 {{- range $key, $value := .payload -}}
   {{- if hasKey $.owned $key -}}
     {{- $reserved := index $.owned $key -}}
     {{- $path := printf "%s.%s" $.path $key -}}
     {{- if or (not (kindIs "map" $reserved)) (not (kindIs "map" $value)) -}}
-      {{- fail (printf "cd-company: %s is platform-owned" $path) -}}
+      {{- fail (printf "%s: %s is platform-owned" ($.chart | default "cd-company") $path) -}}
     {{- end -}}
-    {{- include "cd-company.assertOwnership" (dict "path" $path "payload" $value "owned" $reserved) -}}
+    {{- include "cd-company.assertOwnership" (dict "chart" $.chart "path" $path "payload" $value "owned" $reserved) -}}
   {{- end -}}
 {{- end -}}
 {{- end -}}

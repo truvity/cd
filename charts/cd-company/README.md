@@ -160,6 +160,12 @@ maintained with `just vendor cd-company`. Commit `Chart.lock` and the resulting
 `charts/cd-delivery`. The dependency's default `products: {}` renders nothing;
 the adapter schema enforces that this map stays empty.
 
+The adapter is the named template `cd-company.render` (`templates/_render.tpl`);
+`templates/applications.yaml` calls it with the chart's values, and
+[cd-project](../../docs/reference.md#cd-project) calls it once per cluster of a
+project. A change here moves both renders: re-vendor cd-project with
+`just vendor cd-project` (the chart proofs check its archive against this tree).
+
 `python3 hack/company-schema.py` derives `values.schema.json` from cd-delivery's
 strict platform/product schemas; it does not copy chart templates. Commit that
 schema too. `just lint` checks schema drift and the normal dependency status.

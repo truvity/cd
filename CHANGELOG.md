@@ -5,6 +5,11 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## v0.33.0
+
+- **Added:** chart `cd-project`, one company project per release, for a platform that renders one Argo CD Application per project. Company files supply `project` (name, `source.chart`/`infraChart`/`semver`/`versionPrefix`/`subscribeAs`, `clusters`, `pipeline.stageOrder`/`autoPromote`/`upstreams`), `values.<cluster>.{infra,app,e2e}` and `pins.<cluster>` (`""` dormant); the platform's `valuesObject` supplies `clusters`, `platform.<cluster>`, `products.<cluster>`, the allowlisted `pipeline` settings and `platformDigest`, a sha256 over those four keys that a company file adding to them breaks. Per cluster it renders exactly the Applications `cd-company` renders for the project on that cluster (proved byte-identical), and the project's Warehouse, Stages and ProjectConfig through `cd-pipeline` with `createProject: false`; no Project, credentials, verification or access objects, refused by the schema and checked on the render. Cases `minimal`, `full`, `layers` (goldens) and 30 refusal fixtures.
+- **Changed (no render change):** `cd-company`'s adapter moved into the named template `cd-company.render` (`templates/_render.tpl`), which `cd-project` calls per cluster; `cd-company.assertOwnership` takes an optional `chart` for its message. `cd-pipeline`'s schema accepts Helm's `global`, so the chart can be packaged as a dependency. No existing golden moves.
+
 ## v0.32.0
 
 - **Added:** `cd-pipeline` `projects[].createProject` (default `true`). With `false` the chart renders no `Project` for that project, only the rest of it in the project's namespace: Warehouse, Stages, ProjectConfig, access, verification and the write-back `ExternalSecret`. This is for an installation where one party owns the cluster-scoped Project, and so its namespace, and another owns the pipeline inside it. With `argocd.namespace` set, the verification's Role and RoleBinding read Applications from that namespace, as before. `projects[].annotations` (the Project's own) are refused with `createProject: false`. New case `cd-pipeline/no-project` (golden) and fixture `no-project-with-annotations`. Unset, every existing render is byte-identical (no existing golden moves).

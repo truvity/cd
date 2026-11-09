@@ -1,0 +1,72 @@
+# The platform's platformValues and pin-gated layers per cluster, as in
+# cd-company's `layers` case: on east the pin opens the layer, so the paths it
+# sets are the platform's; on west the pin is below it, the layer reserves
+# nothing and the company sets the same path. tests/proof holds every
+# Application here to cd-company's render of the same cluster, byte for byte.
+
+# Company files.
+project:
+  name: shop
+  source:
+    chart: oci://registry.example.com/charts/shop
+    semver: ">=0.9.0"
+    versionPrefix: v
+  clusters: [east, west]
+  pipeline:
+    stageOrder: [west, east]
+pins:
+  east: "1.2.3"
+  west: "0.9.0"
+values:
+  east:
+    app:
+      tuning: {burst: 5}
+      config: {greeting: hello}
+  west:
+    app:
+      tuning: {replicas: 7}
+
+# The platform's valuesObject.
+clusters: [east, west]
+platform:
+  east: &platform
+    clusterName: east
+    argocdNamespace: argocd
+    applicationPrefix: east-
+    appProject: "{product}-{cluster}"
+    chartRegistry: oci://registry.example.com/charts
+    postgres: {instances: 1, storage: 2Gi}
+    events:
+      url: nats://broker.example:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: "{product}"
+  west:
+    <<: *platform
+    clusterName: west
+    applicationPrefix: west-
+products:
+  east: &product
+    interface: 1
+    hostname: shop.example.com
+    platformValues:
+      app:
+        greeting: platform
+    layers:
+      - name: tuning
+        since: 1.0.0
+        values:
+          app:
+            tuning: {replicas: 3}
+  west: *product
+pipeline:
+  git:
+    repoURL: https://git.example.com/acme/shop-delivery.git
+  promotion:
+    pinFile: "pins/{stage}.yaml"
+  graph:
+    applicationName: "{stage}-{app}"
+    upstreams:
+      east: [west]
+platformDigest: "446de97df844187044aa88266f69217b8a1930859c612401b4368f01bb7eba0e"
