@@ -5,6 +5,10 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## v0.30.1
+
+- Dependency updates.
+
 ## v0.30.0
 
 - **Added:** `cd-company` knows the kind of each product: for a `kind: chart` service it refuses a `values.<service>.infra` or `.e2e` payload by name, pin or no pin. Until now a dormant service's payload was checked against the three rings of a product only, and the refusal appeared with the first promotion. The reserved roots of a chart's `values.app` are the product's, as before. Nothing that rendered stops rendering (new case `kind-chart`; no existing golden moves).
