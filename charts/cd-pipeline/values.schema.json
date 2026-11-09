@@ -1133,6 +1133,11 @@
           "spec"
         ]
       }
+    },
+    "global": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Helm's own: a parent chart's global values reach every subchart (cd-project packages this chart). The chart reads none of it."
     }
   }
 }

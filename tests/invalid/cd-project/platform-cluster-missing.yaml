@@ -1,0 +1,49 @@
+# expect: platform.stage is missing
+# The platform registered a cluster but gave no facts for it.
+project:
+  name: shop
+  source:
+    chart: oci://registry.example.com/charts/shop
+    semver: '>=1.0.0 <2.0.0'
+  clusters:
+    - dev
+    - stage
+  pipeline:
+    stageOrder:
+      - dev
+pins:
+  dev: 1.2.3
+values:
+  dev:
+    app:
+      config:
+        greeting: hello
+clusters:
+  - dev
+  - stage
+platform:
+  dev:
+    clusterName: dev
+    argocdNamespace: argocd
+    applicationPrefix: dev-
+    appProject: '{product}-{cluster}'
+    chartRegistry: oci://registry.example.com/charts
+    postgres:
+      instances: 1
+      storage: 2Gi
+    events:
+      url: nats://broker.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: '{product}'
+products:
+  dev:
+    interface: 15
+    hostname: shop.dev.example.com
+pipeline:
+  git:
+    repoURL: https://git.example.com/acme/shop-delivery.git
+  promotion:
+    pinFile: pins/{stage}.yaml
+platformDigest: 6ed9f148850b0ef0a421ffd34154536657f851c2ea9e47530e0fd8121a0415ce

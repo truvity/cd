@@ -1,0 +1,47 @@
+# expect: pipeline.promotion.pinFile must be a path inside the repository
+# The platform's pin file leaves the repository.
+project:
+  name: shop
+  source:
+    chart: oci://registry.example.com/charts/shop
+    semver: '>=1.0.0 <2.0.0'
+  clusters:
+    - dev
+  pipeline:
+    stageOrder:
+      - dev
+pins:
+  dev: 1.2.3
+values:
+  dev:
+    app:
+      config:
+        greeting: hello
+clusters:
+  - dev
+platform:
+  dev:
+    clusterName: dev
+    argocdNamespace: argocd
+    applicationPrefix: dev-
+    appProject: '{product}-{cluster}'
+    chartRegistry: oci://registry.example.com/charts
+    postgres:
+      instances: 1
+      storage: 2Gi
+    events:
+      url: nats://broker.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: '{product}'
+products:
+  dev:
+    interface: 15
+    hostname: shop.dev.example.com
+pipeline:
+  git:
+    repoURL: https://git.example.com/acme/shop-delivery.git
+  promotion:
+    pinFile: ../pins/{stage}.yaml
+platformDigest: 4b2ee2307c8729668f27eb9075d8db486062e94440d6abf5c6f5331f201eebfc

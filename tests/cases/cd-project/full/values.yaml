@@ -1,0 +1,123 @@
+# A project on three clusters with an infra chart. Stages dev -> stage ->
+# prod; dev promotes on its own; prod is dormant (an empty pin) and renders
+# no Application until its Stage promotes into it, but its Stage exists. The
+# platform's pipeline settings name the repository, wording, labels and the
+# Argo CD namespace; the Applications land in each cluster's namespace.
+
+# Company files (values/<cluster>.yaml, pins/<cluster>.yaml, project.yaml).
+project:
+  name: shop
+  source:
+    chart: oci://registry.example.com/charts/shop
+    infraChart: oci://registry.example.com/charts/shop-infra
+    semver: ">=1.0.0 <2.0.0"
+  clusters: [dev, stage, prod]
+  pipeline:
+    stageOrder: [dev, stage, prod]
+    autoPromote: [dev]
+pins:
+  dev: "1.4.0"
+  stage: "1.3.2"
+  prod: ""
+values:
+  dev:
+    infra:
+      postgres:
+        parameters: {max_connections: "100"}
+    app:
+      config: {greeting: hello, logLevel: debug}
+    e2e:
+      config: {timeout: 30s}
+  stage:
+    app:
+      config: {greeting: hello}
+  prod:
+    app:
+      config: {greeting: hello}
+
+# The platform's valuesObject.
+clusters: [dev, stage, prod, sandbox]
+platform:
+  dev:
+    clusterName: dev
+    argocdNamespace: delivery
+    applicationPrefix: dev-
+    appProject: "{product}-{cluster}"
+    applicationLabels:
+      acme.example.com/project: "{product}"
+    chartRegistry: oci://registry.example.com/charts
+    postgres: {instances: 1, storage: 2Gi}
+    events:
+      url: nats://broker.dev.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: "{product}"
+    cloud:
+      accountID: EXAMPLE_ACCOUNT
+      region: example-region
+      iamNameTemplate: "{cluster}-{product}"
+      bucketNameTemplate: "{cluster}-{slug}"
+    e2e: {mode: full}
+  stage:
+    clusterName: stage
+    argocdNamespace: delivery
+    applicationPrefix: stage-
+    appProject: "{product}-{cluster}"
+    chartRegistry: oci://registry.example.com/charts
+    availability: high
+    postgres: {instances: 2, storage: 4Gi}
+    events:
+      url: nats://broker.stage.example.com:4222
+      storage: file
+      replicas: 2
+      maxAge: 24h
+      account: "{product}"
+  prod:
+    clusterName: prod
+    argocdNamespace: delivery
+    applicationPrefix: prod-
+    appProject: "{product}-{cluster}"
+    chartRegistry: oci://registry.example.com/charts
+    availability: high
+    postgres: {instances: 3, storage: 8Gi}
+    events:
+      url: nats://broker.prod.example.com:4222
+      storage: file
+      replicas: 3
+      maxAge: 72h
+      account: "{product}"
+products:
+  dev:
+    interface: 15
+    hostname: shop.dev.example.com
+    bucketSlug: shop
+    e2e:
+      enabled: true
+      events: {url: nats://broker.dev.example.com:4222}
+  stage:
+    interface: 15
+    hostname: shop.stage.example.com
+  prod:
+    interface: 15
+    hostname: shop.example.com
+pipeline:
+  labels:
+    acme.example.com/managed-by: platform
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false
+  argocd:
+    namespace: delivery
+  git:
+    repoURL: https://git.example.com/acme/shop-delivery.git
+  promotion:
+    branch: main
+    pinFile: "pins/{stage}.yaml"
+    commitMessage: "chore({project}): promote {version} to {stage}"
+    prTitle: "chore({project}): promote to {stage}"
+    prLabels: [promotion]
+  graph:
+    upstreams:
+      stage: [dev]
+      prod: [stage]
+platformDigest: "1b51e806a48b1adfc491837722580997e26de8d87747131d7cf14586e1dda29b"

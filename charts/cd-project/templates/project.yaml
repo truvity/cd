@@ -1,0 +1,2 @@
+{{- /* The adapter itself is templates/_project.tpl. */ -}}
+{{- include "cd-project.render" . -}}

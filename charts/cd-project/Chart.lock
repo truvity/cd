@@ -1,0 +1,9 @@
+dependencies:
+- name: cd-company
+  repository: file://../cd-company
+  version: 0.0.0
+- name: cd-pipeline
+  repository: file://../cd-pipeline
+  version: 0.0.0
+digest: sha256:e02b316c12939ebb48afee0c9a54c423836c5fa8fc37a7d43450b2eaae85c654
+generated: "2026-11-10T01:18:25.536130191+07:00"

@@ -724,3 +724,119 @@ Names derived by the chart, from the project's `name` and `slug` and the Stage's
 `name`: `kargo-verify-<stage>` (ServiceAccount), `kargo-verify-<project>-<stage>`
 (Role and RoleBinding in the Argo CD namespace), `<slug>-<stage>-verify-promoted-version`
 (ConfigMap, not with `gateImage`) and `<slug>-<stage>-promoted-version` (AnalysisTemplate).
+
+## cd-project
+
+One company project per release. A platform renders one Argo CD Application
+per project that installs this chart: the company's repository supplies value
+files (`project`, `values`, `pins`), and the platform's own facts arrive as the
+Application's `valuesObject` (`clusters`, `platform`, `products`, `pipeline`,
+`platformDigest`). The chart renders, and only renders:
+
+- per cluster of `project.clusters`, the Applications `cd-company` renders for
+  the project as its one service on that cluster (infra, app and e2e rings, as
+  the product's kind decides), in `platform.<cluster>.argocdNamespace`. A
+  cluster whose pin is `""` is dormant and renders none;
+- the project's Kargo `Warehouse`, `Stage`s and `ProjectConfig`, derived by
+  `cd-pipeline` from `project.pipeline.stageOrder` with `createProject: false`.
+
+The cluster-scoped Kargo `Project`, the write-back credentials, verification
+(AnalysisTemplates, their ConfigMaps, ServiceAccounts, Roles and RoleBindings)
+and access are the platform's and are never rendered here. The render is
+checked against those four kinds and Argo CD's `Application` at render time
+as well (`tests/proof/project_test.go` holds every case to the same list).
+
+### Inputs
+
+```yaml
+# Company files (Helm deep-merges them; per-cluster files are keyed by cluster).
+project:
+  name: shop                       # the service name, Kargo namespace and Warehouse
+  source:
+    chart: oci://registry.example.com/charts/shop
+    infraChart: oci://registry.example.com/charts/shop-infra   # optional
+    semver: ">=1.0.0 <2.0.0"
+    versionPrefix: v               # optional, as cd-pipeline's chart.versionPrefix
+    subscribeAs: chart             # optional: chart (default) or image
+  clusters: [dev, stage, prod]
+  pipeline:
+    stageOrder: [dev, stage, prod] # each a cluster of project.clusters
+    autoPromote: [dev]
+    upstreams: {prod: [stage]}     # optional, over pipeline.graph.upstreams
+values:                            # values/<cluster>.yaml
+  dev:
+    app: {config: {greeting: hello}}
+pins:                              # pins/<cluster>.yaml, written by Kargo
+  dev: "1.4.0"
+  stage: "1.3.2"
+  prod: ""                         # dormant
+```
+
+```yaml
+# The platform's valuesObject.
+clusters: [dev, stage, prod]       # registered for this project
+platform:                          # cd-company's `platform`, per cluster
+  dev: {clusterName: dev, argocdNamespace: argocd, applicationPrefix: dev-, ...}
+products:                          # cd-company's `products.<service>`, per cluster
+  dev: {interface: 15, hostname: shop.dev.example.com}
+pipeline:                          # the allowlisted cd-pipeline settings
+  git: {repoURL: https://git.example.com/acme/shop-delivery.git}
+  promotion: {pinFile: "pins/{stage}.yaml"}
+  argocd: {namespace: argocd}
+  graph: {applicationName: "{stage}-{app}"}
+platformDigest: <sha256 of the four keys above, see below>
+```
+
+`pipeline` takes cd-pipeline's `labels`, `annotations`, `waves`, `argocd`,
+`git.repoURL`, `promotion`, `jobs` and `graph.upstreams` / `graph.applicationName`,
+laid over cd-pipeline's defaults (maps merge key by key). Nothing that renders
+credentials, verification, access, a Project or an AppProject is accepted:
+`git.credentials`, `graph.promotedVersion`, `graph.approvers`, `graph.admins`,
+`promotedVersion`, `metricsGate`, `viewer`, `projects` and `appProjects` are
+refused by the schema, as is a `createProject` in `project`. A Stage writes the
+pin of its cluster: `promotion.pinKey` defaults to `pins.{stage}`, the key the
+chart reads, and `promotion.pinFile` names the company file it lives in.
+
+Refused at render: a `project.clusters` entry the platform did not register in
+`clusters`, or one without `platform.<cluster>`; a `pins` or `values` key that
+is not in `project.clusters`; a Stage that is not a cluster of the project, an
+`autoPromote` or `upstreams` Stage that is not in `stageOrder`; a cluster with
+no pin (`""` is dormant), a non-dormant one with no `products.<cluster>`. Ring
+payloads are held to cd-company's ownership rules by cd-company's own code: the
+fixed reserved paths, and whatever the platform sets for the cluster through
+`products.<cluster>.platformValues` and its open layers, dormant or not.
+
+### Company and platform
+
+Helm sees merged values, not which file supplied a key. Argo CD gives the
+`valuesObject` precedence over every value file, so a company file cannot
+change a value the platform sets; it can only add to the platform's keys. The
+platform seals them: `platformDigest` is
+
+```text
+sha256sum (toJson (dict "clusters" $clusters "pipeline" $pipeline "platform" $platform "products" $products))
+```
+
+over the four keys exactly as the platform passes them (`[]` or `{}` for one
+it leaves out; no `null`, which Helm drops), computed in the platform's own
+Helm template. The chart computes the same over what it received and refuses
+a render that differs, naming the digest it got. The `valuesObject` also wins
+on `platformDigest` itself, so a company file cannot replace the seal. The
+schema refuses every other top-level key, and holds the values of the two
+packaged dependencies (`cd-company`, `cd-pipeline`) to their own defaults, so
+neither side can reach a subchart's own render.
+
+### Composition
+
+`cd-company` and `cd-pipeline` are local dependencies (`file://../cd-company`,
+`file://../cd-pipeline`), packaged under `charts/cd-project/charts/` with
+`just vendor cd-project` (after `just vendor cd-company` when cd-delivery
+moved). Their own templates render nothing: their values stay at their
+defaults. The children come from `cd-company.render`, the template
+`cd-company`'s own `applications.yaml` calls, given the cluster's slice of the
+inputs; the Kargo objects from `cd-pipeline.derive` and `cd-pipeline.project`.
+`tests/proof/project_test.go` proves the Applications of every case byte-identical
+to cd-company's render of each cluster, the Kargo objects byte-identical to
+cd-pipeline's render of the same project, and the packaged archives identical to
+their sources. `python3 hack/company-schema.py` composes the schema from
+cd-delivery's and cd-pipeline's.

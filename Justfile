@@ -2,7 +2,7 @@
 # check workflow (truvity/ci-workflows) runs each one as its own job, so a
 # laptop and CI run the same thing.
 
-chart_names := "cd-argocd cd-kargo cd-rollouts cd-delivery cd-company cd-pipeline cd-cluster-registration cd-webhook-relay"
+chart_names := "cd-argocd cd-kargo cd-rollouts cd-delivery cd-company cd-pipeline cd-project cd-cluster-registration cd-webhook-relay"
 
 # Lint every chart, and prove every refusal still refuses.
 lint:
@@ -66,7 +66,8 @@ golden:
     hack/golden.sh update
 
 # Re-vendor a chart's declared dependencies into its charts/ directory.
-# cd-company packages the sibling cd-delivery source; upstream wrappers
+# cd-company packages the sibling cd-delivery source, and cd-project the
+# sibling cd-company (vendor that first) and cd-pipeline; upstream wrappers
 # first move the dependency pin in Chart.yaml. Commit the archive so a
 # render needs no network. Then `just golden` and review the diff; for an
 # upstream wrapper also move appVersion to the upstream's.
