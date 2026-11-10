@@ -38,12 +38,12 @@
             "chart": {
               "type": "string",
               "minLength": 1,
-              "description": "The repoURL of the application chart the Warehouse subscribes to."
+              "description": "The application chart, oci://<repository>/<chart>: what the Warehouse subscribes to, and the repository and chart of every ring's Application (<chart>, <chart>-infra, <chart>-e2e)."
             },
             "infraChart": {
               "type": "string",
               "minLength": 1,
-              "description": "The repoURL of the infra chart; when set the Warehouse subscribes to it as well, with the same semver."
+              "description": "The infra chart, released with the application chart and installed at its pin; must be <chart>-infra. Refused for a kind with no infra ring."
             },
             "semver": {
               "type": "string",
@@ -613,16 +613,6 @@
             "minimum": 1,
             "maximum": 15,
             "description": "The highest delivery interface the pinned charts read (truvity/policy docs/contracts/delivery-interface.md)."
-          },
-          "repository": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Where the product's charts are published; defaults to platform.chartRegistry."
-          },
-          "chart": {
-            "type": "string",
-            "minLength": 1,
-            "description": "The base name of the charts this product installs (<chart>, <chart>-infra, <chart>-e2e); defaults to the product's own name. A tenant of another product names that product."
           },
           "hostname": {
             "type": "string",

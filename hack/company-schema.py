@@ -36,6 +36,14 @@ def company_product(source):
     return product
 
 
+def project_product(source):
+    """cd-company's product, less the chart source: the company's project.source."""
+    product = company_product(source)
+    for key in ("repository", "chart"):
+        del product["properties"][key]
+    return product
+
+
 def generated_schema(root):
     source = delivery_schema(root)
     product = company_product(source)
@@ -121,8 +129,8 @@ def generated_project_schema(root):
                         "type": "object", "additionalProperties": False,
                         "required": ["chart", "semver"],
                         "properties": {
-                            "chart": dict(chart["repoURL"], description="The repoURL of the application chart the Warehouse subscribes to."),
-                            "infraChart": dict(chart["repoURL"], description="The repoURL of the infra chart; when set the Warehouse subscribes to it as well, with the same semver."),
+                            "chart": dict(chart["repoURL"], description="The application chart, oci://<repository>/<chart>: what the Warehouse subscribes to, and the repository and chart of every ring's Application (<chart>, <chart>-infra, <chart>-e2e)."),
+                            "infraChart": dict(chart["repoURL"], description="The infra chart, released with the application chart and installed at its pin; must be <chart>-infra. Refused for a kind with no infra ring."),
                             "semver": chart["semver"],
                             "versionPrefix": chart["versionPrefix"],
                             "subscribeAs": chart["subscribeAs"],
@@ -154,7 +162,7 @@ def generated_project_schema(root):
                 "description": "Platform-owned: cd-company's platform block, per cluster.",
             },
             "products": {
-                "type": "object", "propertyNames": NAME, "additionalProperties": company_product(source),
+                "type": "object", "propertyNames": NAME, "additionalProperties": project_product(source),
                 "description": "Platform-owned: the project's product facts, per cluster (cd-company's products.<service>).",
             },
             "pipeline": {

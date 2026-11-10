@@ -1,6 +1,10 @@
 package proof
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -63,7 +67,8 @@ func documents(t *testing.T, raw []byte) map[string]string {
 
 // companySlice is what cd-company is given for one cluster of a project: the
 // cluster's platform block, the project as its one service, and the
-// cluster's pin, payload and product facts under the project's name.
+// cluster's pin, payload and product facts under the project's name, the
+// facts with the project's chart source in them, as cd-project injects it.
 func companySlice(values map[string]any, cluster string) map[string]any {
 	project := values["project"].(map[string]any)
 	name := project["name"].(string)
@@ -81,7 +86,13 @@ func companySlice(values map[string]any, cluster string) map[string]any {
 		out["values"] = map[string]any{name: payload}
 	}
 	if product, ok := parity.Map(values["products"])[cluster]; ok {
-		out["products"] = map[string]any{name: product}
+		// The chart source is the company's: oci://<repository>/<chart>.
+		chart := project["source"].(map[string]any)["chart"].(string)
+		cut := strings.LastIndex(chart, "/")
+		facts := maps.Clone(product.(map[string]any))
+		facts["repository"] = chart[:cut]
+		facts["chart"] = chart[cut+1:]
+		out["products"] = map[string]any{name: facts}
 	}
 	return out
 }
@@ -150,13 +161,6 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 				if v, ok := pipeline[key]; ok {
 					p[key] = v
 				}
-			}
-			if infra, ok := source["infraChart"]; ok {
-				var subs []any
-				for _, repo := range []any{source["chart"], infra} {
-					subs = append(subs, map[string]any{"chart": map[string]any{"repoURL": repo, "semverConstraint": source["semver"], "discoveryLimit": 20}})
-				}
-				p["warehouse"] = map[string]any{"subscriptions": subs}
 			}
 			settings := map[string]any{}
 			for k, v := range parity.Map(values["pipeline"]) {
@@ -272,6 +276,31 @@ func TestProjectGuardRefusesOtherKinds(t *testing.T) {
 			out, err := render()
 			if err == nil || !strings.Contains(out, "cd-project: the render holds an object of kind") {
 				t.Fatalf("the guard let the render through: %v\n%s", err, out)
+			}
+		})
+	}
+}
+
+// TestProjectDigestIsPlainJSON proves the platformDigest recipe of
+// docs/reference.md#cd-project from outside Helm: sha256, in hex, of Go's
+// encoding/json of the four platform keys (map keys sorted, compact) equals
+// the digest every case is sealed with, so a platform written in Go computes
+// what the chart checks.
+func TestProjectDigestIsPlainJSON(t *testing.T) {
+	for _, path := range projectCases(t) {
+		t.Run(filepath.Base(filepath.Dir(path)), func(t *testing.T) {
+			values := companyValues(t, path)
+			sealed := map[string]any{}
+			for _, key := range []string{"clusters", "pipeline", "platform", "products"} {
+				sealed[key] = values[key]
+			}
+			raw, err := json.Marshal(sealed)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sum := sha256.Sum256(raw)
+			if got := hex.EncodeToString(sum[:]); got != values["platformDigest"] {
+				t.Fatalf("sha256 of %s\n= %s, sealed %v", raw, got, values["platformDigest"])
 			}
 		})
 	}
