@@ -754,7 +754,7 @@ project:
   name: shop                       # the service name, Kargo namespace and Warehouse
   source:
     chart: oci://registry.example.com/charts/shop
-    infraChart: oci://registry.example.com/charts/shop-infra   # optional
+    infraChart: oci://registry.example.com/charts/shop-infra   # optional; must be <chart>-infra
     semver: ">=1.0.0 <2.0.0"
     versionPrefix: v               # optional, as cd-pipeline's chart.versionPrefix
     subscribeAs: chart             # optional: chart (default) or image
@@ -777,7 +777,7 @@ pins:                              # pins/<cluster>.yaml, written by Kargo
 clusters: [dev, stage, prod]       # registered for this project
 platform:                          # cd-company's `platform`, per cluster
   dev: {clusterName: dev, argocdNamespace: argocd, applicationPrefix: dev-, ...}
-products:                          # cd-company's `products.<service>`, per cluster
+products:                          # cd-company's `products.<service>`, per cluster, less repository/chart
   dev: {interface: 15, hostname: shop.dev.example.com}
 pipeline:                          # the allowlisted cd-pipeline settings
   git: {repoURL: https://git.example.com/acme/shop-delivery.git}
@@ -796,6 +796,20 @@ credentials, verification, access, a Project or an AppProject is accepted:
 refused by the schema, as is a `createProject` in `project`. A Stage writes the
 pin of its cluster: `promotion.pinKey` defaults to `pins.{stage}`, the key the
 chart reads, and `promotion.pinFile` names the company file it lives in.
+
+The chart source is the company's. `project.source.chart` (`oci://<repository>/<chart>`)
+is the Warehouse's one subscription and, split at its last `/`, the
+`repository` and `chart` the chart puts into every cluster's product facts
+before cd-company renders them, so every ring installs from it: `<chart>`,
+`<chart>-infra` and `<chart>-e2e` from that repository at the cluster's pin.
+The infra chart is released with the application chart and follows its pin;
+the Warehouse does not subscribe to it. `source.infraChart` is optional and,
+where given, must be `<source.chart>-infra`; a cluster whose product is
+`kind: chart` (no infra ring) refuses it. A `products.<cluster>` that sets
+`repository` or `chart` is refused (schema, and again at render): the platform
+restricts which sources may be installed through its AppProjects'
+`sourceRepos`, not through facts. `kind: static-site`, delivered by digest
+from a chart release of its own, has no chart for the Warehouse and is refused.
 
 Refused at render: a `project.clusters` entry the platform did not register in
 `clusters`, or one without `platform.<cluster>`; a `pins` or `values` key that
@@ -817,10 +831,18 @@ platform seals them: `platformDigest` is
 sha256sum (toJson (dict "clusters" $clusters "pipeline" $pipeline "platform" $platform "products" $products))
 ```
 
-over the four keys exactly as the platform passes them (`[]` or `{}` for one
-it leaves out; no `null`, which Helm drops), computed in the platform's own
-Helm template. The chart computes the same over what it received and refuses
-a render that differs, naming the digest it got. The `valuesObject` also wins
+over the four keys exactly as the platform passes them. Outside Helm it is
+the lowercase hex SHA-256 of the compact JSON of one object with the keys
+`clusters`, `pipeline`, `platform` and `products`, every object's keys sorted
+bytewise, no whitespace, strings escaped as Go's `encoding/json` does (`<`,
+`>` and `&` as `\u003c`, `\u003e`, `\u0026`), numbers as Go formats a
+`float64` (`2`, `0.05`). In Go that is `json.Marshal` of a
+`map[string]any{"clusters": ..., "pipeline": ..., "platform": ..., "products": ...}`
+built from the same values. A key the platform leaves out is `[]` or `{}`,
+never `null`: Helm drops a null value, so the chart would hash something else.
+`TestProjectDigestIsPlainJSON` (tests/proof) holds every case's sealed digest
+to exactly that computation. The chart computes the same over what it
+received and refuses a render that differs, naming the digest it got. The `valuesObject` also wins
 on `platformDigest` itself, so a company file cannot replace the seal. The
 schema refuses every other top-level key, and holds the values of the two
 packaged dependencies (`cd-company`, `cd-pipeline`) to their own defaults, so

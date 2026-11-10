@@ -1,0 +1,49 @@
+# expect: products.dev.kind static-site
+# A static site is delivered by digest: no chart for the Warehouse to discover.
+project:
+  name: shop
+  source:
+    chart: oci://registry.example.com/charts/shop
+    semver: '>=1.0.0 <2.0.0'
+  clusters:
+    - dev
+  pipeline:
+    stageOrder:
+      - dev
+pins:
+  dev: 1.2.3
+values:
+  dev:
+    app:
+      config:
+        greeting: hello
+clusters:
+  - dev
+platform:
+  dev:
+    clusterName: dev
+    argocdNamespace: argocd
+    applicationPrefix: dev-
+    appProject: '{product}-{cluster}'
+    chartRegistry: oci://registry.example.com/charts
+    postgres:
+      instances: 1
+      storage: 2Gi
+    events:
+      url: nats://broker.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: '{product}'
+products:
+  dev:
+    kind: static-site
+    chartVersion: 1.0.0
+    artifact:
+      ref: registry.example.com/sites/shop
+pipeline:
+  git:
+    repoURL: https://git.example.com/acme/shop-delivery.git
+  promotion:
+    pinFile: pins/{stage}.yaml
+platformDigest: a491d72a8af55ffadfe8c899d70e058729e06d64226a91edfa53cb3c307da86f

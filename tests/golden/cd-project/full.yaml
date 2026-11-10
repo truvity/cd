@@ -42,7 +42,7 @@ spec:
           storage: 2Gi
         tier: primary
     path: .
-    repoURL: oci://registry.example.com/charts/shop-infra
+    repoURL: oci://charts.example.com/acme/shop-infra
     targetRevision: 1.4.0
   syncPolicy:
     automated:
@@ -102,7 +102,7 @@ spec:
             name: shop
         tier: primary
     path: .
-    repoURL: oci://registry.example.com/charts/shop
+    repoURL: oci://charts.example.com/acme/shop
     targetRevision: 1.4.0
   syncPolicy:
     automated:
@@ -166,7 +166,7 @@ spec:
           create: true
           name: shop-e2e
     path: .
-    repoURL: oci://registry.example.com/charts/shop-e2e
+    repoURL: oci://charts.example.com/acme/shop-e2e
     targetRevision: 1.4.0
   syncPolicy:
     automated:
@@ -209,7 +209,7 @@ spec:
           storage: 4Gi
         tier: primary
     path: .
-    repoURL: oci://registry.example.com/charts/shop-infra
+    repoURL: oci://charts.example.com/acme/shop-infra
     targetRevision: 1.3.2
   syncPolicy:
     automated:
@@ -263,7 +263,7 @@ spec:
             name: shop
         tier: primary
     path: .
-    repoURL: oci://registry.example.com/charts/shop
+    repoURL: oci://charts.example.com/acme/shop
     targetRevision: 1.3.2
   syncPolicy:
     automated:
@@ -349,7 +349,7 @@ spec:
       - name: gitRepo
         value: https://git.example.com/acme/shop-delivery.git
       - name: chartRepo
-        value: oci://registry.example.com/charts/shop
+        value: oci://charts.example.com/acme/shop
       - name: chartName
         value: ""
   requestedFreight:
@@ -446,7 +446,7 @@ spec:
       - name: gitRepo
         value: https://git.example.com/acme/shop-delivery.git
       - name: chartRepo
-        value: oci://registry.example.com/charts/shop
+        value: oci://charts.example.com/acme/shop
       - name: chartName
         value: ""
   requestedFreight:
@@ -544,7 +544,7 @@ spec:
       - name: gitRepo
         value: https://git.example.com/acme/shop-delivery.git
       - name: chartRepo
-        value: oci://registry.example.com/charts/shop
+        value: oci://charts.example.com/acme/shop
       - name: chartName
         value: ""
   requestedFreight:
@@ -574,9 +574,5 @@ spec:
   subscriptions:
   - chart:
       discoveryLimit: 20
-      repoURL: oci://registry.example.com/charts/shop
-      semverConstraint: '>=1.0.0 <2.0.0'
-  - chart:
-      discoveryLimit: 20
-      repoURL: oci://registry.example.com/charts/shop-infra
+      repoURL: oci://charts.example.com/acme/shop
       semverConstraint: '>=1.0.0 <2.0.0'

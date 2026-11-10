@@ -45,7 +45,7 @@ Call with the chart's root context.
 {{- $out := "" -}}
 {{- range $c := $p.clusters -}}
   {{- $products := dict -}}
-  {{- if hasKey $v.products $c -}}{{- $_ := set $products $name (index $v.products $c) -}}{{- end -}}
+  {{- if hasKey $v.products $c -}}{{- $_ := set $products $name (include "cd-project.facts" (dict "cluster" $c "product" (index $v.products $c) "source" $p.source) | fromYaml) -}}{{- end -}}
   {{- $pins := dict -}}
   {{- if hasKey $v.pins $c -}}{{- $_ := set $pins $name (index $v.pins $c) -}}{{- end -}}
   {{- $values := dict -}}
@@ -96,20 +96,57 @@ Call with the chart's root context.
 {{- $project := dict "name" $p.name "createProject" false "chart" $chart "stageOrder" $p.pipeline.stageOrder -}}
 {{- with $p.pipeline.autoPromote -}}{{- $_ := set $project "autoPromote" . -}}{{- end -}}
 {{- with $p.pipeline.upstreams -}}{{- $_ := set $project "upstreams" . -}}{{- end -}}
-{{- with $src.infraChart -}}
-  {{- /* The infra chart beside the application chart, discovered the same way. */ -}}
-  {{- $subs := list -}}
-  {{- range $repo := list $src.chart . -}}
-    {{- if eq ($src.subscribeAs | default "chart") "image" -}}
-      {{- $subs = append $subs (dict "image" (dict "repoURL" (trimPrefix "oci://" $repo) "imageSelectionStrategy" "SemVer" "strictSemvers" false "constraint" $src.semver "discoveryLimit" 20)) -}}
-    {{- else -}}
-      {{- $subs = append $subs (dict "chart" (dict "repoURL" $repo "semverConstraint" $src.semver "discoveryLimit" 20)) -}}
-    {{- end -}}
-  {{- end -}}
-  {{- $_ := set $project "warehouse" (dict "subscriptions" $subs) -}}
-{{- end -}}
 {{- $project = include "cd-pipeline.derive" (dict "root" $root "p" $project) | fromYaml -}}
 {{- include "cd-pipeline.project" (dict "root" $root "p" $project) -}}
+{{- end -}}
+
+{{/*
+A cluster's product facts with the project's chart source in them. The
+source is the company's (`project.source`); the platform keeps which
+repositories may be installed in its AppProjects' sourceRepos, so a product
+that names a `repository` or `chart` of its own is refused. cd-delivery
+installs `<repository>/<chart>` and, beside it, `<chart>-infra` and
+`<chart>-e2e` from the same repository at the same pin, so `source.chart` (an
+`oci://` reference) is split into the two, and `source.infraChart`, where
+given, must be the infra chart that address yields; a kind with no infra
+ring refuses it. A static site is delivered by digest from a chart release of
+its own and has no chart for the Warehouse to discover: refused.
+As YAML for `fromYaml`. Call with (dict "cluster" .. "product" .. "source" ..).
+*/}}
+{{- define "cd-project.facts" -}}
+{{- $c := .cluster -}}
+{{- $src := .source -}}
+{{- range $key := list "repository" "chart" -}}
+  {{- if hasKey $.product $key -}}
+    {{- fail (printf "cd-project: products.%s.%s: the chart source is the company's (project.source); the platform restricts sources through its AppProjects' sourceRepos" $c $key) -}}
+  {{- end -}}
+{{- end -}}
+{{- $kind := $.product.kind | default "product" -}}
+{{- if eq $kind "static-site" -}}
+  {{- fail (printf "cd-project: products.%s.kind static-site: a site is delivered by digest and has no chart for the project's Warehouse to discover" $c) -}}
+{{- end -}}
+{{- if not (hasPrefix "oci://" $src.chart) -}}
+  {{- fail (printf "cd-project: project.source.chart must be an oci:// reference (<repository>/<chart>), got %q" $src.chart) -}}
+{{- end -}}
+{{- /* Split at the last `/` by hand: `dir` would clean the `//` of `oci://`. */ -}}
+{{- $parts := splitList "/" $src.chart -}}
+{{- $chart := last $parts -}}
+{{- $repository := join "/" (initial $parts) -}}
+{{- if or (not $chart) (eq $repository "oci:/") -}}
+  {{- fail (printf "cd-project: project.source.chart must be oci://<repository>/<chart>, got %q" $src.chart) -}}
+{{- end -}}
+{{- with $src.infraChart -}}
+  {{- if eq $kind "chart" -}}
+    {{- fail (printf "cd-project: project.source.infraChart: products.%s is kind chart, which has no infra ring" $c) -}}
+  {{- end -}}
+  {{- if ne . (printf "%s-infra" $src.chart) -}}
+    {{- fail (printf "cd-project: project.source.infraChart must be %s-infra (the infra ring installs <chart>-infra from the chart's repository at the same pin), got %q" $src.chart .) -}}
+  {{- end -}}
+{{- end -}}
+{{- $facts := deepCopy $.product -}}
+{{- $_ := set $facts "repository" $repository -}}
+{{- $_ := set $facts "chart" $chart -}}
+{{- toYaml $facts -}}
 {{- end -}}
 
 {{/* A map laid over another: maps merge key by key, every other value replaces. As YAML for `fromYaml`. Call with (dict "base" .. "over" ..). */}}

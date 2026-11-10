@@ -2,14 +2,15 @@
 # prod; dev promotes on its own; prod is dormant (an empty pin) and renders
 # no Application until its Stage promotes into it, but its Stage exists. The
 # platform's pipeline settings name the repository, wording, labels and the
-# Argo CD namespace; the Applications land in each cluster's namespace.
+# Argo CD namespace; the Applications land in each cluster's namespace. The
+# charts come from the company's project.source, not platform.chartRegistry.
 
 # Company files (values/<cluster>.yaml, pins/<cluster>.yaml, project.yaml).
 project:
   name: shop
   source:
-    chart: oci://registry.example.com/charts/shop
-    infraChart: oci://registry.example.com/charts/shop-infra
+    chart: oci://charts.example.com/acme/shop
+    infraChart: oci://charts.example.com/acme/shop-infra
     semver: ">=1.0.0 <2.0.0"
   clusters: [dev, stage, prod]
   pipeline:
