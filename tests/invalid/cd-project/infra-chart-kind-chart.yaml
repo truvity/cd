@@ -1,10 +1,11 @@
-# expect: products.dev is kind chart, which has no infra ring
-# A single chart (kind chart) has no infra ring to install an infra chart in.
+# expect: project.source.infraChart: kind chart has one ring (app) and no infra chart
+# A single chart (source.kind: chart) has no infra ring to install an infra chart in.
 project:
   name: shop
   source:
     chart: oci://registry.example.com/charts/shop
     semver: '>=1.0.0 <2.0.0'
+    kind: chart
     infraChart: oci://registry.example.com/charts/shop-infra
   clusters:
     - dev
@@ -16,8 +17,7 @@ pins:
 values:
   dev:
     app:
-      config:
-        greeting: hello
+      replicas: 1
 clusters:
   - dev
 platform:
@@ -37,11 +37,10 @@ platform:
       maxAge: 24h
       account: '{product}'
 products:
-  dev:
-    kind: chart
+  dev: {}
 pipeline:
   git:
     repoURL: https://git.example.com/acme/shop-delivery.git
   promotion:
     pinFile: pins/{stage}.yaml
-platformDigest: 3131924b37bc56db90b7f52dd69ecfcf5382eed5b4f0b416b2988aa9cb1994b1
+platformDigest: 1290afd31e2d738948108b6ea073eee969566a94058eac8c16c57590026a7ca5

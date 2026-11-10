@@ -754,7 +754,8 @@ project:
   name: shop                       # the service name, Kargo namespace and Warehouse
   source:
     chart: oci://registry.example.com/charts/shop
-    infraChart: oci://registry.example.com/charts/shop-infra   # optional; must be <chart>-infra
+    kind: product                  # optional: product (default; three rings) or chart (app ring only)
+    infraChart: oci://registry.example.com/charts/shop-infra   # optional; must be <chart>-infra; not with kind chart
     semver: ">=1.0.0 <2.0.0"
     versionPrefix: v               # optional, as cd-pipeline's chart.versionPrefix
     subscribeAs: chart             # optional: chart (default) or image
@@ -777,7 +778,7 @@ pins:                              # pins/<cluster>.yaml, written by Kargo
 clusters: [dev, stage, prod]       # registered for this project
 platform:                          # cd-company's `platform`, per cluster
   dev: {clusterName: dev, argocdNamespace: argocd, applicationPrefix: dev-, ...}
-products:                          # cd-company's `products.<service>`, per cluster, less repository/chart
+products:                          # cd-company's `products.<service>`, per cluster, less repository/chart/kind
   dev: {interface: 15, hostname: shop.dev.example.com}
 pipeline:                          # the allowlisted cd-pipeline settings
   git: {repoURL: https://git.example.com/acme/shop-delivery.git}
@@ -804,12 +805,20 @@ before cd-company renders them, so every ring installs from it: `<chart>`,
 `<chart>-infra` and `<chart>-e2e` from that repository at the cluster's pin.
 The infra chart is released with the application chart and follows its pin;
 the Warehouse does not subscribe to it. `source.infraChart` is optional and,
-where given, must be `<source.chart>-infra`; a cluster whose product is
-`kind: chart` (no infra ring) refuses it. A `products.<cluster>` that sets
-`repository` or `chart` is refused (schema, and again at render): the platform
-restricts which sources may be installed through its AppProjects'
-`sourceRepos`, not through facts. `kind: static-site`, delivered by digest
-from a chart release of its own, has no chart for the Warehouse and is refused.
+where given, must be `<source.chart>-infra`. The kind of product is the
+company's as well: `source.kind` is `product` (the default: `<chart>`,
+`<chart>-infra` and `<chart>-e2e`) or `chart` (one Application per cluster,
+named after the project, the app ring alone; see [Kinds](#kinds)), put into
+every cluster's product facts as `kind`. A `chart` refuses `infraChart`, and
+cd-company's ring check refuses its `values.<cluster>.infra` and `.e2e`
+(`values.<cluster>.infra: kind chart takes values.app only`). The platform's
+`products.<cluster>` follow the kind: a `product` needs `interface` and
+`hostname`; a `chart` takes `namespace` and nothing else. A
+`products.<cluster>` that sets `repository`, `chart` or `kind` is refused
+(schema, and again at render): the platform restricts which sources may be
+installed through its AppProjects' `sourceRepos`, not through facts.
+`static-site`, delivered by digest from a chart release of its own, has no
+chart for the Warehouse and is not a `source.kind`.
 
 Refused at render: a `project.clusters` entry the platform did not register in
 `clusters`, or one without `platform.<cluster>`; a `pins` or `values` key that

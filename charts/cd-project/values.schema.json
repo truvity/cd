@@ -9,6 +9,59 @@
     "clusters",
     "platformDigest"
   ],
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "project"
+        ],
+        "properties": {
+          "project": {
+            "required": [
+              "source"
+            ],
+            "properties": {
+              "source": {
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "chart"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "products": {
+            "additionalProperties": {
+              "propertyNames": {
+                "enum": [
+                  "namespace"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "products": {
+            "additionalProperties": {
+              "required": [
+                "interface",
+                "hostname"
+              ]
+            }
+          }
+        }
+      }
+    }
+  ],
   "properties": {
     "project": {
       "type": "object",
@@ -60,6 +113,14 @@
                 "image"
               ],
               "description": "How the Warehouse discovers the chart. `chart` (default) is a chart subscription. `image` is an image subscription with SemVer selection and `strictSemvers: false`, for an OCI chart whose tags carry a `v` (Helm's tag listing drops them, so a chart subscription finds nothing). A leading `oci://` is dropped from `repoURL` for the subscription, the promotion steps write the discovered tag as it is (the `v` stays), and `name` and `versionPrefix` are refused."
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "product",
+                "chart"
+              ],
+              "description": "The kind of product, put into every cluster's product facts: product (default; <chart>, <chart>-infra, <chart>-e2e) or chart (the app ring alone, no infraChart). A static site has no chart for the Warehouse and is not accepted."
             }
           }
         },
@@ -987,15 +1048,6 @@
             },
             "description": "Ordered, pin-gated payloads owned by the platform: a chart's closed schema rejects a key an older release does not read, and the pin moves without the platform rendering anything, so the comparison is made here. Merged after `platformValues` in list order, before `values`."
           },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "product",
-              "chart",
-              "static-site"
-            ],
-            "description": "`product` (default): the three-ring product. `chart`: one chart, one Application named after the product, no rings, no composed platform facts; takes only `pin`, `repository`, `chart`, `namespace` and `values.app`. A `repository` that starts with `oci://` renders `repoURL: <repository>/<chart>`; any other renders `repoURL: <repository>` with `chart: <chart>`. `static-site`: two Applications, `<name>-infra` and `<name>`, of the same chart release, pinned by the digest of the site artifact; takes `pin` (a `sha256:` digest), `chartVersion`, `artifact.ref`, `repository`, `namespace`, `values.{infra,app}` and `platformValues.{infra,app}`."
-          },
           "namespace": {
             "type": "string",
             "minLength": 1,
@@ -1021,30 +1073,7 @@
             "description": "Kind `static-site` only: the site artifact."
           }
         },
-        "required": [],
-        "allOf": [
-          {
-            "if": {
-              "properties": {
-                "kind": {
-                  "enum": [
-                    "chart",
-                    "static-site"
-                  ]
-                }
-              },
-              "required": [
-                "kind"
-              ]
-            },
-            "else": {
-              "required": [
-                "interface",
-                "hostname"
-              ]
-            }
-          }
-        ]
+        "required": []
       },
       "description": "Platform-owned: the project's product facts, per cluster (cd-company's products.<service>)."
     },

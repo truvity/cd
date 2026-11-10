@@ -1,0 +1,53 @@
+# A project that is one chart (source.kind: chart) on two clusters: one
+# Application per cluster, named after the project, from the company's
+# source, with no infra or end-to-end ring. dev promotes on its own; stage
+# by pull request. tests/proof holds both Applications to cd-company's
+# render of a kind chart service on each cluster, byte for byte.
+
+# Company files.
+project:
+  name: docs
+  source:
+    chart: oci://charts.example.com/acme/docs
+    kind: chart
+    semver: ">=2.0.0 <3.0.0"
+  clusters: [dev, stage]
+  pipeline:
+    stageOrder: [dev, stage]
+pins:
+  dev: "2.1.0"
+  stage: "2.0.4"
+values:
+  dev:
+    app:
+      replicas: 1
+      config: {banner: preview}
+  stage:
+    app:
+      replicas: 2
+
+# The platform's valuesObject.
+clusters: [dev, stage]
+platform:
+  dev:
+    clusterName: dev
+    argocdNamespace: argocd
+    applicationPrefix: dev-
+    appProject: "{product}-{cluster}"
+  stage:
+    clusterName: stage
+    argocdNamespace: argocd
+    applicationPrefix: stage-
+    appProject: "{product}-{cluster}"
+products:
+  dev: {namespace: docs-site}
+  stage: {namespace: docs-site}
+pipeline:
+  git:
+    repoURL: https://git.example.com/acme/docs-delivery.git
+  promotion:
+    pinFile: "pins/{stage}.yaml"
+  graph:
+    upstreams:
+      stage: [dev]
+platformDigest: "3d60aeb94c4e42d711a5eb907c7e6dbeb252780dae58d4b63dae4bb98c9ed3b0"
