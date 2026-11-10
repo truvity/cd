@@ -26,6 +26,9 @@ Call with the chart's root context.
     {{- end -}}
   {{- end -}}
 {{- end -}}
+{{- if and $p.source.infraChart (eq ($p.source.kind | default "product") "chart") -}}
+  {{- fail "cd-project: project.source.infraChart: kind chart has one ring (app) and no infra chart" -}}
+{{- end -}}
 {{- $order := $p.pipeline.stageOrder -}}
 {{- range $s := $order -}}
   {{- if not (has $s $p.clusters) -}}
@@ -108,9 +111,12 @@ that names a `repository` or `chart` of its own is refused. cd-delivery
 installs `<repository>/<chart>` and, beside it, `<chart>-infra` and
 `<chart>-e2e` from the same repository at the same pin, so `source.chart` (an
 `oci://` reference) is split into the two, and `source.infraChart`, where
-given, must be the infra chart that address yields; a kind with no infra
-ring refuses it. A static site is delivered by digest from a chart release of
-its own and has no chart for the Warehouse to discover: refused.
+given, must be the infra chart that address yields. The kind of product is
+the company's too (`source.kind`: `product`, the three rings, or `chart`, the
+app ring alone) and is put in as `kind`; a product that sets one is refused,
+and so is `infraChart` for a `chart` (checked once, in cd-project.render). A
+static site is delivered by digest from a chart release of its own and has no
+chart for the Warehouse to discover: refused.
 As YAML for `fromYaml`. Call with (dict "cluster" .. "product" .. "source" ..).
 */}}
 {{- define "cd-project.facts" -}}
@@ -121,9 +127,12 @@ As YAML for `fromYaml`. Call with (dict "cluster" .. "product" .. "source" ..).
     {{- fail (printf "cd-project: products.%s.%s: the chart source is the company's (project.source); the platform restricts sources through its AppProjects' sourceRepos" $c $key) -}}
   {{- end -}}
 {{- end -}}
-{{- $kind := $.product.kind | default "product" -}}
-{{- if eq $kind "static-site" -}}
-  {{- fail (printf "cd-project: products.%s.kind static-site: a site is delivered by digest and has no chart for the project's Warehouse to discover" $c) -}}
+{{- if hasKey $.product "kind" -}}
+  {{- fail (printf "cd-project: products.%s.kind: the kind of product is the company's (project.source.kind), like its charts" $c) -}}
+{{- end -}}
+{{- $kind := $src.kind | default "product" -}}
+{{- if not (has $kind (list "product" "chart")) -}}
+  {{- fail (printf "cd-project: project.source.kind %s: a project is a product or a chart (a static site is delivered by digest and has no chart for the project's Warehouse to discover)" $kind) -}}
 {{- end -}}
 {{- if not (hasPrefix "oci://" $src.chart) -}}
   {{- fail (printf "cd-project: project.source.chart must be an oci:// reference (<repository>/<chart>), got %q" $src.chart) -}}
@@ -136,9 +145,6 @@ As YAML for `fromYaml`. Call with (dict "cluster" .. "product" .. "source" ..).
   {{- fail (printf "cd-project: project.source.chart must be oci://<repository>/<chart>, got %q" $src.chart) -}}
 {{- end -}}
 {{- with $src.infraChart -}}
-  {{- if eq $kind "chart" -}}
-    {{- fail (printf "cd-project: project.source.infraChart: products.%s is kind chart, which has no infra ring" $c) -}}
-  {{- end -}}
   {{- if ne . (printf "%s-infra" $src.chart) -}}
     {{- fail (printf "cd-project: project.source.infraChart must be %s-infra (the infra ring installs <chart>-infra from the chart's repository at the same pin), got %q" $src.chart .) -}}
   {{- end -}}
@@ -146,6 +152,7 @@ As YAML for `fromYaml`. Call with (dict "cluster" .. "product" .. "source" ..).
 {{- $facts := deepCopy $.product -}}
 {{- $_ := set $facts "repository" $repository -}}
 {{- $_ := set $facts "chart" $chart -}}
+{{- $_ := set $facts "kind" $kind -}}
 {{- toYaml $facts -}}
 {{- end -}}
 

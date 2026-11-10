@@ -1,0 +1,47 @@
+# expect: cd-project: values.dev.infra: kind chart takes values.app only
+# A single chart has the app ring alone: an infra payload for a cluster is refused.
+project:
+  name: shop
+  source:
+    chart: oci://registry.example.com/charts/shop
+    semver: '>=1.0.0 <2.0.0'
+    kind: chart
+  clusters:
+    - dev
+  pipeline:
+    stageOrder:
+      - dev
+pins:
+  dev: 1.2.3
+values:
+  dev:
+    app:
+      replicas: 1
+    infra:
+      config: {}
+clusters:
+  - dev
+platform:
+  dev:
+    clusterName: dev
+    argocdNamespace: argocd
+    applicationPrefix: dev-
+    appProject: '{product}-{cluster}'
+    chartRegistry: oci://registry.example.com/charts
+    postgres:
+      instances: 1
+      storage: 2Gi
+    events:
+      url: nats://broker.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: '{product}'
+products:
+  dev: {}
+pipeline:
+  git:
+    repoURL: https://git.example.com/acme/shop-delivery.git
+  promotion:
+    pinFile: pins/{stage}.yaml
+platformDigest: 1290afd31e2d738948108b6ea073eee969566a94058eac8c16c57590026a7ca5

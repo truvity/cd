@@ -37,11 +37,26 @@ def company_product(source):
 
 
 def project_product(source):
-    """cd-company's product, less the chart source: the company's project.source."""
+    """cd-company's product, less the chart source and kind: the company's project.source."""
     product = company_product(source)
-    for key in ("repository", "chart"):
+    for key in ("repository", "chart", "kind"):
         del product["properties"][key]
+    # What a kind requires is decided by project.source.kind (KIND_RULES).
+    del product["allOf"]
     return product
+
+
+# The platform's product facts by the company's kind: a single chart takes
+# a namespace and nothing else (cd-delivery refuses the rest by name); a
+# product needs its interface and hostname.
+KIND_RULES = [{
+    "if": {
+        "required": ["project"],
+        "properties": {"project": {"required": ["source"], "properties": {"source": {"required": ["kind"], "properties": {"kind": {"const": "chart"}}}}}},
+    },
+    "then": {"properties": {"products": {"additionalProperties": {"propertyNames": {"enum": ["namespace"]}}}}},
+    "else": {"properties": {"products": {"additionalProperties": {"required": ["interface", "hostname"]}}}},
+}]
 
 
 def generated_schema(root):
@@ -118,6 +133,7 @@ def generated_project_schema(root):
         "type": "object",
         "additionalProperties": False,
         "required": ["project", "clusters", "platformDigest"],
+        "allOf": KIND_RULES,
         "properties": {
             "project": {
                 "type": "object", "additionalProperties": False,
@@ -134,6 +150,7 @@ def generated_project_schema(root):
                             "semver": chart["semver"],
                             "versionPrefix": chart["versionPrefix"],
                             "subscribeAs": chart["subscribeAs"],
+                            "kind": {"type": "string", "enum": ["product", "chart"], "description": "The kind of product, put into every cluster's product facts: product (default; <chart>, <chart>-infra, <chart>-e2e) or chart (the app ring alone, no infraChart). A static site has no chart for the Warehouse and is not accepted."},
                         },
                     },
                     "clusters": dict(names, minItems=1, description="The clusters the project runs on; each one the platform registered (clusters)."),

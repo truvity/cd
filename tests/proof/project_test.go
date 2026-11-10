@@ -68,7 +68,8 @@ func documents(t *testing.T, raw []byte) map[string]string {
 // companySlice is what cd-company is given for one cluster of a project: the
 // cluster's platform block, the project as its one service, and the
 // cluster's pin, payload and product facts under the project's name, the
-// facts with the project's chart source in them, as cd-project injects it.
+// facts with the project's chart source and kind in them, as cd-project
+// injects them.
 func companySlice(values map[string]any, cluster string) map[string]any {
 	project := values["project"].(map[string]any)
 	name := project["name"].(string)
@@ -92,6 +93,11 @@ func companySlice(values map[string]any, cluster string) map[string]any {
 		facts := maps.Clone(product.(map[string]any))
 		facts["repository"] = chart[:cut]
 		facts["chart"] = chart[cut+1:]
+		// So is the kind of product (project.source.kind, default product).
+		facts["kind"] = "product"
+		if kind, ok := project["source"].(map[string]any)["kind"]; ok {
+			facts["kind"] = kind
+		}
 		out["products"] = map[string]any{name: facts}
 	}
 	return out
