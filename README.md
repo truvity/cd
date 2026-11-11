@@ -118,11 +118,12 @@ and keeps the Kargo `Project`, the write-back credentials, the verification and
 the access, which `cd-project` never renders (see
 [the reference](docs/reference.md#cd-project)).
 
-**Company part.** A company's SRE writes, in the company's own repository, the
-value files that `cd-project` reads for each project: `project` (the source
-chart, the clusters and the stage order), `values.<cluster>` and
-`pins.<cluster>`. A company file cannot change a value the platform sets,
-because the platform seals those with `platformDigest`.
+**Company part.** A company's SRE writes, in the company's own gitops
+repository, the project file that `cd-project` reads (the source chart, the
+clusters and the stage order) and, per cluster, a values file. Kargo's
+promotion writes the pins and people do not edit them; a company file cannot
+change a value the platform sets, because the platform seals those with
+`platformDigest` (see [the reference](docs/reference.md#cd-project)).
 
 ## Consumers
 
