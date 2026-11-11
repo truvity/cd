@@ -5,7 +5,7 @@
 An installation that runs the upstream `argo-cd` or `kargo` chart today can
 move onto these with its values nested one level and no change to a single
 object in the cluster. After that, the pieces that make a delivery pipeline
-out of the two (promotion stages, health gates, cluster registration) arrive
+out of the two (promotion stages, health gates, cluster registration) are
 here as further charts and a small gate binary, each one adopted the same
 way.
 
@@ -107,10 +107,33 @@ install it only if you use Kargo verification; values under `argo-rollouts:`. Up
 or an OIDC configuration; set one of them
 (see [docs/reference.md](docs/reference.md)).
 
+## Platform part and company part
+
+**Platform part.** The platform admin installs `cd-argocd`, `cd-kargo` and
+`cd-rollouts`, registers clusters with `cd-cluster-registration`, bootstraps
+Argo CD with `genesis`, applies `deploy/pulumi/registryread`, and runs
+`cd-webhook-relay` in front of Argo CD. For each company project it renders
+one `cd-project` Application with the platform's facts as its `valuesObject`,
+and keeps the Kargo `Project`, the write-back credentials, the verification and
+the access, which `cd-project` never renders (see
+[the reference](docs/reference.md#cd-project)).
+
+**Company part.** A company's SRE writes, in the company's own repository, the
+files that `cd-project` reads for each project: `project` (the source chart, the
+clusters and the stage order), `values.<cluster>` and `pins.<cluster>`. A
+company file cannot change a value the platform sets, because the platform seals
+those with `platformDigest`. A team that runs its own Argo CD or Kargo installs
+the wrapper charts with its values nested under `argo-cd` or `kargo`, as
+[the adoption guide](docs/adoption.md) shows.
+
 ## Consumers
 
-No consumer is recorded at `v0.1.0`; a repository that adopts these charts
-adds a line here, naming the repository and the chart.
+The maintainers' platform repository consumes the charts `cd-argocd`,
+`cd-kargo`, `cd-rollouts`, `cd-cluster-registration`, `cd-webhook-relay`,
+`cd-delivery`, `cd-company`, `cd-pipeline` and `cd-project`, and the Go
+packages `genesis`, `delivery`, `appproject`, `parity`,
+`deploy/pulumi/registryread` and `chartgate`. A repository that adopts these
+charts adds a line here, naming the repository and the chart.
 
 ## Neighbours
 
@@ -142,9 +165,12 @@ the rest.
 
 ## Status
 
-`v0.1.0` ships `cd-argocd` and `cd-kargo`, and later releases add `cd-rollouts`. Each renders the upstream chart's objects
-unchanged; that is what the parity gate proves on every pull request. No
-chart in this repository sets a default of its own yet.
+Every release and its notes are on the
+[releases page](https://github.com/truvity/cd/releases); `CHANGELOG.md` lists
+each change a consumer sees. `cd-argocd`, `cd-kargo` and `cd-rollouts` render
+the upstream chart's objects unchanged; that is what the parity gate proves on
+every pull request. They set no default of their own. The other charts have no
+upstream.
 
 ## Development
 
@@ -163,8 +189,8 @@ python3 hack/company-schema.py  # refresh the adapters' composed schemas
 
 A tag `vX.Y.Z` publishes every chart at that version to
 `oci://ghcr.io/truvity/charts`, and the `promotion-gate` image as
-`ghcr.io/truvity/cd/promotion-gate:X.Y.Z`. The first release is hand-cut. Automatic
-patch releases are off until they are armed on purpose; minors and majors
+`ghcr.io/truvity/cd/promotion-gate:X.Y.Z`. Automatic patch releases are armed
+for this repository (the `v0.30.1` tag was cut that way); minors and majors
 are always manual.
 
 ## Licence
