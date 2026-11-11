@@ -119,12 +119,10 @@ the access, which `cd-project` never renders (see
 [the reference](docs/reference.md#cd-project)).
 
 **Company part.** A company's SRE writes, in the company's own repository, the
-files that `cd-project` reads for each project: `project` (the source chart, the
-clusters and the stage order), `values.<cluster>` and `pins.<cluster>`. A
-company file cannot change a value the platform sets, because the platform seals
-those with `platformDigest`. A team that runs its own Argo CD or Kargo installs
-the wrapper charts with its values nested under `argo-cd` or `kargo`, as
-[the adoption guide](docs/adoption.md) shows.
+value files that `cd-project` reads for each project: `project` (the source
+chart, the clusters and the stage order), `values.<cluster>` and
+`pins.<cluster>`. A company file cannot change a value the platform sets,
+because the platform seals those with `platformDigest`.
 
 ## Consumers
 
