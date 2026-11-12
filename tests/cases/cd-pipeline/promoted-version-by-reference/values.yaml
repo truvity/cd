@@ -1,0 +1,21 @@
+# The promoted-version check named, not rendered (`promotedVersion.objects:
+# false`): every derived Stage carries the verification that names
+# `<slug>-<stage>-promoted-version` with its `chart-version` argument, and no
+# ServiceAccount, Role, RoleBinding, ConfigMap or AnalysisTemplate is rendered
+# for it. Whoever owns the cluster the check runs on renders those, under the
+# same names; no image is needed here.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+promotedVersion:
+  objects: false
+graph:
+  upstreams:
+    prod: [dev]
+  promotedVersion: true
+projects:
+  - name: shop
+    pinKey: "pins.{stage}"
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    stageOrder: [dev, prod]

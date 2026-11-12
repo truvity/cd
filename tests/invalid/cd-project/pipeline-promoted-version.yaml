@@ -1,6 +1,9 @@
 # expect: additional properties 'promotedVersion' not allowed
-# Pipeline input that would render verification: the promoted-version check on
-# every derived Stage (AnalysisTemplate, ConfigMap, ServiceAccount, Role, RoleBinding).
+# Pipeline input that would render the promoted-version check's objects
+# (AnalysisTemplate, ConfigMap, ServiceAccount, Role, RoleBinding) here: the
+# check's own settings are not the platform's to pass a company's render. The
+# graph may turn the check on (case cd-project/verification); its objects are
+# rendered where the check runs, never here.
 project:
   name: shop
   source:
@@ -47,4 +50,8 @@ pipeline:
     pinFile: pins/{stage}.yaml
   graph:
     promotedVersion: true
+  promotedVersion:
+    objects: true
+    image: registry.example.com/tools/curl:8
+    jqImage: registry.example.com/tools/jq:1
 platformDigest: 420d3331e6813ef54a51c30510991121334a0b6fef66d108ff47ed51b9b1ffa8

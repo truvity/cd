@@ -180,6 +180,9 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 				promotion["pinKey"] = "pins.{stage}"
 			}
 			settings["promotion"] = promotion
+			// cd-project names the promoted-version check and never renders
+			// its objects: the same as cd-pipeline with objects false.
+			settings["promotedVersion"] = map[string]any{"objects": false}
 			settings["projects"] = []any{p}
 			want := documents(t, parity.Template(t, helm, "pipeline", "../../charts/cd-pipeline", settings))
 			got := map[string]string{}
@@ -239,8 +242,9 @@ func TestProjectDependenciesMatchTheirSources(t *testing.T) {
 
 // TestProjectGuardRefusesOtherKinds proves the render-time guard behind the
 // schema: with schema validation skipped, platform settings that would make
-// cd-pipeline render credentials or verification, sealed as the platform's,
-// still fail the render instead of rendering those objects.
+// cd-pipeline render credentials, sealed as the platform's, still fail the
+// render instead of rendering those objects. (Verification cannot reach the
+// guard: TestProjectVerificationIsNamedNotRendered.)
 func TestProjectGuardRefusesOtherKinds(t *testing.T) {
 	helm := parity.RequireHelm(t)
 	digest := regexp.MustCompile(`received sha256 ([0-9a-f]{64})`)
@@ -252,10 +256,6 @@ func TestProjectGuardRefusesOtherKinds(t *testing.T) {
 				"remoteKey":      "pipeline/github-app",
 				"properties":     map[string]any{"appID": "app-id", "installationID": "installation-id", "privateKey": "private-key"},
 			}
-		},
-		"verification": func(pipeline map[string]any) {
-			pipeline["graph"] = map[string]any{"promotedVersion": true}
-			pipeline["promotedVersion"] = map[string]any{"image": "registry.example.com/tools/curl:8", "jqImage": "registry.example.com/tools/jq:1"}
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -284,6 +284,75 @@ func TestProjectGuardRefusesOtherKinds(t *testing.T) {
 				t.Fatalf("the guard let the render through: %v\n%s", err, out)
 			}
 		})
+	}
+}
+
+// TestProjectVerificationIsNamedNotRendered proves that the promoted-version
+// check reaches a company's render only by name: with the platform's graph
+// turning it on, and even with platform settings that ask cd-pipeline to
+// render its objects (schema validation skipped), every Stage names
+// `<project>-<stage>-promoted-version` and the render holds none of its
+// ServiceAccount, Role, RoleBinding, ConfigMap or AnalysisTemplate.
+func TestProjectVerificationIsNamedNotRendered(t *testing.T) {
+	helm := parity.RequireHelm(t)
+	values := companyValues(t, "../cases/cd-project/full/values.yaml")
+	pipeline := parity.Map(values["pipeline"])
+	graph := parity.Map(pipeline["graph"])
+	if graph == nil {
+		graph = map[string]any{}
+		pipeline["graph"] = graph
+	}
+	graph["promotedVersion"] = true
+	pipeline["promotedVersion"] = map[string]any{"objects": true, "image": "registry.example.com/tools/curl:8", "jqImage": "registry.example.com/tools/jq:1"}
+
+	digest := regexp.MustCompile(`received sha256 ([0-9a-f]{64})`)
+	render := func() (string, error) {
+		raw, err := yaml.Marshal(values)
+		if err != nil {
+			t.Fatal(err)
+		}
+		file := filepath.Join(t.TempDir(), "values.yaml")
+		if err := os.WriteFile(file, raw, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		out, err := exec.CommandContext(t.Context(), helm, "template", "x", "../../charts/cd-project", "--skip-schema-validation", "-f", file).CombinedOutput()
+		return string(out), err
+	}
+	out, _ := render()
+	m := digest.FindStringSubmatch(out)
+	if m == nil {
+		t.Fatalf("no digest to seal with:\n%s", out)
+	}
+	values["platformDigest"] = m[1]
+	out, err := render()
+	if err != nil {
+		t.Fatalf("render: %v\n%s", err, out)
+	}
+
+	project := parity.Map(values["project"])
+	name, _ := project["name"].(string)
+	stages := 0
+	for _, doc := range strings.Split(out, "\n---") {
+		var obj map[string]any
+		if err := yaml.Unmarshal([]byte(doc), &obj); err != nil || obj == nil {
+			continue
+		}
+		switch kind, _ := obj["kind"].(string); kind {
+		case "ServiceAccount", "Role", "RoleBinding", "ConfigMap", "AnalysisTemplate":
+			t.Errorf("the render holds a %s of the check: %v", kind, parity.Map(obj["metadata"])["name"])
+		case "Stage":
+			stages++
+			stage, _ := parity.Map(obj["metadata"])["name"].(string)
+			verification := parity.Map(parity.Map(obj["spec"])["verification"])
+			want := name + "-" + stage + "-promoted-version"
+			templates := parity.List(verification["analysisTemplates"])
+			if len(templates) != 1 || parity.Map(templates[0])["name"] != want {
+				t.Errorf("Stage %s names %v, want only %s", stage, templates, want)
+			}
+		}
+	}
+	if stages == 0 {
+		t.Fatal("no Stage rendered: the proof checked nothing")
 	}
 }
 

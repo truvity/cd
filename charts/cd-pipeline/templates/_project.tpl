@@ -123,6 +123,11 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- $at := printf "%s-%s-promoted-version" $slug $s.name -}}
 {{- $ns := $v.argocd.namespace -}}
 {{- $templates = append $templates $at -}}
+{{- /* With promotedVersion.objects false the Stage only names the check: its
+       ServiceAccount, Role, RoleBinding and AnalysisTemplate are rendered by
+       whoever owns the cluster the check runs on (a platform rendering a
+       company's pipeline), under the same names. */ -}}
+{{- if ne (toString $pv.objects) "false" -}}
 {{- include "cd-pipeline.doc" (dict "apiVersion" "v1" "kind" "ServiceAccount" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $sa "ns" $name "wave" $w.config) | fromYaml)) -}}
 {{- include "cd-pipeline.doc" (dict "apiVersion" "rbac.authorization.k8s.io/v1" "kind" "Role" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $role "ns" $ns "wave" $w.config) | fromYaml) "rules" (list (dict "apiGroups" (list "argoproj.io") "resources" (list "applications") "resourceNames" $apps "verbs" (list "get")))) -}}
 {{- include "cd-pipeline.doc" (dict "apiVersion" "rbac.authorization.k8s.io/v1" "kind" "RoleBinding" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $role "ns" $ns "wave" $w.config) | fromYaml) "roleRef" (dict "apiGroup" "rbac.authorization.k8s.io" "kind" "Role" "name" $role) "subjects" (list (dict "kind" "ServiceAccount" "name" $sa "namespace" $name))) -}}
@@ -141,6 +146,7 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- include "cd-pipeline.jobCheck" (dict "root" $r "name" $at "ns" $name "metric" "promoted-version" "args" (list "chart-version") "sa" $sa "image" (required "cd-pipeline: promotedVersion.image is required" $pv.image) "command" (list "/bin/sh" "/scripts/verify-promoted-version.sh") "env" $env "mounts" $mounts "volumes" $vols "deadline" (add (int $pv.waitSeconds) $v.jobs.headroomSeconds)) -}}
 {{- end -}}
 {{- end -}}
+{{- end -}}
 
 {{- /* The end-to-end operation check: that the Promotion's sync of the end-to-end Application ran the suite hook for the promoted version and it succeeded. */ -}}
 {{- if $s.e2eApplication -}}
@@ -152,8 +158,8 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- $at := printf "%s-%s-e2e-operation" $slug $s.name -}}
 {{- $ns := $v.argocd.namespace -}}
 {{- $templates = append $templates $at -}}
-{{- /* The promoted-version check renders this ServiceAccount when it is on. */ -}}
-{{- if not $verif.promotedVersion -}}
+{{- /* The promoted-version check renders this ServiceAccount when it is on and renders its objects. */ -}}
+{{- if or (not $verif.promotedVersion) (eq (toString ($v.promotedVersion | default dict).objects) "false") -}}
 {{- include "cd-pipeline.doc" (dict "apiVersion" "v1" "kind" "ServiceAccount" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $sa "ns" $name "wave" $w.config) | fromYaml)) -}}
 {{- end -}}
 {{- include "cd-pipeline.doc" (dict "apiVersion" "rbac.authorization.k8s.io/v1" "kind" "Role" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $role "ns" $ns "wave" $w.config) | fromYaml) "rules" (list (dict "apiGroups" (list "argoproj.io") "resources" (list "applications") "resourceNames" (list $app) "verbs" (list "get")))) -}}

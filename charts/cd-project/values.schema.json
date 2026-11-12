@@ -1250,9 +1250,13 @@
               "type": "string",
               "minLength": 1,
               "description": "The Argo CD Application a derived Stage watches; tokens {stage}, {app}."
+            },
+            "promotedVersion": {
+              "type": "boolean",
+              "description": "Every derived Stage runs the promoted-version check."
             }
           },
-          "description": "The promotion graph: derived Stages never run the promoted-version check and get no access subjects here."
+          "description": "The promotion graph: with promotedVersion every derived Stage names the promoted-version check, whose objects are the platform's and never rendered here; no access subjects here."
         }
       }
     },
@@ -1380,7 +1384,8 @@
           "const": {
             "waitSeconds": 1500,
             "pollSeconds": 15,
-            "gateImage": ""
+            "gateImage": "",
+            "objects": true
           }
         },
         "metricsGate": {
