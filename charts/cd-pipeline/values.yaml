@@ -55,11 +55,17 @@ jobs:
 # by a stage that turns the check on, unless `gateImage` is set: then the check
 # runs that image's Go check (truvity/cd's promotion-gate image,
 # `/ko-app/promotion-gate promoted-version`) with no script and no jq. The
-# end-to-end operation check still needs `image` and `jqImage`.
+# end-to-end operation check still needs `image` and `jqImage`. With `objects:
+# false` a Stage still names the check (`<slug>-<stage>-promoted-version`, its
+# `chart-version` argument) but its ServiceAccount `kargo-verify-<stage>`,
+# Role and RoleBinding `kargo-verify-<project>-<stage>` and AnalysisTemplate
+# are not rendered: whoever owns the cluster the check runs on renders them
+# under those names, and no image is needed here.
 promotedVersion:
   waitSeconds: 1500
   pollSeconds: 15
   gateImage: ""
+  objects: true
 
 # The metrics gate (`stages[].verification.metricsGate`, or a derived Stage
 # that `metricsGateStages` lists): a Job that waits until the promoted version

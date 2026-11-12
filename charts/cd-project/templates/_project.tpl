@@ -88,8 +88,12 @@ Call with the chart's root context.
 {{- if not (dig "promotion" "pinKey" "" $v.pipeline) -}}
   {{- $_ := set $values.promotion "pinKey" "pins.{stage}" -}}
 {{- end -}}
-{{- /* No verification is rendered, so no script is read; Files is there so a
-       render that reached one still ends at the kinds guard. */ -}}
+{{- /* The promoted-version check, when the platform's graph turns it on, is
+       only named by the Stages: its objects are the platform's (it renders
+       them where the check runs), never this render's. No script is read;
+       Files is there so a render that reached one still ends at the kinds
+       guard. */ -}}
+{{- $_ := set $values.promotedVersion "objects" false -}}
 {{- $root := dict "Values" $values "Files" $.Files -}}
 {{- include "cd-pipeline.checkPinFile" (dict "where" "pipeline.promotion.pinFile" "file" $values.promotion.pinFile) -}}
 {{- $src := $p.source -}}

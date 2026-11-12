@@ -123,8 +123,11 @@ def generated_project_schema(root):
     git["properties"] = {"repoURL": git["properties"]["repoURL"]}
     git["description"] = "The repository a promotion writes the pin to. The write-back credentials are the platform's and are not rendered here."
     graph = copy.deepcopy(pp["graph"])
-    graph["properties"] = {key: graph["properties"][key] for key in ("upstreams", "applicationName")}
-    graph["description"] = "The promotion graph: derived Stages never run the promoted-version check and get no access subjects here."
+    graph["properties"] = {key: graph["properties"][key] for key in ("upstreams", "applicationName", "promotedVersion")}
+    graph["description"] = (
+        "The promotion graph: with promotedVersion every derived Stage names the promoted-version check, whose "
+        "objects are the platform's and never rendered here; no access subjects here."
+    )
     names = {"type": "array", "uniqueItems": True, "items": NAME}
     schema = {
         "$schema": source["$schema"],
