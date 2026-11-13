@@ -156,6 +156,21 @@ def generated_project_schema(root):
                             "kind": {"type": "string", "enum": ["product", "chart"], "description": "The kind of product, put into every cluster's product facts: product (default; <chart>, <chart>-infra, <chart>-e2e) or chart (the app ring alone, no infraChart). A static site has no chart for the Warehouse and is not accepted."},
                         },
                     },
+                    "sources": {
+                        "type": "object",
+                        "propertyNames": dict(NAME, maxLength=30, **{"not": {"const": "default"}}),
+                        "description": "Further sources of the same product, by name: each one a Warehouse of its own, <project>-<name>, and the repository the clusters that take it (pipeline.stageSources) install every ring from. `kind` and the ring charts are project.source's; the chart name must be the same.",
+                        "additionalProperties": {
+                            "type": "object", "additionalProperties": False,
+                            "required": ["chart", "semver"],
+                            "properties": {
+                                "chart": dict(chart["repoURL"], description="oci://<repository>/<chart>, with project.source.chart's <chart>: <chart>-infra and <chart>-e2e come from the same repository."),
+                                "semver": chart["semver"],
+                                "versionPrefix": chart["versionPrefix"],
+                                "subscribeAs": chart["subscribeAs"],
+                            },
+                        },
+                    },
                     "clusters": dict(names, minItems=1, description="The clusters the project runs on; each one the platform registered (clusters)."),
                     "pipeline": {
                         "type": "object", "additionalProperties": False,
@@ -164,6 +179,7 @@ def generated_project_schema(root):
                             "stageOrder": dict(names, minItems=1, description="The Stages, in order; each one a cluster of project.clusters whose pin it writes."),
                             "autoPromote": dict(names, description="Stages that promote on their own although they have an upstream."),
                             "upstreams": {"type": "object", "propertyNames": NAME, "additionalProperties": {"type": "array", "items": NAME}, "description": "Replaces pipeline.graph.upstreams for the Stages it names."},
+                            "stageSources": {"type": "object", "propertyNames": NAME, "additionalProperties": NAME, "description": "Stage -> a key of project.sources: the Warehouse the Stage takes Freight from and the repository its cluster installs from. A Stage it does not name takes project.source. A Stage and its upstream take the same source; an empty upstreams entry takes Freight straight from the Warehouse."},
                         },
                     },
                 },

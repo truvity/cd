@@ -124,6 +124,49 @@
             }
           }
         },
+        "sources": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "maxLength": 30,
+            "not": {
+              "const": "default"
+            }
+          },
+          "description": "Further sources of the same product, by name: each one a Warehouse of its own, <project>-<name>, and the repository the clusters that take it (pipeline.stageSources) install every ring from. `kind` and the ring charts are project.source's; the chart name must be the same.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "chart",
+              "semver"
+            ],
+            "properties": {
+              "chart": {
+                "type": "string",
+                "minLength": 1,
+                "description": "oci://<repository>/<chart>, with project.source.chart's <chart>: <chart>-infra and <chart>-e2e come from the same repository."
+              },
+              "semver": {
+                "type": "string",
+                "minLength": 1
+              },
+              "versionPrefix": {
+                "type": "string",
+                "description": "Written in front of the version in the pin, for a repository whose tags carry one."
+              },
+              "subscribeAs": {
+                "type": "string",
+                "enum": [
+                  "chart",
+                  "image"
+                ],
+                "description": "How the Warehouse discovers the chart. `chart` (default) is a chart subscription. `image` is an image subscription with SemVer selection and `strictSemvers: false`, for an OCI chart whose tags carry a `v` (Helm's tag listing drops them, so a chart subscription finds nothing). A leading `oci://` is dropped from `repoURL` for the subscription, the promotion steps write the discovered tag as it is (the `v` stays), and `name` and `versionPrefix` are refused."
+              }
+            }
+          }
+        },
         "clusters": {
           "type": "array",
           "uniqueItems": true,
@@ -179,6 +222,20 @@
                 }
               },
               "description": "Replaces pipeline.graph.upstreams for the Stages it names."
+            },
+            "stageSources": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                "maxLength": 63
+              },
+              "additionalProperties": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                "maxLength": 63
+              },
+              "description": "Stage -> a key of project.sources: the Warehouse the Stage takes Freight from and the repository its cluster installs from. A Stage it does not name takes project.source. A Stage and its upstream take the same source; an empty upstreams entry takes Freight straight from the Warehouse."
             }
           }
         }

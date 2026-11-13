@@ -1,0 +1,588 @@
+---
+# Source: cd-project/templates/project.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  labels:
+    acme.example.com/project: shop
+  name: dev-shop-infra
+  namespace: delivery
+spec:
+  destination:
+    name: dev
+    namespace: shop
+  project: shop-dev
+  sources:
+  - helm:
+      releaseName: shop-infra
+      valuesObject:
+        cloud:
+          accountID: EXAMPLE_ACCOUNT
+          bucket: dev-shop
+          clusterName: dev
+          iamName: dev-shop
+          region: example-region
+          serviceAccount: shop
+        events:
+          account: shop
+          maxAge: 24h
+          replicas: 1
+          storage: file
+        installName: shop
+        postgres:
+          instances: 1
+          parameters:
+            max_connections: "100"
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: shop-pg-runtime
+          runtimeRole: shop_app
+          storage: 2Gi
+        tier: primary
+    path: .
+    repoURL: oci://preview.example.com/acme/shop-infra
+    targetRevision: 1.5.0-main.7
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-project/templates/project.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  labels:
+    acme.example.com/project: shop
+  name: dev-shop
+  namespace: delivery
+spec:
+  destination:
+    name: dev
+    namespace: shop
+  project: shop-dev
+  sources:
+  - helm:
+      releaseName: shop
+      valuesObject:
+        archive:
+          bucket:
+            name: dev-shop
+            region: example-region
+        config:
+          greeting: hello
+          logLevel: debug
+        database:
+          app:
+            passwordSecret: shop-pg-runtime
+            role: shop_app
+          host: shop-infra-pg-rw
+        events:
+          url: nats://broker.dev.example.com:4222
+        installName: shop
+        route:
+          enabled: true
+          hostname: shop.dev.example.com
+        serviceAccount:
+          app:
+            name: shop
+        tier: primary
+    path: .
+    repoURL: oci://preview.example.com/acme/shop
+    targetRevision: 1.5.0-main.7
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-project/templates/project.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  labels:
+    acme.example.com/project: shop
+  name: dev-shop-e2e
+  namespace: delivery
+spec:
+  destination:
+    name: dev
+    namespace: shop
+  project: shop-dev
+  sources:
+  - helm:
+      releaseName: shop-e2e
+      valuesObject:
+        appRelease: shop
+        archive:
+          bucket: dev-shop
+          region: example-region
+        config:
+          timeout: 30s
+        database:
+          app:
+            passwordSecret: shop-pg-runtime
+            role: shop_app
+          host: shop-infra-pg-rw
+          name: shop
+          owner:
+            role: shop_owner
+        events:
+          url: nats://broker.dev.example.com:4222
+        job:
+          annotations:
+            argocd.argoproj.io/sync-options: Force=true,Replace=true
+        mode: full
+        prober:
+          enabled: true
+          interval: 30s
+        serviceAccount:
+          create: true
+          name: shop-e2e
+    path: .
+    repoURL: oci://preview.example.com/acme/shop-e2e
+    targetRevision: 1.5.0-main.7
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-project/templates/project.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: stage-shop-infra
+  namespace: delivery
+spec:
+  destination:
+    name: stage
+    namespace: shop
+  project: shop-stage
+  sources:
+  - helm:
+      releaseName: shop-infra
+      valuesObject:
+        events:
+          account: shop
+          maxAge: 24h
+          replicas: 2
+          storage: file
+        installName: shop
+        postgres:
+          instances: 2
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: shop-pg-runtime
+          runtimeRole: shop_app
+          storage: 4Gi
+        tier: primary
+    path: .
+    repoURL: oci://charts.example.com/acme/shop-infra
+    targetRevision: 1.3.2
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-project/templates/project.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: stage-shop
+  namespace: delivery
+spec:
+  destination:
+    name: stage
+    namespace: shop
+  project: shop-stage
+  sources:
+  - helm:
+      releaseName: shop
+      valuesObject:
+        availability: high
+        config:
+          greeting: hello
+        database:
+          app:
+            passwordSecret: shop-pg-runtime
+            role: shop_app
+          host: shop-infra-pg-rw
+        events:
+          url: nats://broker.stage.example.com:4222
+        installName: shop
+        route:
+          enabled: true
+          hostname: shop.stage.example.com
+        serviceAccount:
+          app:
+            name: shop
+        tier: primary
+    path: .
+    repoURL: oci://charts.example.com/acme/shop
+    targetRevision: 1.3.2
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+
+---
+# Source: cd-project/templates/project.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    acme.example.com/managed-by: platform
+  name: shop
+  namespace: shop
+spec:
+  promotionPolicies:
+  - autoPromotionEnabled: true
+    stage: dev
+  - autoPromotionEnabled: true
+    stage: stage
+
+---
+# Source: cd-project/templates/project.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false
+    argocd.argoproj.io/sync-wave: "4"
+  labels:
+    acme.example.com/managed-by: platform
+  name: dev
+  namespace: shop
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/pins/dev.yaml
+          updates:
+          - key: pins.dev
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shop): promote ${{ chartFrom(vars.chartRepo).Version }}
+            to dev'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/shop-delivery.git
+      - name: chartRepo
+        value: oci://preview.example.com/acme/shop
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: shop-preview
+    sources:
+      direct: true
+
+---
+# Source: cd-project/templates/project.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false
+    argocd.argoproj.io/sync-wave: "4"
+  labels:
+    acme.example.com/managed-by: platform
+  name: stage
+  namespace: shop
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/pins/stage.yaml
+          updates:
+          - key: pins.stage
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shop): promote ${{ chartFrom(vars.chartRepo).Version }}
+            to stage'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          labels:
+          - promotion
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shop): promote to stage'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/shop-delivery.git
+      - name: chartRepo
+        value: oci://charts.example.com/acme/shop
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: shop
+    sources:
+      direct: true
+
+---
+# Source: cd-project/templates/project.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false
+    argocd.argoproj.io/sync-wave: "4"
+  labels:
+    acme.example.com/managed-by: platform
+  name: prod
+  namespace: shop
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: stage-shop
+            namespace: delivery
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/pins/prod.yaml
+          updates:
+          - key: pins.prod
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shop): promote ${{ chartFrom(vars.chartRepo).Version }}
+            to prod'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          labels:
+          - promotion
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shop): promote to prod'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/shop-delivery.git
+      - name: chartRepo
+        value: oci://charts.example.com/acme/shop
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: shop
+    sources:
+      stages:
+      - stage
+
+
+---
+# Source: cd-project/templates/project.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    acme.example.com/managed-by: platform
+  name: shop
+  namespace: shop
+spec:
+  freightCreationPolicy: Automatic
+  interval: 5m0s
+  subscriptions:
+  - chart:
+      discoveryLimit: 20
+      repoURL: oci://charts.example.com/acme/shop
+      semverConstraint: '>=1.0.0 <2.0.0'
+
+---
+# Source: cd-project/templates/project.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    acme.example.com/managed-by: platform
+  name: shop-preview
+  namespace: shop
+spec:
+  freightCreationPolicy: Automatic
+  interval: 5m0s
+  subscriptions:
+  - chart:
+      discoveryLimit: 20
+      repoURL: oci://preview.example.com/acme/shop
+      semverConstraint: '>=1.0.0-0 <2.0.0'
