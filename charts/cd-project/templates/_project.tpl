@@ -45,10 +45,30 @@ Call with the chart's root context.
     {{- fail (printf "cd-project: project.pipeline.upstreams: %q is not a Stage of project.pipeline.stageOrder" $s) -}}
   {{- end -}}
 {{- end -}}
+{{- $sources := $p.sources | default dict -}}
+{{- $chartName := last (splitList "/" $p.source.chart) -}}
+{{- range $sn := keys $sources | sortAlpha -}}
+  {{- $sc := (index $sources $sn).chart -}}
+  {{- if not (hasPrefix "oci://" $sc) -}}
+    {{- fail (printf "cd-project: project.sources.%s.chart must be an oci:// reference (<repository>/<chart>), got %q" $sn $sc) -}}
+  {{- end -}}
+  {{- if ne (last (splitList "/" $sc)) $chartName -}}
+    {{- fail (printf "cd-project: project.sources.%s.chart must be the same chart as project.source.chart (%s) from another repository, got %q" $sn $chartName $sc) -}}
+  {{- end -}}
+{{- end -}}
+{{- $stageSources := $p.pipeline.stageSources | default dict -}}
+{{- range $s := keys $stageSources | sortAlpha -}}
+  {{- if not (has $s $order) -}}
+    {{- fail (printf "cd-project: project.pipeline.stageSources: %q is not a Stage of project.pipeline.stageOrder" $s) -}}
+  {{- end -}}
+  {{- if not (hasKey $sources (index $stageSources $s)) -}}
+    {{- fail (printf "cd-project: project.pipeline.stageSources.%s: %q is not a key of project.sources" $s (index $stageSources $s)) -}}
+  {{- end -}}
+{{- end -}}
 {{- $out := "" -}}
 {{- range $c := $p.clusters -}}
   {{- $products := dict -}}
-  {{- if hasKey $v.products $c -}}{{- $_ := set $products $name (include "cd-project.facts" (dict "cluster" $c "product" (index $v.products $c) "source" $p.source) | fromYaml) -}}{{- end -}}
+  {{- if hasKey $v.products $c -}}{{- $_ := set $products $name (include "cd-project.facts" (dict "cluster" $c "product" (index $v.products $c) "source" (include "cd-project.clusterSource" (dict "project" $p "cluster" $c) | fromYaml)) | fromYaml) -}}{{- end -}}
   {{- $pins := dict -}}
   {{- if hasKey $v.pins $c -}}{{- $_ := set $pins $name (index $v.pins $c) -}}{{- end -}}
   {{- $values := dict -}}
@@ -103,6 +123,17 @@ Call with the chart's root context.
 {{- $project := dict "name" $p.name "createProject" false "chart" $chart "stageOrder" $p.pipeline.stageOrder -}}
 {{- with $p.pipeline.autoPromote -}}{{- $_ := set $project "autoPromote" . -}}{{- end -}}
 {{- with $p.pipeline.upstreams -}}{{- $_ := set $project "upstreams" . -}}{{- end -}}
+{{- with $p.sources -}}
+  {{- $sources := dict -}}
+  {{- range $sn, $sv := . -}}
+    {{- $sc := dict "repoURL" $sv.chart "semver" $sv.semver -}}
+    {{- if hasKey $sv "versionPrefix" -}}{{- $_ := set $sc "versionPrefix" $sv.versionPrefix -}}{{- end -}}
+    {{- with $sv.subscribeAs -}}{{- $_ := set $sc "subscribeAs" . -}}{{- end -}}
+    {{- $_ := set $sources $sn $sc -}}
+  {{- end -}}
+  {{- $_ := set $project "sources" $sources -}}
+{{- end -}}
+{{- with $p.pipeline.stageSources -}}{{- $_ := set $project "stageSources" . -}}{{- end -}}
 {{- $project = include "cd-pipeline.derive" (dict "root" $root "p" $project) | fromYaml -}}
 {{- include "cd-pipeline.project" (dict "root" $root "p" $project) -}}
 {{- end -}}
@@ -158,6 +189,28 @@ As YAML for `fromYaml`. Call with (dict "cluster" .. "product" .. "source" ..).
 {{- $_ := set $facts "chart" $chart -}}
 {{- $_ := set $facts "kind" $kind -}}
 {{- toYaml $facts -}}
+{{- end -}}
+
+{{/*
+The chart source a cluster installs from: project.source, or, for a cluster
+whose Stage pipeline.stageSources names, that source laid over it (`kind` stays
+project.source's; `infraChart`, where given, moves to the source's
+repository). As YAML for `fromYaml`. Call with (dict "project" .. "cluster" ..).
+*/}}
+{{- define "cd-project.clusterSource" -}}
+{{- $p := .project -}}
+{{- $src := deepCopy $p.source -}}
+{{- with index ($p.pipeline.stageSources | default dict) .cluster -}}
+  {{- $sv := index $p.sources . -}}
+  {{- $_ := set $src "chart" $sv.chart -}}
+  {{- $_ := set $src "semver" $sv.semver -}}
+  {{- $_ := unset $src "versionPrefix" -}}
+  {{- $_ := unset $src "subscribeAs" -}}
+  {{- if hasKey $sv "versionPrefix" -}}{{- $_ := set $src "versionPrefix" $sv.versionPrefix -}}{{- end -}}
+  {{- with $sv.subscribeAs -}}{{- $_ := set $src "subscribeAs" . -}}{{- end -}}
+  {{- if hasKey $src "infraChart" -}}{{- $_ := set $src "infraChart" (printf "%s-infra" $sv.chart) -}}{{- end -}}
+{{- end -}}
+{{- toYaml $src -}}
 {{- end -}}
 
 {{/* A map laid over another: maps merge key by key, every other value replaces. As YAML for `fromYaml`. Call with (dict "base" .. "over" ..). */}}

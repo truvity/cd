@@ -87,8 +87,13 @@ func companySlice(values map[string]any, cluster string) map[string]any {
 		out["values"] = map[string]any{name: payload}
 	}
 	if product, ok := parity.Map(values["products"])[cluster]; ok {
-		// The chart source is the company's: oci://<repository>/<chart>.
+		// The chart source is the company's: oci://<repository>/<chart>, from
+		// the source the cluster's Stage takes (project.pipeline.stageSources),
+		// else project.source.
 		chart := project["source"].(map[string]any)["chart"].(string)
+		if src, ok := parity.Map(parity.Map(project["pipeline"])["stageSources"])[cluster]; ok {
+			chart = parity.Map(parity.Map(project["sources"])[src.(string)])["chart"].(string)
+		}
 		cut := strings.LastIndex(chart, "/")
 		facts := maps.Clone(product.(map[string]any))
 		facts["repository"] = chart[:cut]
@@ -163,10 +168,24 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 				}
 			}
 			p := map[string]any{"name": project["name"], "createProject": false, "chart": chart}
-			for _, key := range []string{"stageOrder", "autoPromote", "upstreams"} {
+			for _, key := range []string{"stageOrder", "autoPromote", "upstreams", "stageSources"} {
 				if v, ok := pipeline[key]; ok {
 					p[key] = v
 				}
+			}
+			if named, ok := project["sources"]; ok {
+				sources := map[string]any{}
+				for sn, sv := range parity.Map(named) {
+					s := parity.Map(sv)
+					sc := map[string]any{"repoURL": s["chart"], "semver": s["semver"]}
+					for _, key := range []string{"versionPrefix", "subscribeAs"} {
+						if v, ok := s[key]; ok {
+							sc[key] = v
+						}
+					}
+					sources[sn] = sc
+				}
+				p["sources"] = sources
 			}
 			settings := map[string]any{}
 			for k, v := range parity.Map(values["pipeline"]) {

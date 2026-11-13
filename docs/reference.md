@@ -549,12 +549,13 @@ and per project `name`, `stages` (or `stageOrder`, see [Derived Stages](#derived
 | `projects[].annotations` | Annotations on the Project object alone, for instance Kargo's `kargo.akuity.io/keep-namespace: "true"`: deleting a Project then leaves its namespace, and the Freight in it. |
 | `projects[].name`, `.slug`, `.pinKey` | The Project and namespace; the short name used in check names and tokens (default the name); the key the version is written under. |
 | `projects[].chart` | `repoURL`, `name` (index repositories), `semver`, `versionPrefix` (repositories whose tags carry one), `discoveryLimit`, `subscribeAs` (`chart`, the default, or `image`: an image subscription with SemVer selection and `strictSemvers: false`, for an OCI chart whose `v`-prefixed tags Helm's tag listing drops; `oci://` is dropped from the repository, the pin takes the discovered tag as it is, `name` and `versionPrefix` are refused). `pin` (`tag`, the default, or `digest`: the promotion writes the Freight image's digest; see [Promoting a digest](#promoting-a-digest)), `strictSemvers` (an image subscription's own setting; unset keeps `false`). |
+| `projects[].sources` | Further sources of the project's chart, by name (`[a-z0-9-]`, at most 30 characters), each with the keys of `chart`. Each one gets a Warehouse of its own, `<warehouse>-<source>`, with `warehouse`'s `interval` and `freightCreationPolicy` (`warehouse.subscriptions` is `chart`'s alone). A Stage that takes a source (`stages[].source`, or `stageSources` for derived Stages) requests that Warehouse's Freight, and its promotion and checks read the source in place of `chart`; see [Further sources](#further-sources). |
 | `projects[].warehouse` | `name` (default the project's), `interval` (`5m0s`), `freightCreationPolicy` (`Automatic`), `subscriptions`. |
 | `projects[].access.subjects[]` | `name`, `claims`, `stages`, `approve`. |
 | `projects[].access.approvers`, `.admins` | With `stageOrder`: derive one approver subject per Stage after the first, or one admin subject (see [Derived Stages](#derived-stages)). |
-| `projects[].stageOrder` and the keys it reads | `upstreams`, `autoPromote`, `applications`, `applicationsByStage`, `e2eStages`, `e2eApplication`, `metricsGateStages`: see [Derived Stages](#derived-stages). |
+| `projects[].stageOrder` and the keys it reads | `upstreams`, `autoPromote`, `stageSources`, `applications`, `applicationsByStage`, `e2eStages`, `e2eApplication`, `metricsGateStages`: see [Derived Stages](#derived-stages). |
 | `projects[].metricsGate` | The project's metrics-gate inputs: `namespace` and `release` of the workload (default the slug), `e2eJobRequired` (default true). |
-| `projects[].stages[]` | `name`, `from` (the upstream Stage; none means Freight straight from the Warehouse), `autoPromote`, `applications`, `mode` (`pr` after the first Stage, `direct` for it), `verification`, `promotionTemplate`, `e2eApplication` (an Application that runs the end-to-end suite as a sync hook: the promotion ends with an `argocd-update` step on it, `retry.timeout` `25m0s`, and a check requires the Application to pin the promoted version, its last operation to have Succeeded, with the synced revisions equal to the revisions the Application resolves to (for an OCI chart both are digests, never the version string), and the suite Job of that version to have succeeded (a Sync-hook Job of the operation with `hookPhase` `Succeeded`, or, before `e2e.hook` is on, a Healthy tracked Job); the step is refused by Kargo unless the Application carries `kargo.akuity.io/authorized-stage` for this Stage, which is `products.<name>.e2e.kargoStage` in `cd-delivery`; it is not listed in `applications`; needs `promotedVersion.image` and `.jqImage`). |
+| `projects[].stages[]` | `name`, `from` (the upstream Stage; none means Freight straight from the Warehouse), `source` (a key of `sources`; none means `chart`; a Stage and its upstream take the same one), `autoPromote`, `applications`, `mode` (`pr` after the first Stage, `direct` for it), `verification`, `promotionTemplate`, `e2eApplication` (an Application that runs the end-to-end suite as a sync hook: the promotion ends with an `argocd-update` step on it, `retry.timeout` `25m0s`, and a check requires the Application to pin the promoted version, its last operation to have Succeeded, with the synced revisions equal to the revisions the Application resolves to (for an OCI chart both are digests, never the version string), and the suite Job of that version to have succeeded (a Sync-hook Job of the operation with `hookPhase` `Succeeded`, or, before `e2e.hook` is on, a Healthy tracked Job); the step is refused by Kargo unless the Application carries `kargo.akuity.io/authorized-stage` for this Stage, which is `products.<name>.e2e.kargoStage` in `cd-delivery`; it is not listed in `applications`; needs `promotedVersion.image` and `.jqImage`). |
 
 Durations are written the way the API server stores them (`10m0s`, not `10m`):
 Argo CD compares the manifest with the stored object and a Stage whose
@@ -585,7 +586,8 @@ own `upstreams` replaces the entries it names. Then, for each Stage of
 - on the Stages `e2eStages` lists, `e2eApplication` (default `<slug>-e2e`,
   through the same name) is its end-to-end Application;
 - it runs the promoted-version check when `graph.promotedVersion` is true, and
-  the metrics gate on the Stages `metricsGateStages` lists.
+  the metrics gate on the Stages `metricsGateStages` lists;
+- it takes the source `stageSources.<stage>` names, else `chart`.
 
 The project's first Stage is the last one, in order, with no upstream.
 `access.approvers` adds one subject per Stage after the first, named
@@ -596,6 +598,22 @@ Stage and its own, and the one of the last Stage may also approve Freight.
 and approves. Subjects in `access.subjects` come first, verbatim. A project
 gives `stages` or `stageOrder`, never both, and the derived Stages render
 exactly as the same Stages spelled out would (`tests/cases/cd-pipeline/graph`).
+
+### Further sources
+
+A project may install some Stages from another repository than `chart`: preview
+builds of every commit on a development cluster, say, and releases everywhere
+else. `sources` names each further repository with the keys of `chart`, and
+each one gets a Warehouse, `<warehouse>-<source>`. A Stage takes one with
+`source` (`stageSources.<stage>` when derived): it requests that Warehouse's
+Freight, and its promotion's `vars.chartRepo`, the promoted-version check's
+`CHART_REPO` and its digest rule read the source in place of `chart`. Freight
+does not cross Warehouses, so a Stage and its upstream take the same source,
+refused at render otherwise. A Stage that takes Freight straight from a
+Warehouse other than the first's has no upstream: give it an empty
+`upstreams` entry. When a derived project names any source, such a Stage that
+is not the first of `stageOrder` promotes by pull request, as a hop would,
+rather than by a push to the branch (`tests/cases/cd-pipeline/sources`).
 
 ### Promotion
 
@@ -764,6 +782,12 @@ project:
     stageOrder: [dev, stage, prod] # each a cluster of project.clusters
     autoPromote: [dev]
     upstreams: {prod: [stage]}     # optional, over pipeline.graph.upstreams
+    stageSources: {dev: preview}   # optional: the Stage takes project.sources.preview
+  sources:                         # optional: further sources of the same chart
+    preview:
+      chart: oci://preview.example.com/charts/shop   # the same <chart>, another repository
+      semver: ">=1.0.0-0 <2.0.0"
+      # versionPrefix, subscribeAs: optional, as in source
 values:                            # values/<cluster>.yaml
   dev:
     app: {config: {greeting: hello}}
@@ -820,10 +844,24 @@ installed through its AppProjects' `sourceRepos`, not through facts.
 `static-site`, delivered by digest from a chart release of its own, has no
 chart for the Warehouse and is not a `source.kind`.
 
+`project.sources` are further sources of the same product: `chart` (the same
+`<chart>` as `source.chart`, from another repository), `semver`,
+`versionPrefix`, `subscribeAs`; `default` is not a source name. Each one is a
+Warehouse of its own, `<project>-<source>`. A cluster whose Stage
+`pipeline.stageSources` names a source installs every ring from that source's
+repository: its product facts take the source's `repository`, and
+`source.infraChart`, where given, follows it; `kind` stays `source`'s. The
+platform still decides what a cluster may install through its AppProjects'
+`sourceRepos`, so a source's repository must be one the cluster's AppProject
+allows (`tests/cases/cd-project/sources`).
+
 Refused at render: a `project.clusters` entry the platform did not register in
 `clusters`, or one without `platform.<cluster>`; a `pins` or `values` key that
 is not in `project.clusters`; a Stage that is not a cluster of the project, an
-`autoPromote` or `upstreams` Stage that is not in `stageOrder`; a cluster with
+`autoPromote`, `upstreams` or `stageSources` Stage that is not in `stageOrder`;
+a `stageSources` value that is not a key of `project.sources`; a source whose
+chart is not `oci://` or not `source.chart`'s `<chart>`; a Stage whose
+upstream takes another source; a cluster with
 no pin (`""` is dormant), a non-dormant one with no `products.<cluster>`. Ring
 payloads are held to cd-company's ownership rules by cd-company's own code: the
 fixed reserved paths, and whatever the platform sets for the cluster through

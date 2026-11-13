@@ -25,20 +25,13 @@ pipeline to another party may render it elsewhere (createProject: false). */ -}}
 {{- end -}}
 
 {{- /* Warehouse: one chart subscription unless the project lists its own. */ -}}
-{{- $subs := $wh.subscriptions -}}
-{{- if not $subs -}}
-{{- $sub := dict "repoURL" (required (printf "cd-pipeline: projects.%s.chart.repoURL is required (or warehouse.subscriptions)" $name) $repoURL) "semverConstraint" (required (printf "cd-pipeline: projects.%s.chart.semver is required" $name) $chart.semver) "discoveryLimit" ($chart.discoveryLimit | default 20) -}}
-{{- if $chartName -}}{{- $_ := set $sub "name" $chartName -}}{{- end -}}
-{{- $mode := include "cd-pipeline.chartMode" (dict "name" $name "chart" $chart) | fromYaml -}}
-{{- if $mode.image -}}
-{{- /* An OCI chart whose tags carry a `v`: Helm's tag listing drops them, so subscribe as an image. */ -}}
-{{- $sub = dict "repoURL" $mode.repo "imageSelectionStrategy" "SemVer" "strictSemvers" $mode.strict "constraint" $chart.semver "discoveryLimit" ($chart.discoveryLimit | default 20) -}}
-{{- $subs = list (dict "image" $sub) -}}
-{{- else -}}
-{{- $subs = list (dict "chart" $sub) -}}
+{{- include "cd-pipeline.warehouse" (dict "root" $r "name" $name "whName" $whName "wh" $wh "chart" $chart "subs" $wh.subscriptions "where" "chart") -}}
+{{- /* A Warehouse per further source, <warehouse>-<source>, with the same
+       interval and Freight policy; `warehouse.subscriptions` is `chart`'s alone. */ -}}
+{{- $sources := $p.sources | default dict -}}
+{{- range $sn := keys $sources | sortAlpha -}}
+{{- include "cd-pipeline.warehouse" (dict "root" $r "name" $name "whName" (printf "%s-%s" $whName $sn) "wh" $wh "chart" (index $sources $sn) "subs" list "where" (printf "sources.%s" $sn)) -}}
 {{- end -}}
-{{- end -}}
-{{- include "cd-pipeline.doc" (dict "apiVersion" "kargo.akuity.io/v1alpha1" "kind" "Warehouse" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $whName "ns" $name "wave" $w.warehouse) | fromYaml) "spec" (dict "interval" ($wh.interval | default "5m0s") "freightCreationPolicy" ($wh.freightCreationPolicy | default "Automatic") "subscriptions" $subs)) -}}
 
 {{- /* The credentials a promotion writes back with: one ExternalSecret per project namespace. */ -}}
 {{- $cred := $eff.git.credentials -}}
@@ -86,8 +79,50 @@ pipeline to another party may render it elsewhere (createProject: false). */ -}}
 {{- range $s := $p.stages -}}{{- $_ := set $stages $s.name $s -}}{{- end -}}
 {{- range $s := $p.stages -}}
 {{- if and $s.from (not (hasKey $stages $s.from)) -}}{{- fail (printf "cd-pipeline: projects.%s.stages.%s.from names %q, which is not a stage of the project" $name $s.name $s.from) -}}{{- end -}}
-{{- include "cd-pipeline.stage" (dict "root" $r "p" $p "s" $s "stages" $stages "slug" $slug "whName" $whName "eff" $eff) -}}
+{{- /* A Stage with a source takes that source's Warehouse and chart: its
+       Freight, its promotion's chart and its checks all read the project
+       map's `chart`, so the Stage is rendered with the source in its place. */ -}}
+{{- $ps := $p -}}
+{{- $sw := $whName -}}
+{{- with $s.source -}}
+{{- if not (hasKey $sources .) -}}{{- fail (printf "cd-pipeline: projects.%s.stages.%s.source: %q is not a key of sources" $name $s.name .) -}}{{- end -}}
+{{- $ps = deepCopy $p -}}
+{{- $_ := set $ps "chart" (index $sources .) -}}
+{{- $sw = printf "%s-%s" $whName . -}}
 {{- end -}}
+{{- if $s.from -}}
+{{- $us := (get $stages $s.from).source | default "" -}}
+{{- if ne ($s.source | default "") $us -}}{{- fail (printf "cd-pipeline: projects.%s.stages.%s takes source %q but its upstream %q takes %q; a Stage promotes only Freight of its own source" $name $s.name ($s.source | default "chart") $s.from ($us | default "chart")) -}}{{- end -}}
+{{- end -}}
+{{- include "cd-pipeline.stage" (dict "root" $r "p" $ps "s" $s "stages" $stages "slug" $slug "whName" $sw "eff" $eff) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+One Warehouse: a chart (or image) subscription to the chart given, unless
+`subs` lists its own. Call with (dict "root" . "name" <project> "whName" ..
+"wh" <warehouse settings> "chart" <chart map> "subs" <list> "where" <key path for messages>).
+*/}}
+{{- define "cd-pipeline.warehouse" -}}
+{{- $r := .root -}}
+{{- $w := $r.Values.waves -}}
+{{- $name := .name -}}
+{{- $chart := .chart | default dict -}}
+{{- $wh := .wh -}}
+{{- $subs := .subs -}}
+{{- if not $subs -}}
+{{- $sub := dict "repoURL" (required (printf "cd-pipeline: projects.%s.%s.repoURL is required (or warehouse.subscriptions)" $name .where) $chart.repoURL) "semverConstraint" (required (printf "cd-pipeline: projects.%s.%s.semver is required" $name .where) $chart.semver) "discoveryLimit" ($chart.discoveryLimit | default 20) -}}
+{{- if $chart.name -}}{{- $_ := set $sub "name" $chart.name -}}{{- end -}}
+{{- $mode := include "cd-pipeline.chartMode" (dict "name" $name "chart" $chart) | fromYaml -}}
+{{- if $mode.image -}}
+{{- /* An OCI chart whose tags carry a `v`: Helm's tag listing drops them, so subscribe as an image. */ -}}
+{{- $sub = dict "repoURL" $mode.repo "imageSelectionStrategy" "SemVer" "strictSemvers" $mode.strict "constraint" $chart.semver "discoveryLimit" ($chart.discoveryLimit | default 20) -}}
+{{- $subs = list (dict "image" $sub) -}}
+{{- else -}}
+{{- $subs = list (dict "chart" $sub) -}}
+{{- end -}}
+{{- end -}}
+{{- include "cd-pipeline.doc" (dict "apiVersion" "kargo.akuity.io/v1alpha1" "kind" "Warehouse" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" .whName "ns" $name "wave" $w.warehouse) | fromYaml) "spec" (dict "interval" ($wh.interval | default "5m0s") "freightCreationPolicy" ($wh.freightCreationPolicy | default "Automatic") "subscriptions" $subs)) -}}
 {{- end -}}
 
 {{/*

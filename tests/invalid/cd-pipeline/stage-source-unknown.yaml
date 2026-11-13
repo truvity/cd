@@ -1,0 +1,15 @@
+# expect: stageSources.dev: "nightly" is not a key of sources
+git:
+  repoURL: https://git.example.com/acme/environments.git
+projects:
+  - name: shop
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    sources:
+      preview:
+        repoURL: oci://preview.example.com/charts/shop
+        semver: ">=1.0.0-0 <2.0.0"
+    stageOrder: [dev]
+    stageSources:
+      dev: nightly

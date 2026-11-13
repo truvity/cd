@@ -717,6 +717,67 @@
             ],
             "description": "The chart this project delivers; the Warehouse subscribes to it."
           },
+          "sources": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+              "maxLength": 30
+            },
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "repoURL": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "The chart's name in an index repository; none for an OCI one."
+                },
+                "semver": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "versionPrefix": {
+                  "type": "string",
+                  "description": "Written in front of the version in the pin, for a repository whose tags carry one."
+                },
+                "discoveryLimit": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "subscribeAs": {
+                  "type": "string",
+                  "enum": [
+                    "chart",
+                    "image"
+                  ],
+                  "description": "How the Warehouse discovers the chart. `chart` (default) is a chart subscription. `image` is an image subscription with SemVer selection and `strictSemvers: false`, for an OCI chart whose tags carry a `v` (Helm's tag listing drops them, so a chart subscription finds nothing). A leading `oci://` is dropped from `repoURL` for the subscription, the promotion steps write the discovered tag as it is (the `v` stays), and `name` and `versionPrefix` are refused."
+                },
+                "pin": {
+                  "type": "string",
+                  "enum": [
+                    "tag",
+                    "digest"
+                  ],
+                  "description": "What the promotion writes as the pin. `tag` (default) is the discovered version or tag. `digest` is the artifact's digest (`imageFrom(...).Digest`), for an artifact that is deployed by what it is rather than by what it is called; it needs `subscribeAs: image`, refuses `versionPrefix`, `name` and any promoted-version check (there is no chart version in the Application to compare), and adds a `{tag}` token to `promotion.commitMessage` and `promotion.prTitle`."
+                },
+                "strictSemvers": {
+                  "type": "boolean",
+                  "description": "The image subscription's `strictSemvers`, with `subscribeAs: image`. Unset keeps `false`; a Warehouse whose live object has Kargo's own default (`true`) sets it, so the spec does not differ from the stored object forever."
+                }
+              },
+              "required": [
+                "repoURL",
+                "semver"
+              ],
+              "description": "A further source of the project's chart: its own Warehouse, <warehouse>-<source>, and the repository the Stages that take it promote from. The same keys as `chart`; `warehouse.subscriptions` applies to `chart` alone."
+            },
+            "description": "Further sources of the project's chart, by name. Each one gets a Warehouse of its own, <warehouse>-<source>; a Stage takes one with `source` (or `stageSources` when the Stages are derived). A Stage with no source takes `chart`."
+          },
           "warehouse": {
             "type": "object",
             "additionalProperties": false,
@@ -808,6 +869,11 @@
                   "type": "string",
                   "minLength": 1,
                   "description": "The Stage whose verified Freight this Stage promotes. Absent: the Stage takes Freight straight from the Warehouse (the project's first)."
+                },
+                "source": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "The source (a key of the project's `sources`) the Stage takes Freight from and installs from. Absent: the project's `chart`. A Stage and its upstream take the same source."
                 },
                 "autoPromote": {
                   "type": "boolean",
@@ -1030,6 +1096,14 @@
               "minLength": 1
             },
             "description": "Derived Stages that promote on their own although they have an upstream."
+          },
+          "stageSources": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Stage -> the source (a key of `sources`) it takes Freight from, for derived Stages. A Stage it does not name takes `chart`."
           },
           "applications": {
             "type": "array",

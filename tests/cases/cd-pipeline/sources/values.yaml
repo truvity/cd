@@ -1,0 +1,48 @@
+# A project with a further source: dev installs preview builds from a registry
+# of their own (Warehouse shop-preview, promoted on its own), stage takes
+# releases straight from the project's chart (Warehouse shop, no upstream, so
+# by pull request as the project's later Stage), prod takes stage's. A
+# spelled-out project names its Stages' sources itself.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+promotedVersion:
+  image: registry.example.com/tools/curl:8
+  jqImage: registry.example.com/tools/jq:1
+graph:
+  upstreams:
+    stage: [dev]
+    prod: [stage]
+  applicationName: "{stage}-{app}"
+  promotedVersion: true
+projects:
+  - name: shop
+    pinKey: shop
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    sources:
+      preview:
+        repoURL: oci://preview.example.com/charts/shop
+        semver: ">=1.0.0-0 <2.0.0"
+    stageOrder: [dev, stage, prod]
+    stageSources:
+      dev: preview
+    upstreams:
+      stage: []
+    autoPromote: [stage]
+  - name: cart
+    pinKey: cart
+    chart:
+      repoURL: oci://registry.example.com/charts/cart
+      semver: ">=1.0.0 <2.0.0"
+    sources:
+      nightly:
+        repoURL: oci://nightly.example.com/charts/cart
+        semver: ">=1.0.0-0 <2.0.0"
+        discoveryLimit: 5
+    stages:
+      - name: dev
+        source: nightly
+        applications: [dev-cart]
+      - name: prod
+        applications: [prod-cart]

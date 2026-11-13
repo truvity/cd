@@ -18,6 +18,11 @@ The rules, for each Stage of `stageOrder`, in that order:
   `<slug>-e2e`) through `graph.applicationName`.
 - verification: the promoted-version check when `graph.promotedVersion`, the
   metrics gate on the Stages `metricsGateStages` lists.
+- source: `stageSources` for the Stage (a key of `sources`), else none (the
+  project's `chart`). A Stage and its upstream take the same source. When the
+  project names any source, a Stage with no upstream that is not the first of
+  `stageOrder` promotes by pull request, like a hop: it is a later cluster fed
+  by a Warehouse of its own, not the project's first.
 - access: with `access.approvers`, one subject per Stage but the first, named
   and claimed by `graph.approvers` ({stage}, {slug}), that may promote the first
   Stage and its own and, on the last Stage, approve Freight; with
@@ -46,6 +51,24 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- if not (hasKey $upstream $st) -}}{{- $first = $st -}}{{- end -}}
 {{- end -}}
 {{- $last := last $order -}}
+{{- $srcOf := $p.stageSources | default dict -}}
+{{- $sources := $p.sources | default dict -}}
+{{- range $st := keys $srcOf | sortAlpha -}}
+{{- if not (has $st $order) -}}
+{{- fail (printf "cd-pipeline: projects.%s.stageSources: %q is not a Stage of stageOrder" $name $st) -}}
+{{- end -}}
+{{- if not (hasKey $sources (index $srcOf $st)) -}}
+{{- fail (printf "cd-pipeline: projects.%s.stageSources.%s: %q is not a key of sources" $name $st (index $srcOf $st)) -}}
+{{- end -}}
+{{- end -}}
+{{- range $st := $order -}}
+{{- if hasKey $upstream $st -}}
+{{- $u := index $upstream $st -}}
+{{- if ne (index $srcOf $st | default "") (index $srcOf $u | default "") -}}
+{{- fail (printf "cd-pipeline: projects.%s: Stage %q takes source %q but its upstream %q takes %q; a Stage promotes only Freight of its own source (give it no upstream to take it straight from its Warehouse)" $name $st (index $srcOf $st | default "chart") $u (index $srcOf $u | default "chart")) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
 {{- $appName := $g.applicationName | default "{stage}-{app}" -}}
 {{- $e2eApp := $p.e2eApplication | default (printf "%s-e2e" $slug) -}}
 {{- $stages := list -}}
@@ -57,11 +80,17 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- $s := dict "name" $st "applications" $apps -}}
 {{- if hasKey $upstream $st -}}{{- $_ := set $s "from" (index $upstream $st) -}}{{- end -}}
 {{- if or (not (hasKey $upstream $st)) (has $st $auto) -}}{{- $_ := set $s "autoPromote" true -}}{{- end -}}
+{{- $stChart := $p.chart | default dict -}}
+{{- with index $srcOf $st -}}
+{{- $_ := set $s "source" . -}}
+{{- $stChart = index $sources . -}}
+{{- end -}}
+{{- if and $sources (not (hasKey $upstream $st)) (ne $st (first $order)) -}}{{- $_ := set $s "mode" "pr" -}}{{- end -}}
 {{- if has $st ($p.e2eStages | default list) -}}
 {{- $_ := set $s "e2eApplication" (include "cd-pipeline.fill" (dict "s" $appName "tokens" (dict "stage" $st "app" $e2eApp))) -}}
 {{- end -}}
 {{- /* A digest pin has no chart version for the check to compare: the Stage omits it. */ -}}
-{{- $verif := dict "promotedVersion" (and ($g.promotedVersion | default false) (ne (($p.chart | default dict).pin | default "tag") "digest")) -}}
+{{- $verif := dict "promotedVersion" (and ($g.promotedVersion | default false) (ne ($stChart.pin | default "tag") "digest")) -}}
 {{- if has $st ($p.metricsGateStages | default list) -}}{{- $_ := set $verif "metricsGate" true -}}{{- end -}}
 {{- $_ := set $s "verification" $verif -}}
 {{- $stages = append $stages $s -}}
@@ -88,7 +117,7 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- end -}}
 {{- $_ := set $p "access" (dict "subjects" $subjects) -}}
 {{- $_ := set $p "stages" $stages -}}
-{{- range $k := list "stageOrder" "upstreams" "autoPromote" "applications" "applicationsByStage" "e2eStages" "e2eApplication" "metricsGateStages" -}}
+{{- range $k := list "stageOrder" "upstreams" "autoPromote" "stageSources" "applications" "applicationsByStage" "e2eStages" "e2eApplication" "metricsGateStages" -}}
 {{- $_ := unset $p $k -}}
 {{- end -}}
 {{- toYaml $p -}}
