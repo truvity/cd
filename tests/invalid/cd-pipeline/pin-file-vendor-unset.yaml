@@ -1,0 +1,12 @@
+# expect: promotion.pinFile names {vendor} but the project has no vendor
+git:
+  repoURL: https://git.example.com/acme/environments.git
+promotion:
+  pinFile: "pins/{vendor}/{stage}.yaml"
+projects:
+  - name: shop
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    stages:
+      - name: dev

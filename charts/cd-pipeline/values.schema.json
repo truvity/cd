@@ -146,7 +146,7 @@
         "pinFile": {
           "type": "string",
           "minLength": 1,
-          "description": "The file the pin is written to, relative to the repository; tokens {stage}, {project}, {slug}, {pinKey}."
+          "description": "The file the pin is written to, relative to the repository; tokens {stage}, {project}, {slug}, {product} (the slug), {pinKey} and, where the project gives them, {vendor} and {customer}."
         },
         "pinKey": {
           "type": "string",
@@ -408,7 +408,7 @@
         "applicationName": {
           "type": "string",
           "minLength": 1,
-          "description": "The Argo CD Application a derived Stage watches; tokens {stage}, {app}."
+          "description": "The Argo CD Application a derived Stage watches; tokens {stage}, {app}, {project}, {slug}, {product} (the slug) and, where the project gives them, {vendor} and {customer}."
         },
         "promotedVersion": {
           "type": "boolean",
@@ -496,6 +496,18 @@
             "type": "string",
             "minLength": 1,
             "description": "Names the checks and fills {slug}; default the project's name."
+          },
+          "vendor": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "maxLength": 63,
+            "description": "Who makes the product: the {vendor} token of this project's name templates (promotion.pinFile, pinKey, commitMessage, prTitle; graph.applicationName). A template that names {vendor} without it is refused."
+          },
+          "customer": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "maxLength": 63,
+            "description": "Whom this installation is for: the {customer} token, as vendor."
           },
           "pinKey": {
             "type": "string",

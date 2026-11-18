@@ -1,0 +1,10 @@
+# expect: projects/0/vendor
+git:
+  repoURL: https://git.example.com/acme/environments.git
+projects:
+  - name: shop
+    vendor: Acme Inc
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    stageOrder: [dev]

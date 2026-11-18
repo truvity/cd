@@ -14,7 +14,8 @@ The rules, for each Stage of `stageOrder`, in that order:
 - autoPromote: a Stage with no upstream, and every Stage `autoPromote` lists;
   never a Stage `noAutoPromote` lists, which is marked `noAutoPromote` instead.
 - applications: `applicationsByStage` for the Stage, else `applications`, else
-  the project's slug, each through `graph.applicationName`.
+  the project's slug, each through `graph.applicationName` ({stage}, {app},
+  and the project's tokens: cd-pipeline.projectTokens).
 - e2eApplication: on the Stages `e2eStages` lists, `e2eApplication` (default
   `<slug>-e2e`) through `graph.applicationName`.
 - verification: the promoted-version check when `graph.promotedVersion`, the
@@ -77,12 +78,14 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- end -}}
 {{- end -}}
 {{- $appName := $g.applicationName | default "{stage}-{app}" -}}
+{{- include "cd-pipeline.checkTokens" (dict "p" $p "where" "graph.applicationName" "s" $appName) -}}
+{{- $projectTokens := include "cd-pipeline.projectTokens" $p | fromYaml -}}
 {{- $e2eApp := $p.e2eApplication | default (printf "%s-e2e" $slug) -}}
 {{- $stages := list -}}
 {{- range $st := $order -}}
 {{- $apps := list -}}
 {{- range $a := (index ($p.applicationsByStage | default dict) $st | default $p.applications | default (list $slug)) -}}
-{{- $apps = append $apps (include "cd-pipeline.fill" (dict "s" $appName "tokens" (dict "stage" $st "app" $a))) -}}
+{{- $apps = append $apps (include "cd-pipeline.fill" (dict "s" $appName "tokens" (merge (dict "stage" $st "app" $a) $projectTokens))) -}}
 {{- end -}}
 {{- $s := dict "name" $st "applications" $apps -}}
 {{- if hasKey $upstream $st -}}{{- $_ := set $s "from" (index $upstream $st) -}}{{- end -}}
@@ -96,7 +99,7 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- end -}}
 {{- if and $sources (not (hasKey $upstream $st)) (ne $st (first $order)) -}}{{- $_ := set $s "mode" "pr" -}}{{- end -}}
 {{- if has $st ($p.e2eStages | default list) -}}
-{{- $_ := set $s "e2eApplication" (include "cd-pipeline.fill" (dict "s" $appName "tokens" (dict "stage" $st "app" $e2eApp))) -}}
+{{- $_ := set $s "e2eApplication" (include "cd-pipeline.fill" (dict "s" $appName "tokens" (merge (dict "stage" $st "app" $e2eApp) $projectTokens))) -}}
 {{- end -}}
 {{- /* A digest pin has no chart version for the check to compare: the Stage omits it. */ -}}
 {{- $verif := dict "promotedVersion" (and ($g.promotedVersion | default false) (ne ($stChart.pin | default "tag") "digest")) -}}

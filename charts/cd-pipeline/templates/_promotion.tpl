@@ -17,7 +17,10 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- $upstream := $s.from | default "" -}}
 {{- $mode := $s.mode | default (ternary "pr" "direct" (ne $upstream "")) -}}
 {{- $retry := dict "errorThreshold" $pr.retry.errorThreshold "timeout" $pr.retry.timeout -}}
-{{- $tokens := dict "stage" $s.name "project" $p.name "slug" .slug "pinKey" ($p.pinKey | default "") -}}
+{{- $tokens := merge (dict "stage" $s.name "pinKey" ($p.pinKey | default "")) (include "cd-pipeline.projectTokens" $p | fromYaml) -}}
+{{- range $k := list "pinFile" "pinKey" "commitMessage" "prTitle" -}}
+{{- include "cd-pipeline.checkTokens" (dict "p" $p "where" (printf "promotion.%s" $k) "s" (index $pr $k)) -}}
+{{- end -}}
 {{- $chm := include "cd-pipeline.chartMode" (dict "name" $p.name "chart" $chart) | fromYaml -}}
 {{- $from := include "cd-pipeline.chartFrom" (dict "name" $chartName "vars" true "image" $chm.image) -}}
 {{- $version := printf "${{ %s.%s }}" $from (ternary (ternary "Digest" "Tag" $chm.digest) "Version" $chm.image) -}}
