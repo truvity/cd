@@ -122,7 +122,12 @@ One Warehouse: a chart (or image) subscription to the chart given, unless
 {{- $subs = list (dict "chart" $sub) -}}
 {{- end -}}
 {{- end -}}
-{{- include "cd-pipeline.doc" (dict "apiVersion" "kargo.akuity.io/v1alpha1" "kind" "Warehouse" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" .whName "ns" $name "wave" $w.warehouse) | fromYaml) "spec" (dict "interval" ($wh.interval | default "5m0s") "freightCreationPolicy" ($wh.freightCreationPolicy | default "Automatic") "subscriptions" $subs)) -}}
+{{- $spec := dict "interval" ($wh.interval | default "5m0s") "freightCreationPolicy" ($wh.freightCreationPolicy | default "Automatic") "subscriptions" $subs -}}
+{{- /* Freight is created only when the expression holds: the main Warehouse's alone, not a further source's. */ -}}
+{{- if and (eq .where "chart") $wh.freightCreationCriteria -}}
+{{- $_ := set $spec "freightCreationCriteria" $wh.freightCreationCriteria -}}
+{{- end -}}
+{{- include "cd-pipeline.doc" (dict "apiVersion" "kargo.akuity.io/v1alpha1" "kind" "Warehouse" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" .whName "ns" $name "wave" $w.warehouse) | fromYaml) "spec" $spec) -}}
 {{- end -}}
 
 {{/*

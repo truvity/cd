@@ -804,6 +804,21 @@
                   "type": "object"
                 },
                 "description": "Replaces the chart subscription, verbatim."
+              },
+              "freightCreationCriteria": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "expression": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "A Kargo expression (expr-lang) that must be true for the Warehouse to create Freight from a discovery, for instance `imageFrom('repo-a')?.Tag == imageFrom('repo-b')?.Tag`."
+                  }
+                },
+                "required": [
+                  "expression"
+                ],
+                "description": "Kargo's `Warehouse.spec.freightCreationCriteria`, on the project's own Warehouse (`chart`); not on the Warehouses of `sources`."
               }
             }
           },

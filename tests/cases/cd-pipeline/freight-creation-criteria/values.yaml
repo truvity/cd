@@ -1,0 +1,30 @@
+# A Warehouse that subscribes to two images and creates Freight only when
+# their tags agree (Kargo's freightCreationCriteria), so the two move together.
+# `sources` keeps its own Warehouse, which does not take the expression.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+projects:
+  - name: paired
+    pinKey: paired
+    chart:
+      repoURL: oci://registry.example.com/charts/paired
+      semver: ">=1.0.0 <2.0.0"
+    sources:
+      preview:
+        repoURL: oci://registry.example.com/charts/paired
+        semver: ">=1.0.0-0 <2.0.0"
+    warehouse:
+      subscriptions:
+        - image:
+            repoURL: registry.example.com/acme/repo-a
+            imageSelectionStrategy: SemVer
+            constraint: ">=1.0.0 <2.0.0"
+        - image:
+            repoURL: registry.example.com/acme/repo-b
+            imageSelectionStrategy: SemVer
+            constraint: ">=1.0.0 <2.0.0"
+      freightCreationCriteria:
+        expression: "imageFrom('registry.example.com/acme/repo-a')?.Tag == imageFrom('registry.example.com/acme/repo-b')?.Tag"
+    stages:
+      - name: dev
+        autoPromote: true

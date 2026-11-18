@@ -5,6 +5,10 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## v0.36.0
+
+- **Added:** `cd-pipeline` `projects[].warehouse.freightCreationCriteria` (`expression`, required and non-empty), rendered as the Warehouse's `spec.freightCreationCriteria`: Kargo creates Freight from a discovery only when the expression is true, for instance `imageFrom('repo-a')?.Tag == imageFrom('repo-b')?.Tag` over two `warehouse.subscriptions`, so that the two images move together. It is set on the project's own Warehouse alone; the Warehouses of `sources` do not take it. The upstream is Kargo 1.11 (`Warehouse.spec.freightCreationCriteria`). New case `cd-pipeline/freight-creation-criteria` (golden) and fixtures `freight-criteria-empty-expression`, `freight-criteria-unknown-key`. The packaged `cd-pipeline` dependency of `cd-project` is refreshed with it (`cd-project` itself does not take the key). Unset, every existing render is byte-identical (no existing golden moves).
+
 ## v0.35.0
 
 - **Added:** `cd-pipeline` `projects[].sources`, further sources of a project's chart by name, each with the keys of `chart`. Each one renders a Warehouse of its own, `<warehouse>-<source>`, with the project's `warehouse.interval` and `freightCreationPolicy`. A Stage takes one with `stages[].source`, or, for derived Stages, `projects[].stageSources.<stage>`: it requests that Warehouse's Freight, and its promotion (`vars.chartRepo`), its promoted-version check (`CHART_REPO`) and the digest rule read the source in place of `chart`. A Stage and its upstream must take the same source (refused at render). When a derived project names any source, a Stage with no upstream that is not the first of `stageOrder` promotes by pull request rather than by a push. New case `cd-pipeline/sources` (golden) and fixtures `stage-source-unknown`, `stages-source-unknown`, `upstream-other-source`. Unset, every existing render is byte-identical (no existing golden moves).
