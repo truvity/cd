@@ -1,0 +1,51 @@
+# expect: which is not a namespace name
+# The Kargo Project is a namespace: 63 characters at most.
+project:
+  name: shop
+  source:
+    chart: oci://registry.example.com/charts/shop
+    semver: '>=1.0.0 <2.0.0'
+  clusters:
+    - dev
+  pipeline:
+    stageOrder:
+      - dev
+pins:
+  dev: 1.2.3
+values:
+  dev:
+    app:
+      config:
+        greeting: hello
+clusters:
+  - dev
+platform:
+  dev:
+    clusterName: dev
+    argocdNamespace: argocd
+    applicationPrefix: dev-
+    appProject: '{product}-{cluster}'
+    chartRegistry: oci://registry.example.com/charts
+    postgres:
+      instances: 1
+      storage: 2Gi
+    events:
+      url: nats://broker.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: '{product}'
+products:
+  dev:
+    interface: 15
+    hostname: shop.dev.example.com
+pipeline:
+  project:
+    name: cd-{vendor}-{customer}-{project}
+    vendor: a-vendor-with-a-rather-long-name
+    customer: a-customer-with-a-rather-long-name
+  git:
+    repoURL: https://git.example.com/acme/shop-delivery.git
+  promotion:
+    pinFile: pins/{stage}.yaml
+platformDigest: "cdcd453be4a617f872e780cadcefd6a789492914dcb68e3107a68a6d6d77acac"

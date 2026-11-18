@@ -173,6 +173,31 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 					p[key] = v
 				}
 			}
+			// What the platform says about the Kargo Project (pipeline.project)
+			// is the project map's own keys: the filled name with the project's
+			// name as the slug, the vendor and the customer, and the Stages
+			// either side holds back.
+			kargo := parity.Map(parity.Map(values["pipeline"])["project"])
+			held := parity.List(pipeline["noAutoPromote"])
+			for _, stage := range parity.List(kargo["noAutoPromote"]) {
+				if !slices.Contains(held, stage) {
+					held = append(held, stage)
+				}
+			}
+			if len(held) > 0 {
+				p["noAutoPromote"] = held
+			}
+			fill := []string{"{project}", project["name"].(string), "{product}", project["name"].(string)}
+			for _, key := range []string{"vendor", "customer"} {
+				if v, ok := kargo[key]; ok {
+					p[key] = v
+					fill = append(fill, "{"+key+"}", v.(string))
+				}
+			}
+			if name, ok := kargo["name"]; ok {
+				p["name"] = strings.NewReplacer(fill...).Replace(name.(string))
+				p["slug"] = project["name"]
+			}
 			if named, ok := project["sources"]; ok {
 				sources := map[string]any{}
 				for sn, sv := range parity.Map(named) {
@@ -189,7 +214,9 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 			}
 			settings := map[string]any{}
 			for k, v := range parity.Map(values["pipeline"]) {
-				settings[k] = v
+				if k != "project" { // read by cd-project, not a cd-pipeline setting
+					settings[k] = v
+				}
 			}
 			promotion := map[string]any{}
 			for k, v := range parity.Map(settings["promotion"]) {

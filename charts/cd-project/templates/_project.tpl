@@ -40,6 +40,16 @@ Call with the chart's root context.
     {{- fail (printf "cd-project: project.pipeline.autoPromote: %q is not a Stage of project.pipeline.stageOrder" $s) -}}
   {{- end -}}
 {{- end -}}
+{{- range $s := ($p.pipeline.noAutoPromote | default list) -}}
+  {{- if not (has $s $order) -}}
+    {{- fail (printf "cd-project: project.pipeline.noAutoPromote: %q is not a Stage of project.pipeline.stageOrder" $s) -}}
+  {{- end -}}
+{{- end -}}
+{{- range $s := (dig "project" "noAutoPromote" list $v.pipeline) -}}
+  {{- if not (has $s $order) -}}
+    {{- fail (printf "cd-project: pipeline.project.noAutoPromote: %q is not a Stage of project.pipeline.stageOrder" $s) -}}
+  {{- end -}}
+{{- end -}}
 {{- range $s := keys ($p.pipeline.upstreams | default dict) | sortAlpha -}}
   {{- if not (has $s $order) -}}
     {{- fail (printf "cd-project: project.pipeline.upstreams: %q is not a Stage of project.pipeline.stageOrder" $s) -}}
@@ -99,12 +109,15 @@ The project's Kargo objects: cd-pipeline's defaults with the platform's
 `pipeline` laid over them (maps merge key by key, everything else replaces),
 one project derived from `stageOrder`, `createProject: false`. The pin key
 defaults to `pins.{stage}`, the key this chart reads a cluster's pin from.
+`pipeline.project` is not a cd-pipeline setting: it is what the platform says
+about this project's Kargo Project (cd-project.kargoProject), and is taken
+out before the rest is laid over the defaults.
 Call with the chart's root context.
 */}}
 {{- define "cd-project.pipeline" -}}
 {{- $v := .Values -}}
 {{- $p := $v.project -}}
-{{- $values := include "cd-project.merge" (dict "base" (index $v "cd-pipeline") "over" $v.pipeline) | fromYaml -}}
+{{- $values := include "cd-project.merge" (dict "base" (index $v "cd-pipeline") "over" (omit $v.pipeline "project")) | fromYaml -}}
 {{- if not (dig "promotion" "pinKey" "" $v.pipeline) -}}
   {{- $_ := set $values.promotion "pinKey" "pins.{stage}" -}}
 {{- end -}}
@@ -121,7 +134,11 @@ Call with the chart's root context.
 {{- if hasKey $src "versionPrefix" -}}{{- $_ := set $chart "versionPrefix" $src.versionPrefix -}}{{- end -}}
 {{- with $src.subscribeAs -}}{{- $_ := set $chart "subscribeAs" . -}}{{- end -}}
 {{- $project := dict "name" $p.name "createProject" false "chart" $chart "stageOrder" $p.pipeline.stageOrder -}}
+{{- $project = merge (include "cd-project.kargoProject" . | fromYaml) $project -}}
 {{- with $p.pipeline.autoPromote -}}{{- $_ := set $project "autoPromote" . -}}{{- end -}}
+{{- /* Either side may hold a Stage back: the company in its own file, the
+       platform in what it seals (to quiesce a pipeline it is moving). */ -}}
+{{- with concat ($p.pipeline.noAutoPromote | default list) (dig "project" "noAutoPromote" list $v.pipeline) | uniq -}}{{- $_ := set $project "noAutoPromote" . -}}{{- end -}}
 {{- with $p.pipeline.upstreams -}}{{- $_ := set $project "upstreams" . -}}{{- end -}}
 {{- with $p.sources -}}
   {{- $sources := dict -}}
@@ -136,6 +153,41 @@ Call with the chart's root context.
 {{- with $p.pipeline.stageSources -}}{{- $_ := set $project "stageSources" . -}}{{- end -}}
 {{- $project = include "cd-pipeline.derive" (dict "root" $root "p" $project) | fromYaml -}}
 {{- include "cd-pipeline.project" (dict "root" $root "p" $project) -}}
+{{- end -}}
+
+{{/*
+What the platform says about the project's Kargo Project (`pipeline.project`),
+as the keys of cd-pipeline's project map, in YAML for `fromYaml`; an empty map
+when the platform says nothing, and the Project is then named after the
+project, as it always was.
+
+- name: the Kargo Project, and so the namespace of the Warehouse, Stages and
+  ProjectConfig: `pipeline.project.name` with {project} and {product}
+  (project.name), {vendor} and {customer} filled. With it the project's own
+  name becomes cd-pipeline's `slug`, which the Applications a Stage watches,
+  the pin key and the check names are made from, so none of those move.
+- vendor, customer: the tokens of the same names in cd-pipeline's templates.
+
+The name is the platform's alone: `pipeline` is sealed by platformDigest and
+the schema gives a company's `project` no key for it.
+Call with the chart's root context.
+*/}}
+{{- define "cd-project.kargoProject" -}}
+{{- $p := .Values.project -}}
+{{- $k := .Values.pipeline.project | default dict -}}
+{{- $out := dict -}}
+{{- range $key := list "vendor" "customer" -}}
+  {{- with index $k $key -}}{{- $_ := set $out $key . -}}{{- end -}}
+{{- end -}}
+{{- with $k.name -}}
+  {{- $name := include "cd-pipeline.fill" (dict "s" . "tokens" (merge (dict "project" $p.name "product" $p.name) $out)) -}}
+  {{- if not (regexMatch "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$" $name) -}}
+    {{- fail (printf "cd-project: pipeline.project.name %q gives %q, which is not a namespace name (lower-case letters, digits and -, at most 63; tokens {project}, {product}, and {vendor} and {customer} where pipeline.project sets them)" . $name) -}}
+  {{- end -}}
+  {{- $_ := set $out "name" $name -}}
+  {{- $_ := set $out "slug" $p.name -}}
+{{- end -}}
+{{- toYaml $out -}}
 {{- end -}}
 
 {{/*

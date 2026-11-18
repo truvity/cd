@@ -1,0 +1,81 @@
+# One installation in a namespace of its own. The platform names the Kargo Project
+# `cd-<vendor>-<customer>-<project>` (pipeline.project), so the Warehouse,
+# Stages and ProjectConfig live in the namespace cd-acme-globex-shop; it puts
+# the Applications in that namespace too (platform.<cluster>.argocdNamespace,
+# and pipeline.argocd.namespace, where the Stages look for them), each under
+# the AppProject of its Stage, `<project>-<stage>`. The project's own name
+# stays the slug: the Applications are still dev-shop and stage-shop, the pin
+# is still pins.<stage> in pins/<stage>.yaml, and the workloads still run in
+# the namespace shop. The company's files are those of cd-project/minimal on
+# two clusters: nothing in them changes for the move.
+
+# Company files.
+project:
+  name: shop
+  source:
+    chart: oci://registry.example.com/charts/shop
+    semver: ">=1.0.0 <2.0.0"
+  clusters: [dev, stage]
+  pipeline:
+    stageOrder: [dev, stage]
+pins:
+  dev: "1.4.0"
+  stage: "1.3.2"
+values:
+  dev:
+    app:
+      config:
+        greeting: hello
+
+# The platform's valuesObject.
+clusters: [dev, stage]
+platform:
+  dev:
+    clusterName: dev
+    argocdNamespace: cd-acme-globex-shop
+    applicationPrefix: "dev-"
+    appProject: "{product}-{cluster}"
+    chartRegistry: oci://registry.example.com/charts
+    postgres: {instances: 1, storage: 2Gi}
+    events:
+      url: nats://broker.dev.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: "{product}"
+  stage:
+    clusterName: stage
+    argocdNamespace: cd-acme-globex-shop
+    applicationPrefix: "stage-"
+    appProject: "{product}-{cluster}"
+    chartRegistry: oci://registry.example.com/charts
+    postgres: {instances: 1, storage: 2Gi}
+    events:
+      url: nats://broker.stage.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: "{product}"
+products:
+  dev:
+    interface: 15
+    hostname: shop.dev.example.com
+  stage:
+    interface: 15
+    hostname: shop.stage.example.com
+pipeline:
+  project:
+    name: "cd-{vendor}-{customer}-{project}"
+    vendor: acme
+    customer: globex
+  argocd:
+    namespace: cd-acme-globex-shop
+  git:
+    repoURL: https://git.example.com/acme/shop-delivery.git
+  promotion:
+    pinFile: "pins/{stage}.yaml"
+    commitMessage: "chore({product}): promote {version} to {stage} for {customer}"
+  graph:
+    upstreams:
+      stage: [dev]
+platformDigest: "67c4ae474a46c1ffb7b3717cb7bf431a0cecb335ca7019ef018972dc2692677a"
