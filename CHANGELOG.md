@@ -5,6 +5,10 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## v0.37.0
+
+- **Added:** `cd-pipeline` `projects[].noAutoPromote`, the derived Stages that do not promote on their own; it wins over `autoPromote` and over the rule that a Stage with no upstream does, and a name that is not a Stage of `stageOrder` is refused. Until now a derived Stage with no upstream always promoted on its own, so a pipeline could not be held still while a project moves to another Kargo Project. The Stage is written into the `ProjectConfig` with `autoPromotionEnabled: false` rather than left out, so a ProjectConfig an earlier render left behind cannot keep it promoting; a Stage spelled out takes `stages[].noAutoPromote: true` for the same. An explicit `stages[].autoPromote: false` renders as before (no entry). New case `cd-pipeline/no-auto-promote` (golden) and fixture `no-auto-promote-unknown-stage`. Unset, every existing render is byte-identical (no existing golden moves).
+
 ## v0.36.0
 
 - **Added:** `cd-pipeline` `projects[].warehouse.freightCreationCriteria` (`expression`, required and non-empty), rendered as the Warehouse's `spec.freightCreationCriteria`: Kargo creates Freight from a discovery only when the expression is true, for instance `imageFrom('repo-a')?.Tag == imageFrom('repo-b')?.Tag` over two `warehouse.subscriptions`, so that the two images move together. It is set on the project's own Warehouse alone; the Warehouses of `sources` do not take it. The upstream is Kargo 1.11 (`Warehouse.spec.freightCreationCriteria`). New case `cd-pipeline/freight-creation-criteria` (golden) and fixtures `freight-criteria-empty-expression`, `freight-criteria-unknown-key`. The packaged `cd-pipeline` dependency of `cd-project` is refreshed with it (`cd-project` itself does not take the key). Unset, every existing render is byte-identical (no existing golden moves).

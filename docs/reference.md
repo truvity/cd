@@ -553,9 +553,9 @@ and per project `name`, `stages` (or `stageOrder`, see [Derived Stages](#derived
 | `projects[].warehouse` | `name` (default the project's), `interval` (`5m0s`), `freightCreationPolicy` (`Automatic`), `subscriptions`, `freightCreationCriteria`. `freightCreationCriteria.expression` (required, non-empty) is rendered verbatim as the Warehouse's `spec.freightCreationCriteria`: Kargo creates Freight from a discovery only when the expression is true, for instance `imageFrom('repo-a')?.Tag == imageFrom('repo-b')?.Tag` over two `subscriptions`, so the two images move together. It applies to the project's own Warehouse alone, not to the Warehouses of `sources`; needs a Kargo that supports it (1.11 does). Unset, nothing is rendered (`tests/cases/cd-pipeline/freight-creation-criteria`). |
 | `projects[].access.subjects[]` | `name`, `claims`, `stages`, `approve`. |
 | `projects[].access.approvers`, `.admins` | With `stageOrder`: derive one approver subject per Stage after the first, or one admin subject (see [Derived Stages](#derived-stages)). |
-| `projects[].stageOrder` and the keys it reads | `upstreams`, `autoPromote`, `stageSources`, `applications`, `applicationsByStage`, `e2eStages`, `e2eApplication`, `metricsGateStages`: see [Derived Stages](#derived-stages). |
+| `projects[].stageOrder` and the keys it reads | `upstreams`, `autoPromote`, `noAutoPromote`, `stageSources`, `applications`, `applicationsByStage`, `e2eStages`, `e2eApplication`, `metricsGateStages`: see [Derived Stages](#derived-stages). |
 | `projects[].metricsGate` | The project's metrics-gate inputs: `namespace` and `release` of the workload (default the slug), `e2eJobRequired` (default true). |
-| `projects[].stages[]` | `name`, `from` (the upstream Stage; none means Freight straight from the Warehouse), `source` (a key of `sources`; none means `chart`; a Stage and its upstream take the same one), `autoPromote`, `applications`, `mode` (`pr` after the first Stage, `direct` for it), `verification`, `promotionTemplate`, `e2eApplication` (an Application that runs the end-to-end suite as a sync hook: the promotion ends with an `argocd-update` step on it, `retry.timeout` `25m0s`, and a check requires the Application to pin the promoted version, its last operation to have Succeeded, with the synced revisions equal to the revisions the Application resolves to (for an OCI chart both are digests, never the version string), and the suite Job of that version to have succeeded (a Sync-hook Job of the operation with `hookPhase` `Succeeded`, or, before `e2e.hook` is on, a Healthy tracked Job); the step is refused by Kargo unless the Application carries `kargo.akuity.io/authorized-stage` for this Stage, which is `products.<name>.e2e.kargoStage` in `cd-delivery`; it is not listed in `applications`; needs `promotedVersion.image` and `.jqImage`). |
+| `projects[].stages[]` | `name`, `from` (the upstream Stage; none means Freight straight from the Warehouse), `source` (a key of `sources`; none means `chart`; a Stage and its upstream take the same one), `autoPromote`, `noAutoPromote` (the ProjectConfig names the Stage with `autoPromotionEnabled: false`, over `autoPromote`), `applications`, `mode` (`pr` after the first Stage, `direct` for it), `verification`, `promotionTemplate`, `e2eApplication` (an Application that runs the end-to-end suite as a sync hook: the promotion ends with an `argocd-update` step on it, `retry.timeout` `25m0s`, and a check requires the Application to pin the promoted version, its last operation to have Succeeded, with the synced revisions equal to the revisions the Application resolves to (for an OCI chart both are digests, never the version string), and the suite Job of that version to have succeeded (a Sync-hook Job of the operation with `hookPhase` `Succeeded`, or, before `e2e.hook` is on, a Healthy tracked Job); the step is refused by Kargo unless the Application carries `kargo.akuity.io/authorized-stage` for this Stage, which is `products.<name>.e2e.kargoStage` in `cd-delivery`; it is not listed in `applications`; needs `promotedVersion.image` and `.jqImage`). |
 
 Durations are written the way the API server stores them (`10m0s`, not `10m`):
 Argo CD compares the manifest with the stored object and a Stage whose
@@ -580,7 +580,7 @@ own `upstreams` replaces the entries it names. Then, for each Stage of
 - its `from` is the first of its candidates that is also a Stage of the
   project; with none it takes Freight straight from the Warehouse;
 - it promotes on its own when it has no upstream, or when the project's
-  `autoPromote` lists it;
+  `autoPromote` lists it, unless the project's `noAutoPromote` lists it (below);
 - it watches `applicationsByStage.<stage>`, else `applications`, else the
   slug, each named through `graph.applicationName` (tokens `{stage}`, `{app}`);
 - on the Stages `e2eStages` lists, `e2eApplication` (default `<slug>-e2e`,
@@ -598,6 +598,17 @@ Stage and its own, and the one of the last Stage may also approve Freight.
 and approves. Subjects in `access.subjects` come first, verbatim. A project
 gives `stages` or `stageOrder`, never both, and the derived Stages render
 exactly as the same Stages spelled out would (`tests/cases/cd-pipeline/graph`).
+
+`noAutoPromote` lists the Stages that do not promote on their own. It wins
+over both rules above, so it is how a pipeline is held still: while a project
+moves to another Kargo Project, say, and only one of the two may write a pin.
+A name that is not a Stage of `stageOrder` is refused. The Stage is then
+written into the `ProjectConfig` with `autoPromotionEnabled: false` instead of
+being left out, so the object stays and says so: a ProjectConfig that an
+earlier render left behind (`Prune=false`) cannot keep the Stage promoting.
+With every Stage held, the ProjectConfig holds only such entries. A Stage
+spelled out takes `noAutoPromote: true` for the same
+(`tests/cases/cd-pipeline/no-auto-promote`).
 
 ### Further sources
 

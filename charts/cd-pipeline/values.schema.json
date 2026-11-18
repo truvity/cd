@@ -894,6 +894,10 @@
                   "type": "boolean",
                   "description": "Promote new Freight without waiting for a person."
                 },
+                "noAutoPromote": {
+                  "type": "boolean",
+                  "description": "The ProjectConfig names the Stage with autoPromotionEnabled false, over `autoPromote`: what a derived Stage that the project's `noAutoPromote` lists is marked with."
+                },
                 "applications": {
                   "type": "array",
                   "items": {
@@ -1111,6 +1115,14 @@
               "minLength": 1
             },
             "description": "Derived Stages that promote on their own although they have an upstream."
+          },
+          "noAutoPromote": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Derived Stages that do not promote on their own, whatever `autoPromote` and the no-upstream rule say; each one a Stage of stageOrder. The ProjectConfig names them with autoPromotionEnabled false."
           },
           "stageSources": {
             "type": "object",
