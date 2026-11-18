@@ -330,19 +330,31 @@
           },
           "applicationPrefix": {
             "type": "string",
-            "description": "Prepended to every Application's name (empty is allowed)."
+            "description": "Prepended to every Application's name (empty is allowed); accepts {vendor} and {customer} where the platform gives them."
           },
           "appProject": {
             "type": "string",
             "minLength": 1,
-            "description": "The AppProject every Application runs under, with {product} and {cluster} tokens."
+            "description": "The AppProject every Application runs under, with {product} and {cluster} tokens and, where the platform gives them, {vendor} and {customer}."
+          },
+          "vendor": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "maxLength": 63,
+            "description": "Who makes the products of this installation: the {vendor} token of appProject, applicationPrefix and applicationLabels. One of them naming {vendor} without it is refused."
+          },
+          "customer": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "maxLength": 63,
+            "description": "Whom this installation is for: the {customer} token, as vendor."
           },
           "applicationLabels": {
             "type": "object",
             "additionalProperties": {
               "type": "string"
             },
-            "description": "Labels on every Application; values accept the {product} and {cluster} tokens."
+            "description": "Labels on every Application; values accept the {product} and {cluster} tokens and, where the platform gives them, {vendor} and {customer}."
           },
           "waves": {
             "type": "object",
