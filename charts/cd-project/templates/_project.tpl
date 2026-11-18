@@ -165,7 +165,8 @@ project, as it always was.
   ProjectConfig: `pipeline.project.name` with {project} and {product}
   (project.name), {vendor} and {customer} filled. With it the project's own
   name becomes cd-pipeline's `slug`, which the Applications a Stage watches,
-  the pin key and the check names are made from, so none of those move.
+  the pin key and the check names are made from, so none of those move. The
+  Warehouse keeps the project's own name too.
 - vendor, customer: the tokens of the same names in cd-pipeline's templates.
 
 The name is the platform's alone: `pipeline` is sealed by platformDigest and
@@ -186,6 +187,8 @@ Call with the chart's root context.
   {{- end -}}
   {{- $_ := set $out "name" $name -}}
   {{- $_ := set $out "slug" $p.name -}}
+  {{- /* The Warehouse keeps the project's own name: the Project is renamed, the product is not. */ -}}
+  {{- $_ := set $out "warehouse" (dict "name" $p.name) -}}
 {{- end -}}
 {{- toYaml $out -}}
 {{- end -}}

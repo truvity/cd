@@ -270,7 +270,7 @@ spec:
   requestedFreight:
   - origin:
       kind: Warehouse
-      name: cd-acme-globex-shop
+      name: shop
     sources:
       direct: true
 
@@ -362,7 +362,7 @@ spec:
   requestedFreight:
   - origin:
       kind: Warehouse
-      name: cd-acme-globex-shop
+      name: shop
     sources:
       stages:
       - dev
@@ -375,7 +375,7 @@ kind: Warehouse
 metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "1"
-  name: cd-acme-globex-shop
+  name: shop
   namespace: cd-acme-globex-shop
 spec:
   freightCreationPolicy: Automatic
