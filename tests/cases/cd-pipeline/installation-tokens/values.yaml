@@ -1,0 +1,36 @@
+# A project that names its vendor and customer. The Kargo Project is
+# cd-acme-globex-shop and the slug shop: the Applications the Stages watch
+# and the pin are named from the slug and the customer ({product} is the
+# slug), so one repository can hold the pins of several installations. The
+# second project has no vendor or customer, so it lays its own pin file and
+# wording over the release's, which name them, and spells its Stage out (the
+# graph's Application name is not for it).
+git:
+  repoURL: https://git.example.com/acme/environments.git
+promotion:
+  pinFile: "pins/{vendor}/{customer}/{stage}.yaml"
+  pinKey: "pins.{product}"
+  commitMessage: "chore({slug}): promote {version} to {stage} for {customer}"
+graph:
+  upstreams:
+    stage: [dev]
+  applicationName: "{stage}-{customer}-{app}"
+projects:
+  - name: cd-acme-globex-shop
+    slug: shop
+    vendor: acme
+    customer: globex
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    stageOrder: [dev, stage]
+  - name: web
+    promotion:
+      pinFile: "pins/{project}/{stage}.yaml"
+      commitMessage: "chore({project}): promote {version} to {stage}"
+    chart:
+      repoURL: oci://registry.example.com/charts/web
+      semver: ">=1.0.0 <2.0.0"
+    stages:
+      - name: dev
+        applications: [dev-web]

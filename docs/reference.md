@@ -534,7 +534,7 @@ and per project `name`, `stages` (or `stageOrder`, see [Derived Stages](#derived
 | --- | --- |
 | `git.repoURL` | The repository a promotion writes the new pin to. |
 | `git.credentials` | `secretStoreRef`, `remoteKey` and `properties` (`appID`, `installationID`, `privateKey`) of a GitHub App; renders an `ExternalSecret` per project namespace, `secretName` (default `kargo-git-writeback`), `refreshInterval` (default `1h`). |
-| `promotion.*` | What a promotion writes: `branch`, `pinFile` and `pinKey` (tokens `{stage}`, `{project}`, `{slug}`, `{pinKey}`), `commitMessage` (also `{version}`), `prTitle`, `prLabels`, `provider`, and the `retry` and `gate` budgets. All have neutral defaults. |
+| `promotion.*` | What a promotion writes: `branch`, `pinFile` and `pinKey` (tokens `{stage}`, `{project}`, `{slug}`, `{product}`, `{vendor}`, `{customer}`, `{pinKey}`; see [Project tokens](#project-tokens)), `commitMessage` (also `{version}`), `prTitle`, `prLabels`, `provider`, and the `retry` and `gate` budgets. All have neutral defaults. |
 | `projects[].git` | A per-project override of `git`: `repoURL` replaces the release's, and `credentials` replaces the release's `git.credentials` for this project's namespace (`false` renders no `ExternalSecret` for it). A project without it renders exactly as before. See [Per-project git and promotion](#per-project-git-and-promotion). |
 | `projects[].promotion` | A per-project override of `promotion`, with the same keys: what the project sets replaces the release's value, except that `retry` and `gate` merge key by key. |
 | `waves` | The Argo CD sync-wave of each kind of object: `project`, `warehouse`, `credentials`, `config`, `stage` (0 to 4). |
@@ -548,6 +548,7 @@ and per project `name`, `stages` (or `stageOrder`, see [Derived Stages](#derived
 | `projects[].createProject` | `true` (default) renders the project's `Project`. `false` renders none and everything else of the project as before, in its namespace: for an installation where one party owns the cluster-scoped Project (and so the namespace) and another owns the Warehouse, Stages, access and credentials in it. With `argocd.namespace` set, the verification's Roles read Applications from that namespace. `annotations` are refused with it (`tests/cases/cd-pipeline/no-project`). |
 | `projects[].annotations` | Annotations on the Project object alone, for instance Kargo's `kargo.akuity.io/keep-namespace: "true"`: deleting a Project then leaves its namespace, and the Freight in it. |
 | `projects[].name`, `.slug`, `.pinKey` | The Project and namespace; the short name used in check names and tokens (default the name); the key the version is written under. |
+| `projects[].vendor`, `.customer` | Who makes the product and whom this installation is for: the `{vendor}` and `{customer}` tokens of the project's name templates. Optional; see [Project tokens](#project-tokens). |
 | `projects[].chart` | `repoURL`, `name` (index repositories), `semver`, `versionPrefix` (repositories whose tags carry one), `discoveryLimit`, `subscribeAs` (`chart`, the default, or `image`: an image subscription with SemVer selection and `strictSemvers: false`, for an OCI chart whose `v`-prefixed tags Helm's tag listing drops; `oci://` is dropped from the repository, the pin takes the discovered tag as it is, `name` and `versionPrefix` are refused). `pin` (`tag`, the default, or `digest`: the promotion writes the Freight image's digest; see [Promoting a digest](#promoting-a-digest)), `strictSemvers` (an image subscription's own setting; unset keeps `false`). |
 | `projects[].sources` | Further sources of the project's chart, by name (`[a-z0-9-]`, at most 30 characters), each with the keys of `chart`. Each one gets a Warehouse of its own, `<warehouse>-<source>`, with `warehouse`'s `interval` and `freightCreationPolicy` (`warehouse.subscriptions` is `chart`'s alone). A Stage that takes a source (`stages[].source`, or `stageSources` for derived Stages) requests that Warehouse's Freight, and its promotion and checks read the source in place of `chart`; see [Further sources](#further-sources). |
 | `projects[].warehouse` | `name` (default the project's), `interval` (`5m0s`), `freightCreationPolicy` (`Automatic`), `subscriptions`, `freightCreationCriteria`. `freightCreationCriteria.expression` (required, non-empty) is rendered verbatim as the Warehouse's `spec.freightCreationCriteria`: Kargo creates Freight from a discovery only when the expression is true, for instance `imageFrom('repo-a')?.Tag == imageFrom('repo-b')?.Tag` over two `subscriptions`, so the two images move together. It applies to the project's own Warehouse alone, not to the Warehouses of `sources`; needs a Kargo that supports it (1.11 does). Unset, nothing is rendered (`tests/cases/cd-pipeline/freight-creation-criteria`). |
@@ -582,7 +583,8 @@ own `upstreams` replaces the entries it names. Then, for each Stage of
 - it promotes on its own when it has no upstream, or when the project's
   `autoPromote` lists it, unless the project's `noAutoPromote` lists it (below);
 - it watches `applicationsByStage.<stage>`, else `applications`, else the
-  slug, each named through `graph.applicationName` (tokens `{stage}`, `{app}`);
+  slug, each named through `graph.applicationName` (tokens `{stage}`, `{app}`
+  and the [project tokens](#project-tokens));
 - on the Stages `e2eStages` lists, `e2eApplication` (default `<slug>-e2e`,
   through the same name) is its end-to-end Application;
 - it runs the promoted-version check when `graph.promotedVersion` is true, and
@@ -609,6 +611,32 @@ earlier render left behind (`Prune=false`) cannot keep the Stage promoting.
 With every Stage held, the ProjectConfig holds only such entries. A Stage
 spelled out takes `noAutoPromote: true` for the same
 (`tests/cases/cd-pipeline/no-auto-promote`).
+
+### Project tokens
+
+Every name template of a project takes the project's tokens: `{project}` (its
+`name`, the Kargo Project), `{slug}` and `{product}` (its `slug`; `{product}`
+is the word `cd-delivery`'s templates use for the same thing, so one spelling
+serves both charts), and `{vendor}` and `{customer}` where the project sets
+`vendor` and `customer`. They are filled in `promotion.pinFile`, `pinKey`,
+`commitMessage` and `prTitle` (the release's or the project's own) and in
+`graph.applicationName`. So a project whose Kargo Project is named for its
+installation keeps short names everywhere else:
+
+```yaml
+promotion: {pinFile: "pins/{customer}/{stage}.yaml"}
+graph: {applicationName: "{stage}-{customer}-{app}"}
+projects:
+  - name: cd-acme-globex-shop    # the Project and its namespace
+    slug: shop                   # {slug}, {product}: checks, Applications, pin
+    vendor: acme
+    customer: globex
+```
+
+A template that names `{vendor}` or `{customer}` for a project that does not
+set it is refused, not rendered with the token left in a name or a pin key; a
+project without them lays its own `promotion` over such a release
+(`tests/cases/cd-pipeline/installation-tokens`).
 
 ### Further sources
 

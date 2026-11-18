@@ -1209,7 +1209,7 @@
             "pinFile": {
               "type": "string",
               "minLength": 1,
-              "description": "The file the pin is written to, relative to the repository; tokens {stage}, {project}, {slug}, {pinKey}."
+              "description": "The file the pin is written to, relative to the repository; tokens {stage}, {project}, {slug}, {product} (the slug), {pinKey} and, where the project gives them, {vendor} and {customer}."
             },
             "pinKey": {
               "type": "string",
@@ -1306,7 +1306,7 @@
             "applicationName": {
               "type": "string",
               "minLength": 1,
-              "description": "The Argo CD Application a derived Stage watches; tokens {stage}, {app}."
+              "description": "The Argo CD Application a derived Stage watches; tokens {stage}, {app}, {project}, {slug}, {product} (the slug) and, where the project gives them, {vendor} and {customer}."
             },
             "promotedVersion": {
               "type": "boolean",

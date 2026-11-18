@@ -10,6 +10,34 @@ Replace the {token}s of a string. Call with (dict "s" <string> "tokens" <map>).
 {{- end -}}
 
 {{/*
+The tokens a project brings to every name template: {project} (its name),
+{slug} and {product} (its slug; {product} is the word cd-delivery's templates
+use for the same thing), and {vendor} and {customer} where the project gives
+them. As YAML for `fromYaml`. Call with the project map.
+*/}}
+{{- define "cd-pipeline.projectTokens" -}}
+{{- $slug := .slug | default .name -}}
+{{- $t := dict "project" .name "slug" $slug "product" $slug -}}
+{{- range $k := list "vendor" "customer" -}}
+{{- with index $ $k -}}{{- $_ := set $t $k . -}}{{- end -}}
+{{- end -}}
+{{- toYaml $t -}}
+{{- end -}}
+
+{{/*
+A template may name {vendor} or {customer} only when the project gives it: a
+token left as written would become part of a name or of a pin key.
+Call with (dict "p" <project map> "where" <key path for the message> "s" <template>).
+*/}}
+{{- define "cd-pipeline.checkTokens" -}}
+{{- range $k := list "vendor" "customer" -}}
+{{- if and (contains (printf "{%s}" $k) (toString $.s)) (not (index $.p $k)) -}}
+{{- fail (printf "cd-pipeline: projects.%s: %s names {%s} but the project has no %s" $.p.name $.where $k $k) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 The metadata of one object, as YAML for `fromYaml`: name, namespace when the
 object has one, the sync-wave annotation, the chart-wide annotations, any further
 annotations of the object and the chart-wide labels. Call with (dict "root" . "name" .. "ns" .. "wave" .. "annotations" ..).

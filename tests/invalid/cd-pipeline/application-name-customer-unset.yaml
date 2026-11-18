@@ -1,0 +1,12 @@
+# expect: graph.applicationName names {customer} but the project has no customer
+git:
+  repoURL: https://git.example.com/acme/environments.git
+graph:
+  applicationName: "{stage}-{customer}-{app}"
+projects:
+  - name: shop
+    vendor: acme
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    stageOrder: [dev]
