@@ -254,7 +254,8 @@ required below must be present, and a key the chart does not read is refused.
 | --- | --- |
 | `platform.clusterName` (required) | The destination cluster's name in Argo CD; the `{cluster}` token. |
 | `platform.argocdNamespace`, `.applicationPrefix` (required) | Where the Applications live, and what their names start with (the prefix may be empty). |
-| `platform.appProject` (required) | The AppProject each Application runs under, with `{product}` and `{cluster}` tokens. |
+| `platform.appProject` (required) | The AppProject each Application runs under, with `{product}` and `{cluster}` tokens (and `{vendor}`, `{customer}`, below). |
+| `platform.vendor`, `.customer` | Who makes the products of this installation and whom it is for: the `{vendor}` and `{customer}` tokens of `appProject`, `applicationPrefix` and `applicationLabels`, and of nothing else. Both optional; one of the three naming a token the platform gives no value for is refused (`tests/cases/cd-delivery/installation-tokens`). |
 | `platform.applicationLabels` | Labels on every Application; values take the same tokens. |
 | `platform.waves` (deprecated) | Accepted and ignored since v0.10.0; Applications carry no sync-wave. Drop it. |
 | `platform.chartRegistry` | The base the charts are published under; a product may name its own `repository`. |

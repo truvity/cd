@@ -19,6 +19,23 @@ Call with (dict "s" <string> "product" <string> "cluster" <string> "slug" <strin
 {{- end -}}
 
 {{/*
+Replace the {vendor} and {customer} tokens of an Application's own names (its
+AppProject, name prefix and labels) with platform.vendor and platform.customer.
+A token the platform gives no value for is refused: left as written it would
+become part of a name. Call with (dict "s" <string> "plat" <platform map>
+"what" <path for the message>).
+*/}}
+{{- define "cd-delivery.fillInstallation" -}}
+{{- $s := .s -}}
+{{- range $k := list "vendor" "customer" -}}
+{{- if contains (printf "{%s}" $k) $s -}}
+{{- $s = replace (printf "{%s}" $k) (required (printf "cd-delivery: %s names {%s} but platform.%s is not set" $.what $k $k) (index $.plat $k)) $s -}}
+{{- end -}}
+{{- end -}}
+{{- $s -}}
+{{- end -}}
+
+{{/*
 Refuse a key this chart does not read. The chart's values.schema.json says the
 same when the chart is installed on its own; this is the same rule for a
 caller that hands the Application template its input directly (see

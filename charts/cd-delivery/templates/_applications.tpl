@@ -18,7 +18,7 @@ that passes its own dict gets the same refusal of an unknown key from
 {{- $products := .products | default dict -}}
 {{- $docs := list -}}
 {{- if $products -}}
-{{- include "cd-delivery.assertKeys" (dict "what" "platform" "got" $plat "allowed" (list "tier" "finalizer" "sync" "syncRetry" "clusterName" "argocdNamespace" "applicationPrefix" "applicationSuffixes" "appProject" "applicationLabels" "waves" "chartRegistry" "cloud" "postgres" "events" "database" "identity" "telemetry" "e2e" "availability" "alerts" "dashboards" "staticSite")) -}}
+{{- include "cd-delivery.assertKeys" (dict "what" "platform" "got" $plat "allowed" (list "tier" "finalizer" "sync" "syncRetry" "clusterName" "argocdNamespace" "applicationPrefix" "applicationSuffixes" "appProject" "vendor" "customer" "applicationLabels" "waves" "chartRegistry" "cloud" "postgres" "events" "database" "identity" "telemetry" "e2e" "availability" "alerts" "dashboards" "staticSite")) -}}
 {{- range $name := (keys $products | sortAlpha) -}}
 {{- $p := get $products $name -}}
 {{- $kind := $p.kind | default "product" -}}
@@ -180,11 +180,11 @@ ring composed. Call with (dict "ctx" <product ctx> "ring" infra|app|e2e
 {{- $cluster := required "cd-delivery: platform.clusterName is required" $plat.clusterName -}}
 {{- $labels := dict -}}
 {{- range $k, $v := ($plat.applicationLabels | default dict) -}}
-{{- $_ := set $labels $k (include "cd-delivery.fill" (dict "s" $v "product" $name "cluster" $cluster)) -}}
+{{- $_ := set $labels $k (include "cd-delivery.fillInstallation" (dict "plat" $plat "what" (printf "platform.applicationLabels.%s" $k) "s" (include "cd-delivery.fill" (dict "s" $v "product" $name "cluster" $cluster)))) -}}
 {{- end -}}
 {{- if not (hasKey $plat "applicationPrefix") -}}{{- fail "cd-delivery: platform.applicationPrefix is required (it may be empty)" -}}{{- end -}}
 {{- $kind := $c.kind | default $p.kind | default "product" -}}
-{{- $meta := dict "name" (printf "%s%s%s" (toString $plat.applicationPrefix) $name $nameSuffix) "namespace" (required "cd-delivery: platform.argocdNamespace is required" $plat.argocdNamespace) "annotations" (dict) -}}
+{{- $meta := dict "name" (printf "%s%s%s" (include "cd-delivery.fillInstallation" (dict "plat" $plat "what" "platform.applicationPrefix" "s" (toString $plat.applicationPrefix))) $name $nameSuffix) "namespace" (required "cd-delivery: platform.argocdNamespace is required" $plat.argocdNamespace) "annotations" (dict) -}}
 {{- $e2eOpts := $p.e2e | default dict -}}
 {{- /* A Kargo Stage may only sync an Application that names it. Only the
        end-to-end Application is ever handed to a Stage this way. */ -}}
@@ -247,7 +247,7 @@ ring composed. Call with (dict "ctx" <product ctx> "ring" infra|app|e2e
 {{- if and (has $kind (list "chart" "static-site")) (not (hasPrefix "oci://" $repo)) -}}
 {{- $source = dict "repoURL" $repo "chart" (printf "%s%s" $chart $suffix) "targetRevision" $revision "helm" (dict "releaseName" $release "valuesObject" $values) -}}
 {{- end -}}
-{{- $spec := dict "project" (include "cd-delivery.fill" (dict "s" (required "cd-delivery: platform.appProject is required" $plat.appProject) "product" $name "cluster" $cluster)) "sources" (list $source) "destination" (dict "name" $cluster "namespace" ($p.namespace | default $name)) "syncPolicy" $syncPolicy -}}
+{{- $spec := dict "project" (include "cd-delivery.fillInstallation" (dict "plat" $plat "what" "platform.appProject" "s" (include "cd-delivery.fill" (dict "s" (required "cd-delivery: platform.appProject is required" $plat.appProject) "product" $name "cluster" $cluster)))) "sources" (list $source) "destination" (dict "name" $cluster "namespace" ($p.namespace | default $name)) "syncPolicy" $syncPolicy -}}
 {{- $ignore := dig "ignoreDifferences" $ring (list) $p -}}
 {{- /* The platform's ignoreDifferences for alert rules (platform.alerts), on
        the application ring of a product whose alerts reach its chart: the
