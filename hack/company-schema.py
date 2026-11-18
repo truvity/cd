@@ -118,7 +118,8 @@ def generated_project_schema(root):
     source = delivery_schema(root)
     pipeline = json.loads((root / "charts/cd-pipeline/values.schema.json").read_text())
     pp = pipeline["properties"]
-    chart = pp["projects"]["items"]["properties"]["chart"]["properties"]
+    project = pp["projects"]["items"]["properties"]
+    chart = project["chart"]["properties"]
     git = copy.deepcopy(pp["git"])
     git["properties"] = {"repoURL": git["properties"]["repoURL"]}
     git["description"] = "The repository a promotion writes the pin to. The write-back credentials are the platform's and are not rendered here."
@@ -143,7 +144,7 @@ def generated_project_schema(root):
                 "description": "Company-owned: the project, its charts, clusters and promotion order.",
                 "required": ["name", "source", "clusters", "pipeline"],
                 "properties": {
-                    "name": dict(NAME, description="The project: the service name of its Applications, its Kargo Project, namespace and Warehouse."),
+                    "name": dict(NAME, description="The project: the service name of its Applications and, unless the platform names the Kargo Project (pipeline.project.name), its Kargo Project, namespace and Warehouse."),
                     "source": {
                         "type": "object", "additionalProperties": False,
                         "required": ["chart", "semver"],
@@ -178,6 +179,7 @@ def generated_project_schema(root):
                         "properties": {
                             "stageOrder": dict(names, minItems=1, description="The Stages, in order; each one a cluster of project.clusters whose pin it writes."),
                             "autoPromote": dict(names, description="Stages that promote on their own although they have an upstream."),
+                            "noAutoPromote": dict(names, description="Stages that do not promote on their own, over autoPromote and over the rule that a Stage with no upstream does. The platform may hold back more (pipeline.project.noAutoPromote)."),
                             "upstreams": {"type": "object", "propertyNames": NAME, "additionalProperties": {"type": "array", "items": NAME}, "description": "Replaces pipeline.graph.upstreams for the Stages it names."},
                             "stageSources": {"type": "object", "propertyNames": NAME, "additionalProperties": NAME, "description": "Stage -> a key of project.sources: the Warehouse the Stage takes Freight from and the repository its cluster installs from. A Stage it does not name takes project.source. A Stage and its upstream take the same source; an empty upstreams entry takes Freight straight from the Warehouse."},
                         },
@@ -213,6 +215,16 @@ def generated_project_schema(root):
                     "promotion": pp["promotion"],
                     "jobs": pp["jobs"],
                     "graph": graph,
+                    "project": {
+                        "type": "object", "additionalProperties": False,
+                        "description": "What the platform says about this project's Kargo Project. Read by cd-project itself, not a cd-pipeline setting; sealed with the rest of pipeline, so a company file cannot set it.",
+                        "properties": {
+                            "name": {"type": "string", "minLength": 1, "description": "The Kargo Project, and so the namespace of the Warehouse, Stages and ProjectConfig (and, by default, the Warehouse's name); tokens {project} and {product} (project.name), {vendor}, {customer}. Unset, it is project.name. With it project.name is the slug: Application names, the pin key and check names stay. A Kargo Project cannot be renamed: a new name is a new Project with a new Freight history."},
+                            "vendor": dict(project["vendor"], description="Who makes the product: the {vendor} token of name, promotion.pinFile, pinKey, commitMessage, prTitle and graph.applicationName."),
+                            "customer": dict(project["customer"], description="Whom this installation is for: the {customer} token, as vendor."),
+                            "noAutoPromote": dict(names, description="Stages the platform holds back from promoting on their own, beside project.pipeline.noAutoPromote: to quiesce a pipeline while it is moved, so that one Kargo Project writes a pin."),
+                        },
+                    },
                 },
             },
             "platformDigest": {

@@ -809,7 +809,7 @@ as well (`tests/proof/project_test.go` holds every case to the same list).
 ```yaml
 # Company files (Helm deep-merges them; per-cluster files are keyed by cluster).
 project:
-  name: shop                       # the service name, Kargo namespace and Warehouse
+  name: shop                       # the service name and, unless pipeline.project.name says otherwise, the Kargo namespace and Warehouse
   source:
     chart: oci://registry.example.com/charts/shop
     kind: product                  # optional: product (default; three rings) or chart (app ring only)
@@ -821,6 +821,7 @@ project:
   pipeline:
     stageOrder: [dev, stage, prod] # each a cluster of project.clusters
     autoPromote: [dev]
+    noAutoPromote: [prod]          # optional: Stages that never promote on their own
     upstreams: {prod: [stage]}     # optional, over pipeline.graph.upstreams
     stageSources: {dev: preview}   # optional: the Stage takes project.sources.preview
   sources:                         # optional: further sources of the same chart
@@ -849,12 +850,19 @@ pipeline:                          # the allowlisted cd-pipeline settings
   promotion: {pinFile: "pins/{stage}.yaml"}
   argocd: {namespace: argocd}
   graph: {applicationName: "{stage}-{app}"}
+  project:                         # optional: the project's Kargo Project, see below
+    name: "cd-{vendor}-{customer}-{project}"
+    vendor: acme
+    customer: globex
+    noAutoPromote: [dev]           # Stages the platform holds back
 platformDigest: <sha256 of the four keys above, see below>
 ```
 
 `pipeline` takes cd-pipeline's `labels`, `annotations`, `waves`, `argocd`,
 `git.repoURL`, `promotion`, `jobs` and `graph.upstreams` / `graph.applicationName`,
-laid over cd-pipeline's defaults (maps merge key by key). Nothing that renders
+laid over cd-pipeline's defaults (maps merge key by key), and `project`, which
+is cd-project's own ([The Kargo Project and its namespaces](#the-kargo-project-and-its-namespaces)).
+Nothing that renders
 credentials, verification, access, a Project or an AppProject is accepted:
 `git.credentials`, `graph.promotedVersion`, `graph.approvers`, `graph.admins`,
 `promotedVersion`, `metricsGate`, `viewer`, `projects` and `appProjects` are
@@ -898,7 +906,10 @@ allows (`tests/cases/cd-project/sources`).
 Refused at render: a `project.clusters` entry the platform did not register in
 `clusters`, or one without `platform.<cluster>`; a `pins` or `values` key that
 is not in `project.clusters`; a Stage that is not a cluster of the project, an
-`autoPromote`, `upstreams` or `stageSources` Stage that is not in `stageOrder`;
+`autoPromote`, `noAutoPromote`, `upstreams` or `stageSources` Stage that is not
+in `stageOrder` (the company's `noAutoPromote` or the platform's); a
+`pipeline.project.name` that does not fill to a namespace name; a template
+that names `{vendor}` or `{customer}` where the platform gives none;
 a `stageSources` value that is not a key of `project.sources`; a source whose
 chart is not `oci://` or not `source.chart`'s `<chart>`; a Stage whose
 upstream takes another source; a cluster with
@@ -906,6 +917,69 @@ no pin (`""` is dormant), a non-dormant one with no `products.<cluster>`. Ring
 payloads are held to cd-company's ownership rules by cd-company's own code: the
 fixed reserved paths, and whatever the platform sets for the cluster through
 `products.<cluster>.platformValues` and its open layers, dormant or not.
+
+### The Kargo Project and its namespaces
+
+By default the Kargo Project is named after the project, and so are the
+namespace of its Warehouse, Stages and ProjectConfig and the Warehouse itself.
+The platform may name it otherwise, for instance
+`cd-<vendor>-<customer>-<project>`:
+
+```yaml
+pipeline:
+  project:
+    name: "cd-{vendor}-{customer}-{project}"   # {project}, {product}: project.name
+    vendor: acme
+    customer: globex
+```
+
+`project.name` is then the slug (cd-pipeline's `slug`) and the Kargo Project
+is `cd-acme-globex-shop`. What is named from the slug does not move: the
+Applications (`<applicationPrefix><project>`), the Applications a Stage
+watches (`graph.applicationName`), the pin key (`pins.<stage>`), the workload
+namespace and the names of the checks. What is named from the Project does:
+the namespace of the Kargo objects, the ProjectConfig, the Warehouse (and the
+Warehouses of `project.sources`, `<Kargo Project>-<source>`), and cd-pipeline's
+`{project}` token, so a `promotion.commitMessage` that should keep saying
+`shop` names `{slug}` or `{product}`. A Kargo Project cannot be renamed: a new
+name is a new Project, created by the platform like the old one, with a new
+Freight history; the pins in the repository stay.
+
+Where the Applications live, and under which AppProject, is the platform's as
+it always was, per cluster:
+
+- `platform.<cluster>.argocdNamespace` is the namespace of that cluster's
+  Applications, and `pipeline.argocd.namespace` is where the Stages look for
+  them. Set both to the Kargo Project's name and the project's Applications
+  live in its own namespace (Argo CD must be told to read Applications there,
+  and the AppProjects must list it in `sourceNamespaces`; neither is rendered
+  here).
+- `platform.<cluster>.appProject` is a template (`{product}`, `{cluster}`,
+  `{vendor}`, `{customer}`): `"{product}-{cluster}"` is one AppProject per
+  cluster, which for one installation is one per Stage, `<project>-<stage>`.
+  The AppProjects themselves are the platform's and are not rendered here.
+- `platform.<cluster>.vendor` and `.customer` give that cluster's Applications
+  the same two tokens in `appProject`, `applicationPrefix` and
+  `applicationLabels`; `pipeline.project.vendor` and `.customer` give them to
+  the name above and to cd-pipeline's templates (`promotion.pinFile`, `pinKey`,
+  `commitMessage`, `prTitle`, `graph.applicationName`). So a new installation
+  may be named `<stage>-<customer>-<project>-<part>`
+  (`tests/cases/cd-project/own-namespace-new-names`), and one that exists keeps its
+  names by leaving the templates as they are (`tests/cases/cd-project/own-namespace`).
+
+All of it is under `platform` and `pipeline`, which the digest seals, and the
+company's `project` has no key for any of it: a company file cannot rename
+its Kargo Project or move its Applications (fixtures
+`company-sets-kargo-project`, `company-sets-argocd-namespace`,
+`project-sets-kargo-project`).
+
+A Stage is held back from promoting on its own by the company
+(`project.pipeline.noAutoPromote`) or by the platform
+(`pipeline.project.noAutoPromote`); the two lists are added together and
+passed to cd-pipeline's `noAutoPromote` ([Derived Stages](#derived-stages)).
+The platform's is the one that quiesces a pipeline during a move, since two
+renders of one project read the same company files and only the platform's
+values can tell them apart (`tests/cases/cd-project/no-auto-promote`).
 
 ### Company and platform
 

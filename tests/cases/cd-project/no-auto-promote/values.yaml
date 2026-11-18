@@ -1,0 +1,76 @@
+# A pipeline held still. dev has no upstream and would promote on its own,
+# and the company lets stage do so too (autoPromote). The company holds stage
+# back in its own file (project.pipeline.noAutoPromote) and the platform holds
+# dev back in what it seals (pipeline.project.noAutoPromote), as it does
+# while it moves a project to another Kargo Project, so that only one of the
+# two writes a pin. The ProjectConfig names both Stages with
+# autoPromotionEnabled false; nothing else of the render differs from the
+# same project without the two lists.
+
+# Company files.
+project:
+  name: shop
+  source:
+    chart: oci://registry.example.com/charts/shop
+    semver: ">=1.0.0 <2.0.0"
+  clusters: [dev, stage]
+  pipeline:
+    stageOrder: [dev, stage]
+    autoPromote: [stage]
+    noAutoPromote: [stage]
+pins:
+  dev: "1.4.0"
+  stage: "1.3.2"
+values:
+  dev:
+    app:
+      config:
+        greeting: hello
+
+# The platform's valuesObject.
+clusters: [dev, stage]
+platform:
+  dev:
+    clusterName: dev
+    argocdNamespace: argocd
+    applicationPrefix: "dev-"
+    appProject: "{product}-{cluster}"
+    chartRegistry: oci://registry.example.com/charts
+    postgres: {instances: 1, storage: 2Gi}
+    events:
+      url: nats://broker.dev.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: "{product}"
+  stage:
+    clusterName: stage
+    argocdNamespace: argocd
+    applicationPrefix: "stage-"
+    appProject: "{product}-{cluster}"
+    chartRegistry: oci://registry.example.com/charts
+    postgres: {instances: 1, storage: 2Gi}
+    events:
+      url: nats://broker.stage.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: "{product}"
+products:
+  dev:
+    interface: 15
+    hostname: shop.dev.example.com
+  stage:
+    interface: 15
+    hostname: shop.stage.example.com
+pipeline:
+  project:
+    noAutoPromote: [dev]
+  git:
+    repoURL: https://git.example.com/acme/shop-delivery.git
+  promotion:
+    pinFile: "pins/{stage}.yaml"
+  graph:
+    upstreams:
+      stage: [dev]
+platformDigest: "70202d0ac217a5b9d748a7c3f1cb551989a658732079a5ebec62097b57fc57b2"

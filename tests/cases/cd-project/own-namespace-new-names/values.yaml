@@ -1,0 +1,90 @@
+# A new installation in a namespace of its own, with the Application names of a new
+# installation: `<stage>-<customer>-<project>-<part>` (dev-globex-shop-api,
+# and -inf for the infra ring), one AppProject per Stage named with the
+# customer, `<project>-<stage>-<customer>`, and one pin file per customer.
+# All of it is the platform's spelling: {vendor} and {customer} in the
+# Application's prefix, AppProject and labels (platform.<cluster>), and in the
+# name a Stage watches, the pin file and the wording (pipeline). The Kargo
+# Project is cd-acme-globex-shop; the slug stays shop.
+
+# Company files.
+project:
+  name: shop
+  source:
+    chart: oci://registry.example.com/charts/shop
+    semver: ">=1.0.0 <2.0.0"
+  clusters: [dev, stage]
+  pipeline:
+    stageOrder: [dev, stage]
+pins:
+  dev: "1.4.0"
+  stage: "1.3.2"
+values:
+  dev:
+    app:
+      config:
+        greeting: hello
+
+# The platform's valuesObject.
+clusters: [dev, stage]
+platform:
+  dev:
+    clusterName: dev
+    argocdNamespace: cd-acme-globex-shop
+    applicationPrefix: "dev-{customer}-"
+    applicationSuffixes: {infra: -inf, app: -api}
+    appProject: "{product}-{cluster}-{customer}"
+    vendor: acme
+    customer: globex
+    applicationLabels:
+      acme.example.com/customer: "{customer}"
+    chartRegistry: oci://registry.example.com/charts
+    postgres: {instances: 1, storage: 2Gi}
+    events:
+      url: nats://broker.dev.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: "{product}"
+  stage:
+    clusterName: stage
+    argocdNamespace: cd-acme-globex-shop
+    applicationPrefix: "stage-{customer}-"
+    applicationSuffixes: {infra: -inf, app: -api}
+    appProject: "{product}-{cluster}-{customer}"
+    vendor: acme
+    customer: globex
+    applicationLabels:
+      acme.example.com/customer: "{customer}"
+    chartRegistry: oci://registry.example.com/charts
+    postgres: {instances: 1, storage: 2Gi}
+    events:
+      url: nats://broker.stage.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: "{product}"
+products:
+  dev:
+    interface: 15
+    hostname: shop.dev.example.com
+  stage:
+    interface: 15
+    hostname: shop.stage.example.com
+pipeline:
+  project:
+    name: "cd-{vendor}-{customer}-{project}"
+    vendor: acme
+    customer: globex
+  argocd:
+    namespace: cd-acme-globex-shop
+  git:
+    repoURL: https://git.example.com/acme/shop-delivery.git
+  promotion:
+    pinFile: "pins/{customer}/{stage}.yaml"
+    prTitle: "chore({product}): promote to {stage} for {customer}"
+  graph:
+    applicationName: "{stage}-{customer}-{app}-api"
+    upstreams:
+      stage: [dev]
+platformDigest: "ff1434fdb295f60752f576a07eb90828a6a8147dce811f62bd930a13dfc49be3"
