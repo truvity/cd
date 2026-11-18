@@ -197,6 +197,8 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 			if name, ok := kargo["name"]; ok {
 				p["name"] = strings.NewReplacer(fill...).Replace(name.(string))
 				p["slug"] = project["name"]
+				// The Warehouse keeps the project's own name.
+				p["warehouse"] = map[string]any{"name": project["name"]}
 			}
 			if named, ok := project["sources"]; ok {
 				sources := map[string]any{}
