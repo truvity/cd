@@ -1,0 +1,13 @@
+# expect: /projects/0/warehouse/freightCreationCriteria/expression
+git:
+  repoURL: https://git.example.com/acme/environments.git
+projects:
+  - name: paired
+    chart:
+      repoURL: oci://registry.example.com/charts/paired
+      semver: ">=1.0.0 <2.0.0"
+    warehouse:
+      freightCreationCriteria:
+        expression: ""
+    stages:
+      - name: dev
