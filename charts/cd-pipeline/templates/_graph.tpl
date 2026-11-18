@@ -11,7 +11,8 @@ The rules, for each Stage of `stageOrder`, in that order:
   Stage with no such candidate takes Freight straight from the Warehouse.
 - first: the last Stage, in order, that has no upstream. Every approver may
   promote it.
-- autoPromote: a Stage with no upstream, and every Stage `autoPromote` lists.
+- autoPromote: a Stage with no upstream, and every Stage `autoPromote` lists;
+  never a Stage `noAutoPromote` lists, which is marked `noAutoPromote` instead.
 - applications: `applicationsByStage` for the Stage, else `applications`, else
   the project's slug, each through `graph.applicationName`.
 - e2eApplication: on the Stages `e2eStages` lists, `e2eApplication` (default
@@ -42,6 +43,12 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- $chains := deepCopy ($g.upstreams | default dict) -}}
 {{- range $st, $cands := ($p.upstreams | default dict) -}}{{- $_ := set $chains $st $cands -}}{{- end -}}
 {{- $auto := $p.autoPromote | default list -}}
+{{- $noAuto := $p.noAutoPromote | default list -}}
+{{- range $st := $noAuto -}}
+{{- if not (has $st $order) -}}
+{{- fail (printf "cd-pipeline: projects.%s.noAutoPromote: %q is not a Stage of stageOrder" $name $st) -}}
+{{- end -}}
+{{- end -}}
 {{- $upstream := dict -}}
 {{- $first := "" -}}
 {{- range $st := $order -}}
@@ -79,7 +86,9 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- end -}}
 {{- $s := dict "name" $st "applications" $apps -}}
 {{- if hasKey $upstream $st -}}{{- $_ := set $s "from" (index $upstream $st) -}}{{- end -}}
-{{- if or (not (hasKey $upstream $st)) (has $st $auto) -}}{{- $_ := set $s "autoPromote" true -}}{{- end -}}
+{{- /* The opt-out wins over both rules. */ -}}
+{{- if has $st $noAuto -}}{{- $_ := set $s "noAutoPromote" true -}}
+{{- else if or (not (hasKey $upstream $st)) (has $st $auto) -}}{{- $_ := set $s "autoPromote" true -}}{{- end -}}
 {{- $stChart := $p.chart | default dict -}}
 {{- with index $srcOf $st -}}
 {{- $_ := set $s "source" . -}}
@@ -117,7 +126,7 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- end -}}
 {{- $_ := set $p "access" (dict "subjects" $subjects) -}}
 {{- $_ := set $p "stages" $stages -}}
-{{- range $k := list "stageOrder" "upstreams" "autoPromote" "stageSources" "applications" "applicationsByStage" "e2eStages" "e2eApplication" "metricsGateStages" -}}
+{{- range $k := list "stageOrder" "upstreams" "autoPromote" "noAutoPromote" "stageSources" "applications" "applicationsByStage" "e2eStages" "e2eApplication" "metricsGateStages" -}}
 {{- $_ := unset $p $k -}}
 {{- end -}}
 {{- toYaml $p -}}

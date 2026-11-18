@@ -1,0 +1,32 @@
+# Stages held back from promoting on their own. In shop, dev has no upstream
+# and would promote on its own, and autoPromote lists stage: noAutoPromote
+# holds both, and prod, which never did, is not named. The ProjectConfig
+# names dev and stage with autoPromotionEnabled false. In web, whose Stages
+# are spelled out, dev is held the same way and stage still promotes.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+graph:
+  upstreams:
+    stage: [dev]
+    prod: [stage]
+projects:
+  - name: shop
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    stageOrder: [dev, stage, prod]
+    autoPromote: [stage]
+    noAutoPromote: [dev, stage]
+  - name: web
+    chart:
+      repoURL: oci://registry.example.com/charts/web
+      semver: ">=1.0.0 <2.0.0"
+    stages:
+      - name: dev
+        autoPromote: true
+        noAutoPromote: true
+        applications: [dev-web]
+      - name: stage
+        from: dev
+        autoPromote: true
+        applications: [stage-web]

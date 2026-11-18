@@ -52,7 +52,10 @@ pipeline to another party may render it elsewhere (createProject: false). */ -}}
 {{- /* ProjectConfig: which Stages promote on their own. */ -}}
 {{- $policies := list -}}
 {{- range $s := $p.stages -}}
-{{- if $s.autoPromote -}}{{- $policies = append $policies (dict "stage" $s.name "autoPromotionEnabled" true) -}}{{- end -}}
+{{- /* A Stage marked `noAutoPromote` says so in the ProjectConfig: a policy
+       left behind by an earlier render cannot keep it promoting. */ -}}
+{{- if $s.noAutoPromote -}}{{- $policies = append $policies (dict "stage" $s.name "autoPromotionEnabled" false) -}}
+{{- else if $s.autoPromote -}}{{- $policies = append $policies (dict "stage" $s.name "autoPromotionEnabled" true) -}}{{- end -}}
 {{- end -}}
 {{- if $policies -}}
 {{- include "cd-pipeline.doc" (dict "apiVersion" "kargo.akuity.io/v1alpha1" "kind" "ProjectConfig" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $name "ns" $name "wave" $w.config) | fromYaml) "spec" (dict "promotionPolicies" $policies)) -}}
