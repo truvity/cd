@@ -283,8 +283,8 @@ required below must be present, and a key the chart does not read is refused.
 | `products.<name>.layers[]` | Ordered `{name, since, required, values.{infra,app,e2e}}`: a payload the platform sets only for a pin at or above `since`. |
 | `products.<name>.kind` | `product` (default), `chart` or `static-site`: see [Kinds](#kinds). |
 | `products.<name>.namespace` | The destination namespace (default the product's name). A product of kind `product` that names one keeps its key for its release, its Helm objects and its pins. |
-| `products.<name>.applicationName` | Kind `product` only: the middle of the product's Application names (default the key); installs of one product for several customers name it alike. |
-| `products.<name>.vendor`, `.customer` | Kind `product` only: this product's `{vendor}` and `{customer}`, over `platform.vendor` and `platform.customer`. |
+| `products.<name>.applicationName` | Kinds `product` and `static-site`: the middle of the product's Application names (default the key); installs of one product for several customers name it alike. |
+| `products.<name>.vendor`, `.customer` | Kinds `product` and `static-site`: this product's `{vendor}` and `{customer}`, over `platform.vendor` and `platform.customer`. |
 | `products.<name>.chartVersion`, `.artifact.ref` | Kind `static-site` only: the release of the two charts, and the repository of the site artifact without a tag. Both required. |
 | `platform.staticSite.{infraLabels,siteAnnotations}` | Labels for the infrastructure Application and annotations for the site Application of every `static-site` product, verbatim. Unset: none. |
 
@@ -1046,6 +1046,35 @@ products name another, its namespace; its Applications take the customer as
 defaults to `pins.<graph.stageName>`, so a Stage writes the key its install
 reads, and `promotion.pinFile` may name `{customer}` to give each customer a
 file of its own (`tests/cases/cd-project/customers`).
+
+### Companions of a project
+
+A release that is a chart and a static bundle with a version of its own (an
+api and its web front end) names the bundle in `project.companions.<name>`:
+`artifact`, the bundle's repository without a tag or digest, and `semver`.
+cd-pipeline's `companions` ([Companions](#companions)) put it in the same
+Freight as the chart: each Warehouse subscribes to both, and each Stage writes
+the chart's pin and the bundle's digest, `<pin key>-<name>`, in one commit.
+
+Beside each install (a cluster, or a customer's Stage) the companion is an
+install of the platform's `static-site` chart, keyed `<key>-<name>` in `pins`,
+`values` and `products`: `pins.dev-globex-web` holds the digest,
+`values.dev-globex-web` the company's site payload, and the platform's
+`products.dev-globex-web` the `chartVersion` and `platformValues` (a platform
+that names the companion's `artifact` or `kind` is refused: they are the
+company's). It is the service `<service>-<name>` in the install's namespace
+unless the platform names another, and for a customer it takes the customer as
+`{customer}` and `<project>-<name>` as the middle of its Application names
+(`dev-globex-shop-web` and `dev-globex-shop-web-infra` beside
+`dev-globex-shop`). The Stages watch `<project>` and `<project>-<name>`
+through `graph.applicationName`, so the template must name both parts' site
+Applications with `{app}`.
+
+A customer may hold the shared bundle to its own line,
+`project.customers[].companions.<name>.semver`, in its Warehouse alone: with a
+customer's own `semver` for the chart, a fix of an older line of either
+reaches that customer and no other, and it is written in the company's own
+repository (`tests/cases/cd-project/companions`).
 
 ### Company and platform
 

@@ -1,0 +1,144 @@
+# expect: products.dev-globex-web.artifact: a companion's artifact and kind are the company's
+# The platform names the companion's artifact, which is the company's.
+project:
+  name: shop
+  source:
+    chart: oci://registry.example.com/charts/shop
+    infraChart: oci://registry.example.com/charts/shop-infra
+    semver: '>=1.0.0 <2.0.0'
+  companions:
+    web:
+      artifact: registry.example.com/static/shop/web
+      semver: '>=1.0.0'
+  customers:
+  - name: globex
+    chart: oci://registry.example.com/charts/shop-globex
+  - name: initech
+    companions:
+      web:
+        semver: '>=1.0.0 <2.0.0'
+  clusters:
+  - dev
+  - stage
+  pipeline:
+    stageOrder:
+    - dev
+    - stage
+pins:
+  dev-globex: 1.4.0
+  dev-globex-web: sha256:1111111111111111111111111111111111111111111111111111111111111111
+  stage-globex: 1.3.2
+  stage-globex-web: sha256:2222222222222222222222222222222222222222222222222222222222222222
+  dev-initech: 1.4.1
+  dev-initech-web: sha256:3333333333333333333333333333333333333333333333333333333333333333
+  stage-initech: ''
+  stage-initech-web: ''
+values:
+  dev-globex:
+    app:
+      config:
+        greeting: hello globex
+  dev-globex-web:
+    app:
+      site:
+        notFoundPage: 404.html
+clusters:
+- dev
+- stage
+platform:
+  dev:
+    clusterName: dev
+    argocdNamespace: cd-acme-shop
+    applicationPrefix: dev-{customer}-
+    appProject: '{cluster}-{customer}-shop'
+    vendor: acme
+    applicationLabels:
+      acme.example.com/customer: '{customer}'
+    chartRegistry: oci://registry.example.com/charts
+    postgres:
+      instances: 1
+      storage: 2Gi
+    events:
+      url: nats://broker.dev.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: '{product}'
+  stage:
+    clusterName: stage
+    argocdNamespace: cd-acme-shop
+    applicationPrefix: stage-{customer}-
+    appProject: '{cluster}-{customer}-shop'
+    vendor: acme
+    applicationLabels:
+      acme.example.com/customer: '{customer}'
+    chartRegistry: oci://registry.example.com/charts
+    postgres:
+      instances: 1
+      storage: 2Gi
+    events:
+      url: nats://broker.stage.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: '{product}'
+products:
+  dev-globex:
+    interface: 15
+    hostname: globex.shop.dev.example.com
+  stage-globex:
+    interface: 15
+    hostname: globex.shop.stage.example.com
+  dev-initech:
+    interface: 15
+    hostname: initech.shop.dev.example.com
+  stage-initech:
+    interface: 15
+    hostname: initech.shop.stage.example.com
+  dev-globex-web:
+    chartVersion: 3.12.0
+    platformValues:
+      app:
+        registry:
+          auth: ecr
+    artifact:
+      ref: registry.example.com/static/other
+  stage-globex-web:
+    chartVersion: 3.12.0
+    platformValues:
+      app:
+        registry:
+          auth: ecr
+  dev-initech-web:
+    chartVersion: 3.12.0
+    platformValues:
+      app:
+        registry:
+          auth: ecr
+  stage-initech-web:
+    chartVersion: 3.12.0
+    platformValues:
+      app:
+        registry:
+          auth: ecr
+pipeline:
+  project:
+    name: cd-{vendor}-{project}
+    vendor: acme
+    customers:
+    - globex
+    - initech
+  argocd:
+    namespace: cd-acme-shop
+  git:
+    repoURL: https://git.example.com/acme/gitops.git
+  promotion:
+    pinFile: projects/{product}/{customer}/{stage}/pin.yaml
+    commitMessage: 'chore({product}): promote {version} to {stage} for {customer}'
+    prTitle: 'chore({product}): promote to {stage} for {customer}'
+  graph:
+    applicationName: '{stage}-{customer}-{app}'
+    upstreams:
+      stage:
+      - dev
+platformDigest: e907df18d9e4a2a687133c872bde9fe4b16829e150a9b2966f1e52e4f18f73d4

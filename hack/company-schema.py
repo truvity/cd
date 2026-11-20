@@ -48,14 +48,17 @@ def project_product(source):
 
 # The platform's product facts by the company's kind: a single chart takes
 # a namespace and nothing else (cd-delivery refuses the rest by name); a
-# product needs its interface and hostname.
+# product needs its interface and hostname. A companion's facts (a static
+# site, keyed <key>-<companion>) are told apart by their chartVersion, which
+# cd-delivery refuses for the other kinds.
+COMPANION_FACTS = {"required": ["chartVersion"]}
 KIND_RULES = [{
     "if": {
         "required": ["project"],
         "properties": {"project": {"required": ["source"], "properties": {"source": {"required": ["kind"], "properties": {"kind": {"const": "chart"}}}}}},
     },
-    "then": {"properties": {"products": {"additionalProperties": {"propertyNames": {"enum": ["namespace"]}}}}},
-    "else": {"properties": {"products": {"additionalProperties": {"required": ["interface", "hostname"]}}}},
+    "then": {"properties": {"products": {"additionalProperties": {"anyOf": [COMPANION_FACTS, {"propertyNames": {"enum": ["namespace"]}}]}}}},
+    "else": {"properties": {"products": {"additionalProperties": {"anyOf": [COMPANION_FACTS, {"required": ["interface", "hostname"]}]}}}},
 }]
 
 
@@ -183,9 +186,26 @@ def generated_project_schema(root):
                                     "name": NAME,
                                     "chart": dict(chart["repoURL"], description="The customer's application chart, oci://<repository>/<chart>, in place of project.source.chart: its Warehouse subscribes to it and its installs take every ring from it (<chart>-infra where project.source has an infraChart)."),
                                     "semver": chart["semver"],
+                                    "companions": {
+                                        "type": "object", "propertyNames": dict(NAME, maxLength=30),
+                                        "additionalProperties": {"type": "object", "additionalProperties": False, "required": ["semver"], "properties": {"semver": chart["semver"]}},
+                                        "description": "This customer's own semver for a companion of project.companions, in its Warehouse alone: to hold one customer to a line of the shared artifact, or to let a fix of an older line reach that customer only.",
+                                    },
                                 },
                             },
                         ]},
+                    },
+                    "companions": {
+                        "type": "object", "propertyNames": dict(NAME, maxLength=30),
+                        "description": "Artifacts released beside the chart and promoted with it in one Freight, by name: today a static bundle served by the platform's static-site chart (kind static-site). Each Warehouse subscribes to the chart and to every companion, and each Stage writes the chart's pin and the companion's digest, <pin key>-<name>, in one commit. Beside each install (a cluster, or a customer's Stage) the companion is an install of its own keyed <key>-<name> in pins, values and products, the service <service>-<name> in the install's namespace; the platform's products.<key>-<name> give its chartVersion and platformValues.",
+                        "additionalProperties": {
+                            "type": "object", "additionalProperties": False, "required": ["artifact", "semver"],
+                            "properties": {
+                                "artifact": {"type": "string", "minLength": 1, "pattern": "^(oci://)?[^:@]+$", "description": "The artifact's repository, <registry>/<path>, without a tag or digest: what the Warehouse subscribes to and the static-site chart serves at the pinned digest."},
+                                "semver": chart["semver"],
+                                "kind": {"type": "string", "enum": ["static-site"], "description": "The kind of the companion's install: static-site (default and only)."},
+                            },
+                        },
                     },
                     "clusters": dict(names, minItems=1, description="The clusters the project runs on; each one the platform registered (clusters)."),
                     "pipeline": {
