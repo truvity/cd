@@ -19,9 +19,15 @@ Call with the chart's root context.
     {{- fail (printf "cd-project: platform.%s is missing: the platform supplies the facts of every cluster it registered" $c) -}}
   {{- end -}}
 {{- end -}}
+{{- $installs := (include "cd-project.installs" . | fromYaml).installs -}}
+{{- $keys := list -}}
+{{- range $i := $installs -}}{{- $keys = append $keys $i.key -}}{{- end -}}
 {{- range $kind := list "pins" "values" -}}
   {{- range $c := keys (index $v $kind) | sortAlpha -}}
-    {{- if not (has $c $p.clusters) -}}
+    {{- if not (has $c $keys) -}}
+      {{- if $p.customers -}}
+        {{- fail (printf "cd-project: %s.%s: %q is not the Stage of a customer of project.customers on a cluster of project.clusters (%s)" $kind $c $c (join ", " $keys)) -}}
+      {{- end -}}
       {{- fail (printf "cd-project: %s.%s: %q is not a cluster of project.clusters" $kind $c $c) -}}
     {{- end -}}
   {{- end -}}
@@ -78,12 +84,29 @@ Call with the chart's root context.
 {{- $out := "" -}}
 {{- range $c := $p.clusters -}}
   {{- $products := dict -}}
-  {{- if hasKey $v.products $c -}}{{- $_ := set $products $name (include "cd-project.facts" (dict "cluster" $c "product" (index $v.products $c) "source" (include "cd-project.clusterSource" (dict "project" $p "cluster" $c) | fromYaml)) | fromYaml) -}}{{- end -}}
   {{- $pins := dict -}}
-  {{- if hasKey $v.pins $c -}}{{- $_ := set $pins $name (index $v.pins $c) -}}{{- end -}}
   {{- $values := dict -}}
-  {{- if hasKey $v.values $c -}}{{- $_ := set $values $name (index $v.values $c) -}}{{- end -}}
-  {{- $out = print $out (include "cd-company.render" (dict "chart" "cd-project" "at" (dict $name $c) "platform" (index $v.platform $c) "products" $products "services" (list $name) "pins" $pins "values" $values)) "\n" -}}
+  {{- $services := list -}}
+  {{- $at := dict -}}
+  {{- range $i := $installs -}}
+    {{- if eq $i.cluster $c -}}
+      {{- $services = append $services $i.service -}}
+      {{- $_ := set $at $i.service $i.key -}}
+      {{- if hasKey $v.products $i.key -}}
+        {{- $facts := include "cd-project.facts" (dict "cluster" $i.key "product" (index $v.products $i.key) "source" $i.source) | fromYaml -}}
+        {{- /* A customer's install: its own {customer}, and the project's
+               name in the middle of its Application names. */ -}}
+        {{- with $i.customer -}}
+          {{- $_ := set $facts "customer" . -}}
+          {{- $_ := set $facts "applicationName" $name -}}
+        {{- end -}}
+        {{- $_ := set $products $i.service $facts -}}
+      {{- end -}}
+      {{- if hasKey $v.pins $i.key -}}{{- $_ := set $pins $i.service (index $v.pins $i.key) -}}{{- end -}}
+      {{- if hasKey $v.values $i.key -}}{{- $_ := set $values $i.service (index $v.values $i.key) -}}{{- end -}}
+    {{- end -}}
+  {{- end -}}
+  {{- $out = print $out (include "cd-company.render" (dict "chart" "cd-project" "at" $at "platform" (index $v.platform $c) "products" $products "services" $services "pins" $pins "values" $values)) "\n" -}}
 {{- end -}}
 {{- $out = print $out (include "cd-project.pipeline" .) "\n" -}}
 {{- include "cd-project.assertKinds" $out -}}
@@ -119,7 +142,9 @@ Call with the chart's root context.
 {{- $p := $v.project -}}
 {{- $values := include "cd-project.merge" (dict "base" (index $v "cd-pipeline") "over" (omit $v.pipeline "project")) | fromYaml -}}
 {{- if not (dig "promotion" "pinKey" "" $v.pipeline) -}}
-  {{- $_ := set $values.promotion "pinKey" "pins.{stage}" -}}
+  {{- /* With customers a pin is keyed by its Stage's name, as the install
+         reads it: pins.<cluster>-<customer> by default. */ -}}
+  {{- $_ := set $values.promotion "pinKey" (ternary (printf "pins.%s" (dig "graph" "stageName" "{stage}-{customer}" $v.pipeline)) "pins.{stage}" (not (empty $p.customers))) -}}
 {{- end -}}
 {{- /* The promoted-version check, when the platform's graph turns it on, is
        only named by the Stages: its objects are the platform's (it renders
@@ -151,8 +176,99 @@ Call with the chart's root context.
   {{- $_ := set $project "sources" $sources -}}
 {{- end -}}
 {{- with $p.pipeline.stageSources -}}{{- $_ := set $project "stageSources" . -}}{{- end -}}
+{{- with (include "cd-project.installs" . | fromYaml).customers -}}
+  {{- $customers := list -}}
+  {{- range $c := . -}}
+    {{- $cc := dict "repoURL" $c.source.chart "semver" $c.source.semver -}}
+    {{- if hasKey $c.source "versionPrefix" -}}{{- $_ := set $cc "versionPrefix" $c.source.versionPrefix -}}{{- end -}}
+    {{- with $c.source.subscribeAs -}}{{- $_ := set $cc "subscribeAs" . -}}{{- end -}}
+    {{- $customers = append $customers (dict "name" $c.name "chart" $cc) -}}
+  {{- end -}}
+  {{- $_ := set $project "customers" $customers -}}
+{{- end -}}
 {{- $project = include "cd-pipeline.derive" (dict "root" $root "p" $project) | fromYaml -}}
 {{- include "cd-pipeline.project" (dict "root" $root "p" $project) -}}
+{{- end -}}
+
+{{/*
+The project's installs, as YAML for `fromYaml`: `installs`, one for each
+cluster of project.clusters, or, with project.customers, one for each
+customer on each cluster; and `customers`, each with its chart source.
+
+- key: what pins, values and products are keyed by: the cluster, or the
+  Stage of the customer's chain on that cluster (pipeline.graph.stageName,
+  default `{stage}-{customer}`, with {stage} the cluster).
+- service: cd-company's service, so the Helm release, its objects and the
+  namespace unless the platform's products name one: the project, or
+  `<project>-<customer>`.
+- source: the chart source the install takes every ring from
+  (cd-project.clusterSource, or the customer's chart laid over
+  project.source).
+
+The customers are the platform's (pipeline.project.customers, sealed by
+platformDigest): the company names the ones it installs and may give each
+one a chart of its own; a product with several customers has one Kargo
+Project, so `pipeline.project.customer` is not set beside them, and the
+sources of project.sources are not used beside them (each customer is a
+source of its own). Call with the chart's root context.
+*/}}
+{{- define "cd-project.installs" -}}
+{{- $v := .Values -}}
+{{- $p := $v.project -}}
+{{- $registered := dig "project" "customers" list ($v.pipeline | default dict) -}}
+{{- $installs := list -}}
+{{- $customers := list -}}
+{{- if and $registered (dig "project" "customer" "" ($v.pipeline | default dict)) -}}
+  {{- fail "cd-project: pipeline.project sets customer and customers: a product with several customers has one Kargo Project, and each Stage has its own {customer}" -}}
+{{- end -}}
+{{- if and $registered (not $p.customers) -}}
+  {{- fail (printf "cd-project: pipeline.project.customers registers %s: project.customers names the ones the company installs" (join ", " $registered)) -}}
+{{- end -}}
+{{- if and $p.customers (not $registered) -}}
+  {{- fail "cd-project: project.customers needs pipeline.project.customers: the platform registers a product's customers" -}}
+{{- end -}}
+{{- if and $p.customers (or $p.sources $p.pipeline.stageSources) -}}
+  {{- fail "cd-project: project.customers is set with project.sources or project.pipeline.stageSources: each customer is a source of its own" -}}
+{{- end -}}
+{{- $stageName := dig "graph" "stageName" "{stage}-{customer}" ($v.pipeline | default dict) -}}
+{{- $seen := dict -}}
+{{- range $entry := ($p.customers | default list) -}}
+  {{- $c := ternary (dict "name" $entry) $entry (kindIs "string" $entry) -}}
+  {{- if not (has $c.name $registered) -}}
+    {{- fail (printf "cd-project: project.customers: %q is not a customer the platform registered for this product (pipeline.project.customers: %s)" $c.name (join ", " $registered)) -}}
+  {{- end -}}
+  {{- if hasKey $seen $c.name -}}
+    {{- fail (printf "cd-project: project.customers: %q is listed twice" $c.name) -}}
+  {{- end -}}
+  {{- $_ := set $seen $c.name true -}}
+  {{- $src := deepCopy $p.source -}}
+  {{- with $c.chart -}}
+    {{- if not (hasPrefix "oci://" .) -}}
+      {{- fail (printf "cd-project: project.customers.%s.chart must be an oci:// reference (<repository>/<chart>), got %q" $c.name .) -}}
+    {{- end -}}
+    {{- $_ := set $src "chart" . -}}
+    {{- if hasKey $src "infraChart" -}}{{- $_ := set $src "infraChart" (printf "%s-infra" .) -}}{{- end -}}
+  {{- end -}}
+  {{- with $c.semver -}}{{- $_ := set $src "semver" . -}}{{- end -}}
+  {{- $customers = append $customers (dict "name" $c.name "source" $src) -}}
+  {{- range $cl := $p.clusters -}}
+    {{- $key := include "cd-pipeline.fill" (dict "s" $stageName "tokens" (dict "stage" $cl "customer" $c.name)) -}}
+    {{- if not (regexMatch "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$" $key) -}}
+      {{- fail (printf "cd-project: pipeline.graph.stageName %q gives %q for customer %s on %s, which is not a Stage name (lower-case letters, digits and -, at most 63; tokens {stage} and {customer})" $stageName $key $c.name $cl) -}}
+    {{- end -}}
+    {{- range $i := $installs -}}
+      {{- if eq $i.key $key -}}
+        {{- fail (printf "cd-project: pipeline.graph.stageName %q gives %q twice: it names each customer's Stage on each cluster apart" $stageName $key) -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $installs = append $installs (dict "key" $key "cluster" $cl "customer" $c.name "service" (printf "%s-%s" $p.name $c.name) "source" $src) -}}
+  {{- end -}}
+{{- else -}}
+  {{- range $cl := $p.clusters -}}
+    {{- $installs = append $installs (dict "key" $cl "cluster" $cl "service" $p.name "source" (include "cd-project.clusterSource" (dict "project" $p "cluster" $cl) | fromYaml)) -}}
+  {{- end -}}
+{{- end -}}
+{{- toYaml (dict "installs" $installs "customers" $customers) -}}
 {{- end -}}
 
 {{/*

@@ -124,7 +124,7 @@ def generated_project_schema(root):
     git["properties"] = {"repoURL": git["properties"]["repoURL"]}
     git["description"] = "The repository a promotion writes the pin to. The write-back credentials are the platform's and are not rendered here."
     graph = copy.deepcopy(pp["graph"])
-    graph["properties"] = {key: graph["properties"][key] for key in ("upstreams", "applicationName", "promotedVersion")}
+    graph["properties"] = {key: graph["properties"][key] for key in ("upstreams", "applicationName", "promotedVersion", "stageName")}
     graph["description"] = (
         "The promotion graph: with promotedVersion every derived Stage names the promoted-version check, whose "
         "objects are the platform's and never rendered here; no access subjects here."
@@ -172,6 +172,21 @@ def generated_project_schema(root):
                             },
                         },
                     },
+                    "customers": {
+                        "type": "array", "minItems": 1,
+                        "description": "The customers the project is installed for, one Kargo Project for all of them: each one a customer the platform registered (pipeline.project.customers), with a Warehouse of its own, <project>-<customer>, and a chain of Stages along pipeline.stageOrder, named by pipeline.graph.stageName (default <cluster>-<customer>). Each install is keyed by its Stage's name in pins, values and products, is the service <project>-<customer> and runs in that namespace unless the platform's products name another. Refused with sources and stageSources.",
+                        "items": {"oneOf": [
+                            NAME,
+                            {
+                                "type": "object", "additionalProperties": False, "required": ["name"],
+                                "properties": {
+                                    "name": NAME,
+                                    "chart": dict(chart["repoURL"], description="The customer's application chart, oci://<repository>/<chart>, in place of project.source.chart: its Warehouse subscribes to it and its installs take every ring from it (<chart>-infra where project.source has an infraChart)."),
+                                    "semver": chart["semver"],
+                                },
+                            },
+                        ]},
+                    },
                     "clusters": dict(names, minItems=1, description="The clusters the project runs on; each one the platform registered (clusters)."),
                     "pipeline": {
                         "type": "object", "additionalProperties": False,
@@ -188,11 +203,11 @@ def generated_project_schema(root):
             },
             "values": {
                 "type": "object", "propertyNames": NAME, "additionalProperties": RINGS,
-                "description": "Company-owned ring payloads per cluster of project.clusters, held to cd-company's ownership rules.",
+                "description": "Company-owned ring payloads per cluster of project.clusters (per Stage, <cluster>-<customer>, with project.customers), held to cd-company's ownership rules.",
             },
             "pins": {
                 "type": "object", "propertyNames": NAME, "additionalProperties": {"type": "string"},
-                "description": "Company-owned (Kargo writes them): the version per cluster of project.clusters; an empty string is dormant.",
+                "description": "Company-owned (Kargo writes them): the version per cluster of project.clusters (per Stage with project.customers); an empty string is dormant.",
             },
             "clusters": dict(names, minItems=1, description="Platform-owned: the clusters the platform registered for this project."),
             "platform": {
@@ -201,7 +216,7 @@ def generated_project_schema(root):
             },
             "products": {
                 "type": "object", "propertyNames": NAME, "additionalProperties": project_product(source),
-                "description": "Platform-owned: the project's product facts, per cluster (cd-company's products.<service>).",
+                "description": "Platform-owned: the project's product facts, per cluster (per Stage with project.customers; cd-company's products.<service>).",
             },
             "pipeline": {
                 "type": "object", "additionalProperties": False,
@@ -222,6 +237,7 @@ def generated_project_schema(root):
                             "name": {"type": "string", "minLength": 1, "description": "The Kargo Project, and so the namespace of the Warehouse, Stages and ProjectConfig (and, by default, the Warehouse's name); tokens {project} and {product} (project.name), {vendor}, {customer}. Unset, it is project.name. With it project.name is the slug: Application names, the pin key and check names stay. A Kargo Project cannot be renamed: a new name is a new Project with a new Freight history."},
                             "vendor": dict(project["vendor"], description="Who makes the product: the {vendor} token of name, promotion.pinFile, pinKey, commitMessage, prTitle and graph.applicationName."),
                             "customer": dict(project["customer"], description="Whom this installation is for: the {customer} token, as vendor."),
+                            "customers": dict(names, minItems=1, description="The customers the platform registered for this product, each one an installation of its own: project.customers may name only these. Not with customer: a product with several customers has one Kargo Project, cd-<vendor>-<project>, and {customer} is each Stage's own."),
                             "noAutoPromote": dict(names, description="Stages the platform holds back from promoting on their own, beside project.pipeline.noAutoPromote: to quiesce a pipeline while it is moved, so that one Kargo Project writes a pin."),
                         },
                     },

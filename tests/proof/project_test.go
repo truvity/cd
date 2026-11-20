@@ -65,14 +65,79 @@ func documents(t *testing.T, raw []byte) map[string]string {
 	return out
 }
 
+// projectCustomers is a project's customers (project.customers) as name and
+// chart, the chart project.source.chart unless the customer names its own.
+func projectCustomers(project map[string]any) [][2]string {
+	var out [][2]string
+	for _, entry := range parity.List(project["customers"]) {
+		chart := project["source"].(map[string]any)["chart"].(string)
+		if name, ok := entry.(string); ok {
+			out = append(out, [2]string{name, chart})
+			continue
+		}
+		c := parity.Map(entry)
+		if own, ok := c["chart"].(string); ok {
+			chart = own
+		}
+		out = append(out, [2]string{c["name"].(string), chart})
+	}
+	return out
+}
+
+// stageNameTemplate is the platform's pipeline.graph.stageName, default
+// {stage}-{customer}.
+func stageNameTemplate(values map[string]any) string {
+	if name, ok := parity.Map(parity.Map(values["pipeline"])["graph"])["stageName"].(string); ok {
+		return name
+	}
+	return "{stage}-{customer}"
+}
+
 // companySlice is what cd-company is given for one cluster of a project: the
 // cluster's platform block, the project as its one service, and the
 // cluster's pin, payload and product facts under the project's name, the
 // facts with the project's chart source and kind in them, as cd-project
-// injects them.
+// injects them. With project.customers each customer is a service of its
+// own, <project>-<customer>, whose pin, payload and facts are keyed by its
+// Stage's name, with the customer and the project's name as the middle of
+// its Application names in its facts.
 func companySlice(values map[string]any, cluster string) map[string]any {
 	project := values["project"].(map[string]any)
 	name := project["name"].(string)
+	if customers := projectCustomers(project); len(customers) > 0 {
+		out := map[string]any{
+			"platform": values["platform"].(map[string]any)[cluster],
+			"services": []any{},
+			"pins":     map[string]any{},
+			"values":   map[string]any{},
+			"products": map[string]any{},
+		}
+		for _, c := range customers {
+			service := name + "-" + c[0]
+			key := strings.NewReplacer("{stage}", cluster, "{customer}", c[0]).Replace(stageNameTemplate(values))
+			out["services"] = append(out["services"].([]any), service)
+			if pin, ok := parity.Map(values["pins"])[key]; ok {
+				out["pins"].(map[string]any)[service] = pin
+			}
+			if payload, ok := parity.Map(values["values"])[key]; ok {
+				out["values"].(map[string]any)[service] = payload
+			}
+			if product, ok := parity.Map(values["products"])[key]; ok {
+				cut := strings.LastIndex(c[1], "/")
+				facts := maps.Clone(product.(map[string]any))
+				facts["repository"] = c[1][:cut]
+				facts["chart"] = c[1][cut+1:]
+				facts["kind"] = "product"
+				if kind, ok := project["source"].(map[string]any)["kind"]; ok {
+					facts["kind"] = kind
+				}
+				facts["customer"] = c[0]
+				facts["applicationName"] = name
+				out["products"].(map[string]any)[service] = facts
+			}
+		}
+		return out
+	}
 	out := map[string]any{
 		"platform": values["platform"].(map[string]any)[cluster],
 		"services": []any{name},
@@ -200,6 +265,15 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 				// The Warehouse keeps the project's own name.
 				p["warehouse"] = map[string]any{"name": project["name"]}
 			}
+			// Each customer is a source of its own: its chart, at the
+			// project's semver.
+			if customers := projectCustomers(project); len(customers) > 0 {
+				var list []any
+				for _, c := range customers {
+					list = append(list, map[string]any{"name": c[0], "chart": map[string]any{"repoURL": c[1], "semver": source["semver"]}})
+				}
+				p["customers"] = list
+			}
 			if named, ok := project["sources"]; ok {
 				sources := map[string]any{}
 				for sn, sv := range parity.Map(named) {
@@ -226,6 +300,10 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 			}
 			if _, ok := promotion["pinKey"]; !ok {
 				promotion["pinKey"] = "pins.{stage}"
+				// With customers a pin is keyed by its Stage's name.
+				if len(projectCustomers(project)) > 0 {
+					promotion["pinKey"] = "pins." + stageNameTemplate(values)
+				}
 			}
 			settings["promotion"] = promotion
 			// cd-project names the promoted-version check and never renders

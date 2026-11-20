@@ -984,6 +984,34 @@ The platform's is the one that quiesces a pipeline during a move, since two
 renders of one project read the same company files and only the platform's
 values can tell them apart (`tests/cases/cd-project/no-auto-promote`).
 
+### A product with several customers
+
+A product installed once for each of several customers has one Kargo Project
+for all of them (cd-pipeline's `projects[].customers`,
+[Derived Stages](#derived-stages)). The customers are the platform's:
+`pipeline.project.customers` registers them, sealed with the rest of
+`pipeline`, and is not set beside `pipeline.project.customer`. The company
+names the ones it installs in `project.customers`, each a name or
+`{name, chart, semver}` with a chart of its own in place of
+`project.source.chart` (`infraChart`, where `project.source` has one, becomes
+`<chart>-infra`). A name the platform did not register, a name given twice, a
+platform list with no company list (or the other way round) and
+`project.sources` or `project.pipeline.stageSources` beside it are refused.
+
+Each customer gets a Warehouse, `<project>-<customer>`, and a chain of Stages
+along `project.pipeline.stageOrder`, named by `pipeline.graph.stageName`
+(default `{stage}-{customer}`, with `{stage}` the cluster). Each customer's
+install on a cluster is keyed by its Stage's name: `pins.<stage>`,
+`values.<stage>` and the platform's `products.<stage>` (`pins.dev-globex`); a
+key that is a bare cluster is refused. The install is cd-company's service
+`<project>-<customer>`, so its Helm release and, unless the platform's
+products name another, its namespace; its Applications take the customer as
+`{customer}` and the project's name as their middle
+(`applicationPrefix: "dev-{customer}-"` gives `dev-globex-shop`). The pin key
+defaults to `pins.<graph.stageName>`, so a Stage writes the key its install
+reads, and `promotion.pinFile` may name `{customer}` to give each customer a
+file of its own (`tests/cases/cd-project/customers`).
+
 ### Company and platform
 
 Helm sees merged values, not which file supplied a key. Argo CD gives the
