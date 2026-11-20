@@ -1,0 +1,44 @@
+# One Kargo Project for a product with three customers: a Warehouse for each
+# customer (shop-globex, shop-initech on the project's chart, shop-umbrella on
+# a chart of its own) and none of the project's own, and a chain of three
+# Stages for each customer, nine in all: dev-<customer> from its Warehouse,
+# promoting on its own; stage-<customer> from dev-<customer>; prod-<customer>
+# from stage-<customer>. In the Application names and the pins, {stage} is
+# the cluster and {customer} the customer. Approvers are for each customer's
+# Stages.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+promotion:
+  pinFile: "projects/{slug}/{customer}/{stage}/pin.yaml"
+  pinKey: "pin"
+graph:
+  upstreams:
+    stage: [dev]
+    prod: [stage]
+  applicationName: "{stage}-{customer}-{app}"
+  approvers:
+    claims:
+      groups: ["{stage}:{slug}:{customer}:approver"]
+  admins:
+    claims:
+      groups: [platform:admin]
+projects:
+  - name: cd-acme-shop
+    slug: shop
+    vendor: acme
+    warehouse:
+      name: shop
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    customers:
+      - globex
+      - initech
+      - name: umbrella
+        chart:
+          repoURL: oci://registry.example.com/charts/shop-umbrella
+          semver: ">=2.0.0 <3.0.0"
+    access:
+      approvers: true
+      admins: true
+    stageOrder: [dev, stage, prod]

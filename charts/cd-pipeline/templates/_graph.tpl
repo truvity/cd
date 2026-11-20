@@ -41,6 +41,30 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- if $p.stages -}}
 {{- fail (printf "cd-pipeline: projects.%s sets both stages and stageOrder; a project spells its Stages out or derives them, not both" $name) -}}
 {{- end -}}
+{{- /* CUSTOMERS: one Kargo Project for a product with several customers.
+       Each customer gets a Warehouse of its own, `<warehouse>-<customer>` (a
+       source named after it, on the project's chart unless the customer
+       names one), and its own chain of Stages, one for each Stage of
+       stageOrder, named by graph.stageName (default `{stage}-{customer}`).
+       A customer's Stages request only its Warehouse and promote only from
+       its own Stages; the first of each chain promotes on its own. In the
+       names of its Applications and in its pins, `{stage}` stays the Stage
+       of stageOrder (the cluster) and `{customer}` is the customer. */ -}}
+{{- $customers := list -}}
+{{- range $c := ($p.customers | default list) -}}
+{{- $customers = append $customers (ternary (dict "name" $c) $c (kindIs "string" $c)) -}}
+{{- end -}}
+{{- if $customers -}}
+{{- if or $p.sources $p.stageSources -}}
+{{- fail (printf "cd-pipeline: projects.%s sets customers and sources or stageSources; each customer is a source of its own" $name) -}}
+{{- end -}}
+{{- $srcs := dict -}}
+{{- range $c := $customers -}}
+{{- if hasKey $srcs $c.name -}}{{- fail (printf "cd-pipeline: projects.%s.customers: %q is listed twice" $name $c.name) -}}{{- end -}}
+{{- $_ := set $srcs $c.name ($c.chart | default $p.chart | default dict) -}}
+{{- end -}}
+{{- $_ := set $p "sources" $srcs -}}
+{{- end -}}
 {{- $chains := deepCopy ($g.upstreams | default dict) -}}
 {{- range $st, $cands := ($p.upstreams | default dict) -}}{{- $_ := set $chains $st $cands -}}{{- end -}}
 {{- $auto := $p.autoPromote | default list -}}
@@ -82,24 +106,44 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- $projectTokens := include "cd-pipeline.projectTokens" $p | fromYaml -}}
 {{- $e2eApp := $p.e2eApplication | default (printf "%s-e2e" $slug) -}}
 {{- $stages := list -}}
+{{- $stageName := $g.stageName | default "{stage}-{customer}" -}}
+{{- $chainsOf := ternary $customers (list (dict)) (gt (len $customers) 0) -}}
+{{- $firsts := list -}}
+{{- range $c := $chainsOf -}}
+{{- $ctok := $projectTokens -}}
+{{- if $c.name -}}{{- $ctok = merge (dict "customer" $c.name) $projectTokens -}}{{- end -}}
 {{- range $st := $order -}}
 {{- $apps := list -}}
 {{- range $a := (index ($p.applicationsByStage | default dict) $st | default $p.applications | default (list $slug)) -}}
-{{- $apps = append $apps (include "cd-pipeline.fill" (dict "s" $appName "tokens" (merge (dict "stage" $st "app" $a) $projectTokens))) -}}
+{{- $apps = append $apps (include "cd-pipeline.fill" (dict "s" $appName "tokens" (merge (dict "stage" $st "app" $a) $ctok))) -}}
 {{- end -}}
-{{- $s := dict "name" $st "applications" $apps -}}
-{{- if hasKey $upstream $st -}}{{- $_ := set $s "from" (index $upstream $st) -}}{{- end -}}
+{{- $sname := $st -}}
+{{- if $c.name -}}{{- $sname = include "cd-pipeline.fill" (dict "s" $stageName "tokens" (dict "stage" $st "customer" $c.name)) -}}{{- end -}}
+{{- $s := dict "name" $sname "applications" $apps -}}
+{{- if $c.name -}}{{- $_ := set $s "env" $st -}}{{- $_ := set $s "customer" $c.name -}}{{- end -}}
+{{- if hasKey $upstream $st -}}
+{{- $u := index $upstream $st -}}
+{{- if $c.name -}}{{- $u = include "cd-pipeline.fill" (dict "s" $stageName "tokens" (dict "stage" $u "customer" $c.name)) -}}{{- end -}}
+{{- $_ := set $s "from" $u -}}
+{{- else -}}
+{{- $firsts = append $firsts $sname -}}
+{{- end -}}
 {{- /* The opt-out wins over both rules. */ -}}
 {{- if has $st $noAuto -}}{{- $_ := set $s "noAutoPromote" true -}}
 {{- else if or (not (hasKey $upstream $st)) (has $st $auto) -}}{{- $_ := set $s "autoPromote" true -}}{{- end -}}
 {{- $stChart := $p.chart | default dict -}}
+{{- if $c.name -}}
+{{- $_ := set $s "source" $c.name -}}
+{{- $stChart = index $p.sources $c.name -}}
+{{- else -}}
 {{- with index $srcOf $st -}}
 {{- $_ := set $s "source" . -}}
 {{- $stChart = index $sources . -}}
 {{- end -}}
 {{- if and $sources (not (hasKey $upstream $st)) (ne $st (first $order)) -}}{{- $_ := set $s "mode" "pr" -}}{{- end -}}
+{{- end -}}
 {{- if has $st ($p.e2eStages | default list) -}}
-{{- $_ := set $s "e2eApplication" (include "cd-pipeline.fill" (dict "s" $appName "tokens" (merge (dict "stage" $st "app" $e2eApp) $projectTokens))) -}}
+{{- $_ := set $s "e2eApplication" (include "cd-pipeline.fill" (dict "s" $appName "tokens" (merge (dict "stage" $st "app" $e2eApp) $ctok))) -}}
 {{- end -}}
 {{- /* A digest pin has no chart version for the check to compare: the Stage omits it. */ -}}
 {{- $verif := dict "promotedVersion" (and ($g.promotedVersion | default false) (ne ($stChart.pin | default "tag") "digest")) -}}
@@ -107,29 +151,46 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- $_ := set $s "verification" $verif -}}
 {{- $stages = append $stages $s -}}
 {{- end -}}
+{{- end -}}
 {{- $acc := $p.access | default dict -}}
 {{- $subjects := $acc.subjects | default list -}}
 {{- if $acc.approvers -}}
 {{- $ap := $g.approvers | default dict -}}
 {{- $claims := $ap.claims -}}
 {{- if not $claims -}}{{- fail "cd-pipeline: graph.approvers.claims is required by access.approvers" -}}{{- end -}}
+{{- range $c := $chainsOf -}}
+{{- $cfirst := $first -}}
+{{- if $c.name -}}{{- $cfirst = include "cd-pipeline.fill" (dict "s" $stageName "tokens" (dict "stage" $first "customer" $c.name)) -}}{{- end -}}
 {{- range $st := $order -}}
 {{- if ne $st $first -}}
 {{- $tokens := dict "stage" $st "slug" $slug "project" $name -}}
-{{- $subjects = append $subjects (dict "name" (include "cd-pipeline.fill" (dict "s" ($ap.subject | default "approver-{stage}") "tokens" $tokens)) "claims" (include "cd-pipeline.fillClaims" (dict "claims" $claims "tokens" $tokens) | fromYaml) "stages" (list $first $st) "approve" (eq $st $last)) -}}
+{{- $sname := $st -}}
+{{- /* One approver for each customer's Stage: a subject name that does not
+       spell the customer takes it as a suffix. */ -}}
+{{- $subj := $ap.subject | default "approver-{stage}" -}}
+{{- if $c.name -}}
+{{- if not (contains "{customer}" $subj) -}}{{- $subj = printf "%s-{customer}" $subj -}}{{- end -}}
+{{- $_ := set $tokens "customer" $c.name -}}
+{{- $sname = include "cd-pipeline.fill" (dict "s" $stageName "tokens" (dict "stage" $st "customer" $c.name)) -}}
+{{- end -}}
+{{- $subjects = append $subjects (dict "name" (include "cd-pipeline.fill" (dict "s" $subj "tokens" $tokens)) "claims" (include "cd-pipeline.fillClaims" (dict "claims" $claims "tokens" $tokens) | fromYaml) "stages" (list $cfirst $sname) "approve" (eq $st $last)) -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
+{{- end -}}
+{{- $allNames := list -}}
+{{- range $s := $stages -}}{{- $allNames = append $allNames $s.name -}}{{- end -}}
 {{- if $acc.admins -}}
 {{- $ad := $g.admins | default dict -}}
 {{- $claims := $ad.claims -}}
 {{- if not $claims -}}{{- fail "cd-pipeline: graph.admins.claims is required by access.admins" -}}{{- end -}}
 {{- $tokens := dict "slug" $slug "project" $name -}}
-{{- $subjects = append $subjects (dict "name" ($ad.subject | default "admin") "claims" (include "cd-pipeline.fillClaims" (dict "claims" $claims "tokens" $tokens) | fromYaml) "stages" $order "approve" true) -}}
+{{- $subjects = append $subjects (dict "name" ($ad.subject | default "admin") "claims" (include "cd-pipeline.fillClaims" (dict "claims" $claims "tokens" $tokens) | fromYaml) "stages" $allNames "approve" true) -}}
 {{- end -}}
 {{- $_ := set $p "access" (dict "subjects" $subjects) -}}
 {{- $_ := set $p "stages" $stages -}}
-{{- range $k := list "stageOrder" "upstreams" "autoPromote" "noAutoPromote" "stageSources" "applications" "applicationsByStage" "e2eStages" "e2eApplication" "metricsGateStages" -}}
+{{- if $customers -}}{{- $_ := set $p "customerWarehousesOnly" true -}}{{- end -}}
+{{- range $k := list "stageOrder" "upstreams" "autoPromote" "noAutoPromote" "stageSources" "applications" "applicationsByStage" "e2eStages" "e2eApplication" "metricsGateStages" "customers" -}}
 {{- $_ := unset $p $k -}}
 {{- end -}}
 {{- toYaml $p -}}
@@ -173,11 +234,11 @@ Call with (dict "root" . "p" <project> "s" <stage> "slug" ..).
 {{- $s := .s -}}
 {{- $slug := .slug -}}
 {{- $pg := $p.metricsGate | default dict -}}
-{{- $ep := required (printf "cd-pipeline: metricsGate.endpoints.%s is required by the metrics gate of projects.%s" $s.name $p.name) (index ($mg.endpoints | default dict) $s.name) -}}
+{{- $ep := required (printf "cd-pipeline: metricsGate.endpoints.%s is required by the metrics gate of projects.%s" ($s.env | default $s.name) $p.name) (index ($mg.endpoints | default dict) ($s.env | default $s.name)) -}}
 {{- $tok := $mg.token -}}
 {{- $ca := $mg.caBundle -}}
 {{- $tokens := dict "stage" $s.name "slug" $slug "project" $p.name -}}
-{{- $env := list (dict "name" "CHART_VERSION" "value" "{{args.chart-version}}") (dict "name" "PROJECT_NAME" "value" $slug) (dict "name" "ISSUER_HOST" "value" (required "cd-pipeline: metricsGate.issuerHost is required by a metrics gate" $mg.issuerHost)) (dict "name" "METRICS_BASE_URL" "value" (required (printf "cd-pipeline: metricsGate.endpoints.%s.url is required" $s.name) $ep.url)) (dict "name" "SA_TOKEN_FILE" "value" (printf "%s/token" $tok.mountPath)) -}}
+{{- $env := list (dict "name" "CHART_VERSION" "value" "{{args.chart-version}}") (dict "name" "PROJECT_NAME" "value" $slug) (dict "name" "ISSUER_HOST" "value" (required "cd-pipeline: metricsGate.issuerHost is required by a metrics gate" $mg.issuerHost)) (dict "name" "METRICS_BASE_URL" "value" (required (printf "cd-pipeline: metricsGate.endpoints.%s.url is required" ($s.env | default $s.name)) $ep.url)) (dict "name" "SA_TOKEN_FILE" "value" (printf "%s/token" $tok.mountPath)) -}}
 {{- if $ep.caBundle -}}
 {{- $env = append $env (dict "name" "CA_BUNDLE" "value" (printf "%s/%s" $ca.mountPath $ca.key)) -}}
 {{- end -}}

@@ -37,6 +37,11 @@ type (
 		Git       Git
 		Promotion Promotion
 		Kind      string
+		// Customers are the customers one Kargo Project delivers the product
+		// to, copied from the input: each has a Warehouse and a chain of
+		// Stages of its own (cd-pipeline projects[].customers). Empty is one
+		// installation, as before.
+		Customers []string
 	}
 
 	// ProductInput is what a platform declares about a product's delivery.
@@ -66,6 +71,10 @@ type (
 		// KindStaticSite). Empty is a product. It is carried to the row as
 		// given and not checked here.
 		Kind string
+		// Customers names the customers of a product with several, each
+		// with a Warehouse and a chain of Stages under the one Kargo
+		// Project. Empty: one installation.
+		Customers []string
 	}
 
 	// Git is a product's override of cd-pipeline's release-wide git settings
@@ -204,6 +213,7 @@ func Product(in ProductInput, defaultRegistry string, order []string, owned map[
 		Git:         in.Git.clone(),
 		Promotion:   in.Promotion.clone(),
 		Kind:        in.Kind,
+		Customers:   slices.Clone(in.Customers),
 	}
 }
 

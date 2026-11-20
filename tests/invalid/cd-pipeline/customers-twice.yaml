@@ -1,0 +1,11 @@
+# expect: customers: "globex" is listed twice
+git:
+  repoURL: https://git.example.com/acme/environments.git
+graph:
+  upstreams:
+    stage: [dev]
+projects:
+  - name: shop
+    chart: {repoURL: oci://registry.example.com/charts/shop, semver: ">=1.0.0"}
+    customers: [globex, globex]
+    stageOrder: [dev, stage]

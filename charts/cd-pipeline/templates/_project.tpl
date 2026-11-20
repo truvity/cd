@@ -15,6 +15,9 @@ Stages, as YAML documents. Call with (dict "root" . "p" <project map>).
 {{- $wh := $p.warehouse | default dict -}}
 {{- $eff := include "cd-pipeline.effective" (dict "root" $r "p" $p) | fromYaml -}}
 {{- $whName := $wh.name | default $name -}}
+{{- if $p.customers -}}
+{{- fail (printf "cd-pipeline: projects.%s.customers needs stageOrder: a customer's chain of Stages is derived" $name) -}}
+{{- end -}}
 
 {{- /* Project: cluster-scoped, so an installation that hands the rest of the
 pipeline to another party may render it elsewhere (createProject: false). */ -}}
@@ -25,7 +28,11 @@ pipeline to another party may render it elsewhere (createProject: false). */ -}}
 {{- end -}}
 
 {{- /* Warehouse: one chart subscription unless the project lists its own. */ -}}
+{{- /* A project with customers has a Warehouse for each customer and none
+       of its own (cd-pipeline.derive). */ -}}
+{{- if not $p.customerWarehousesOnly -}}
 {{- include "cd-pipeline.warehouse" (dict "root" $r "name" $name "whName" $whName "wh" $wh "chart" $chart "subs" $wh.subscriptions "where" "chart") -}}
+{{- end -}}
 {{- /* A Warehouse per further source, <warehouse>-<source>, with the same
        interval and Freight policy; `warehouse.subscriptions` is `chart`'s alone. */ -}}
 {{- $sources := $p.sources | default dict -}}

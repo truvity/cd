@@ -31,7 +31,7 @@ Call with (dict "p" <project map> "where" <key path for the message> "s" <templa
 */}}
 {{- define "cd-pipeline.checkTokens" -}}
 {{- range $k := list "vendor" "customer" -}}
-{{- if and (contains (printf "{%s}" $k) (toString $.s)) (not (index $.p $k)) -}}
+{{- if and (contains (printf "{%s}" $k) (toString $.s)) (not (index $.p $k)) (not (and (eq $k "customer") (or $.p.customers $.p.customerWarehousesOnly))) -}}
 {{- fail (printf "cd-pipeline: projects.%s: %s names {%s} but the project has no %s" $.p.name $.where $k $k) -}}
 {{- end -}}
 {{- end -}}
