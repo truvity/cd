@@ -115,6 +115,18 @@ func TestProductAndPlatformCharts(t *testing.T) {
 		t.Errorf("Product with its own repository = %+v", q)
 	}
 
+	// An install in a namespace of its own takes the AppProjects of that
+	// namespace, not of its name; unset, the name is the namespace.
+	nsAps := []appproject.AppProject{appproject.Deployer("shop-globex", "prod", "g", appproject.InNamespace("finttech-shop-globex")), appproject.Deployer("shop-globex", "stage", "g")}
+
+	if q := Product(ProductInput{Name: "shop-globex", Chart: "shop", Namespace: "finttech-shop-globex"}, "oci://reg", order, owned, nsAps); len(q.AppProjects) != 1 || q.AppProjects[0].Name != "shop-globex-prod" {
+		t.Errorf("product in its own namespace = %+v", q.AppProjects)
+	}
+
+	if q := Product(ProductInput{Name: "shop-globex", Chart: "shop"}, "oci://reg", order, owned, nsAps); len(q.AppProjects) != 1 || q.AppProjects[0].Name != "shop-globex-stage" {
+		t.Errorf("product with no namespace = %+v", q.AppProjects)
+	}
+
 	// A tenant installs another product's charts under its own name.
 	if q := Product(ProductInput{Name: "shop-ie", Chart: "shop"}, "oci://reg", order, owned, nil); q.RepoURL != "oci://reg/shop/charts/shop" || q.Key != "shopIeChart" || q.Name != "shop-ie" {
 		t.Errorf("tenant product = %+v", q)

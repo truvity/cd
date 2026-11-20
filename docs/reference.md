@@ -155,7 +155,11 @@ overrides and the product's `kind`; they are copied, not interpreted, and
 unset they leave the row what it was;
 `delivery.ProberGranted` answers cd-delivery's `e2e.proberGranted`;
 `appproject.Deployer` builds the `<product>-<cluster>` AppProject whose
-deployer role one group holds.
+deployer role one group holds; its destination is the namespace `product`,
+unless `appproject.InNamespace` names another (an install in a namespace of
+its own, `products.<name>.namespace`), and `ProductInput.Namespace` makes
+`delivery.Product` pick the AppProjects of that namespace. Unset, both are what
+they were.
 
 ## deploy/pulumi/registryread
 
