@@ -41,7 +41,12 @@ type PromotedVersionConfig struct {
 	Apps            string // APPS: Application names, space separated
 	ChartRepo       string // CHART_REPO
 	ChartName       string // CHART_NAME: empty for an OCI repository that names the chart
-	Expected        string // EXPECTED: the targetRevision, prefix included
+	Expected        string // EXPECTED: the targetRevision, prefix included, or the digest with ArtifactRef
+	// ArtifactRef (ARTIFACT_REF, optional): the check is of an artifact
+	// deployed by its digest, not of a chart. An Application renders it
+	// when a source's Helm values name it, and is at the promoted version
+	// when they name Expected too.
+	ArtifactRef     string
 	ArgoCDNamespace string // ARGOCD_NAMESPACE, default argocd
 	WaitSeconds     int64  // WAIT_SECONDS
 	Poll            time.Duration
@@ -88,6 +93,7 @@ func PromotedVersionConfigFromEnv(lookup func(string) (string, bool)) (PromotedV
 	cfg.ChartRepo = set("CHART_REPO")
 	cfg.ChartName = set("CHART_NAME")
 	cfg.Expected = set("EXPECTED")
+	cfg.ArtifactRef, _ = lookup("ARTIFACT_REF")
 
 	if v, _ := lookup("ARGOCD_NAMESPACE"); v != "" {
 		cfg.ArgoCDNamespace = v
@@ -186,6 +192,11 @@ func PromotedVersion(ctx context.Context, cfg PromotedVersionConfig) error {
 	last := ""
 	apps := strings.Fields(cfg.Apps)
 
+	what := cfg.ChartRepo
+	if cfg.ArtifactRef != "" {
+		what = cfg.ArtifactRef
+	}
+
 	for {
 		var (
 			pending []string
@@ -224,9 +235,9 @@ func PromotedVersion(ctx context.Context, cfg PromotedVersionConfig) error {
 		}
 
 		if matched == 0 {
-			_, _ = fmt.Fprintf(cfg.Out, "FAIL: none of the Applications (%s) renders a source from %s -- check the Stage's applications:%s\n", cfg.Apps, cfg.ChartRepo, report)
+			_, _ = fmt.Fprintf(cfg.Out, "FAIL: none of the Applications (%s) renders a source from %s -- check the Stage's applications:%s\n", cfg.Apps, what, report)
 
-			return exitf(ExitFail, fmt.Errorf("none of the Applications (%s) renders a source from %s", cfg.Apps, cfg.ChartRepo))
+			return exitf(ExitFail, fmt.Errorf("none of the Applications (%s) renders a source from %s", cfg.Apps, what))
 		}
 
 		now := cfg.Now().Unix()
@@ -288,7 +299,12 @@ func judgeApp(ctx context.Context, cfg PromotedVersionConfig, app string) string
 	}
 
 	out, _ := jqRaw(r.body, cfg.Log, func(v any) ([]string, error) {
-		s, err := judge(v, cfg.ChartRepo, cfg.ChartName, cfg.Expected)
+		judgeOne := func() (string, error) { return judge(v, cfg.ChartRepo, cfg.ChartName, cfg.Expected) }
+		if cfg.ArtifactRef != "" {
+			judgeOne = func() (string, error) { return judgeArtifact(v, cfg.ArtifactRef, cfg.Expected) }
+		}
+
+		s, err := judgeOne()
 		if err != nil {
 			return nil, err
 		}
@@ -476,6 +492,12 @@ func judge(app any, repo, chart, exp string) (string, error) {
 		return "wait spec is at " + exp + " but last comparison was at " + j, nil
 	}
 
+	return judgeStatus(app, exp)
+}
+
+// judgeStatus is the programs' common tail: the Application's operation,
+// sync and health, once its sources are at the promoted version.
+func judgeStatus(app any, exp string) (string, error) {
 	phase, err := orDefault(app, "", "status", "operationState", "phase")
 	if err != nil {
 		return "", err
@@ -508,4 +530,129 @@ func judge(app any, repo, chart, exp string) (string, error) {
 	}
 
 	return "ok at " + exp, nil
+}
+
+// namesIn is the artifact program's `names($s)`: whether a source's Helm
+// values (`.helm.valuesObject // {}`) hold the string s anywhere.
+func namesIn(src any, s string) (bool, error) {
+	vo, err := path(src, "helm", "valuesObject")
+	if err != nil {
+		return false, err
+	}
+
+	if !truthy(vo) {
+		return false, nil
+	}
+
+	found := false
+
+	var walk func(v any)
+	walk = func(v any) {
+		switch x := v.(type) {
+		case string:
+			if x == s {
+				found = true
+			}
+		case map[string]any:
+			for _, e := range x {
+				walk(e)
+			}
+		case []any:
+			for _, e := range x {
+				walk(e)
+			}
+		}
+	}
+	walk(vo)
+
+	return found, nil
+}
+
+// mineArtifact is the sources (`x.sources // [x.source]`) of obj under key
+// whose Helm values name the artifact.
+func mineArtifact(obj any, keys []string, ref string) ([]any, error) {
+	list, err := path(obj, slices.Concat(keys, []string{"sources"})...)
+	if err != nil {
+		return nil, err
+	}
+
+	if !truthy(list) {
+		one, err := path(obj, slices.Concat(keys, []string{"source"})...)
+		if err != nil {
+			return nil, err
+		}
+
+		list = []any{one}
+	}
+
+	items, err := iterate(list)
+	if err != nil {
+		return nil, err
+	}
+
+	var out []any
+
+	for _, it := range items {
+		if it == nil {
+			continue
+		}
+
+		ok, err := namesIn(it, ref)
+		if err != nil {
+			return nil, err
+		}
+
+		if ok {
+			out = append(out, it)
+		}
+	}
+
+	return out, nil
+}
+
+// allName is `all(names($s))` over sources already known to be sources.
+func allName(srcs []any, s string) (bool, error) {
+	for _, src := range srcs {
+		ok, err := namesIn(src, s)
+		if err != nil || !ok {
+			return false, err
+		}
+	}
+
+	return true, nil
+}
+
+// judgeArtifact is the script's artifact program over one Application.
+func judgeArtifact(app any, ref, exp string) (string, error) {
+	spec, err := mineArtifact(app, []string{"spec"}, ref)
+	if err != nil {
+		return "", err
+	}
+
+	cmp, err := mineArtifact(app, []string{"status", "sync", "comparedTo"}, ref)
+	if err != nil {
+		return "", err
+	}
+
+	if len(spec) == 0 {
+		return "skip renders no source of " + ref, nil
+	}
+
+	if ok, err := allName(spec, exp); err != nil || !ok {
+		if err != nil {
+			return "", err
+		}
+
+		return "wait spec does not name " + exp + " yet (parent app-of-apps not synced?)", nil
+	}
+
+	if ok, err := allName(cmp, exp); err != nil || len(cmp) == 0 || !ok {
+		if err != nil {
+			return "", err
+		}
+
+		return "wait spec names " + exp + " but the last comparison did not", nil
+	}
+
+	return judgeStatus(app, exp)
 }
