@@ -31,6 +31,32 @@ func TestDeployer(t *testing.T) {
 	}
 }
 
+func TestDeployerInNamespace(t *testing.T) {
+	t.Parallel()
+
+	base := Deployer("shop-globex", "stage", "g")
+
+	got := Deployer("shop-globex", "stage", "g", InNamespace("finttech-shop-globex"))
+	if got.Name != "shop-globex-stage" || got.DestNamespace != "finttech-shop-globex" || got.DestCluster != "stage" {
+		t.Errorf("Deployer in a namespace = %+v", got)
+	}
+
+	// Only the destination moves: the name, the role and the policies stay.
+	if got.Name != base.Name || !slices.Equal(got.Roles[0].Policies, base.Roles[0].Policies) ||
+		!slices.Equal(got.Roles[0].Groups, base.Roles[0].Groups) {
+		t.Errorf("Deployer in a namespace = %+v, base %+v", got, base)
+	}
+
+	// Unset or empty is the product's name, as without the option.
+	if d := Deployer("shop-globex", "stage", "g", InNamespace("")); d.DestNamespace != "shop-globex" {
+		t.Errorf("empty namespace = %q, want the product's name", d.DestNamespace)
+	}
+
+	if base.DestNamespace != "shop-globex" {
+		t.Errorf("default namespace = %q", base.DestNamespace)
+	}
+}
+
 func TestSortAndForNamespace(t *testing.T) {
 	t.Parallel()
 

@@ -56,7 +56,11 @@ type (
 		// <Chart>/charts); empty means Name. A tenant of a product is its own
 		// product -- namespace, pin, Stages and AppProjects named after it --
 		// installing that product's charts.
-		Chart       string
+		Chart string
+		// Namespace is the namespace the product is installed in (cd-delivery's
+		// products.<name>.namespace); empty means Name. The row's AppProjects
+		// are the ones whose destination it is.
+		Namespace   string
 		Semver      string
 		MetricsGate []string
 		// E2EJob false: the product runs no e2e Job as part of delivery.
@@ -186,7 +190,7 @@ func Owners(order []string, owned map[string][]string, key string) []string {
 
 // Product builds a product's pipeline row: its pin key, the clusters owning
 // it in order, its chart, and the AppProjects (of all of them) whose
-// destination is the product's namespace. Clusters is empty when no cluster
+// destination is the product's namespace (ProductInput.Namespace, default its name). Clusters is empty when no cluster
 // owns the pin; the caller decides whether that is an error.
 func Product(in ProductInput, defaultRegistry string, order []string, owned map[string][]string, appProjects []appproject.AppProject) ProductPipeline {
 	key := PinKey(in.Name)
@@ -201,6 +205,11 @@ func Product(in ProductInput, defaultRegistry string, order []string, owned map[
 		repo = defaultRegistry + "/" + chart + "/charts"
 	}
 
+	namespace := in.Namespace
+	if namespace == "" {
+		namespace = in.Name
+	}
+
 	return ProductPipeline{
 		Name:        in.Name,
 		Key:         key,
@@ -209,7 +218,7 @@ func Product(in ProductInput, defaultRegistry string, order []string, owned map[
 		Clusters:    Owners(order, owned, key),
 		MetricsGate: slices.Clone(in.MetricsGate),
 		E2EJobOff:   in.E2EJob != nil && !*in.E2EJob,
-		AppProjects: appproject.ForNamespace(appProjects, in.Name),
+		AppProjects: appproject.ForNamespace(appProjects, namespace),
 		Git:         in.Git.clone(),
 		Promotion:   in.Promotion.clone(),
 		Kind:        in.Kind,

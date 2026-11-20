@@ -58,12 +58,30 @@ func Policies(appProject, role string, actions []string) []string {
 	return out
 }
 
+// Option changes what Deployer builds. None is needed for a product whose
+// namespace is named after it.
+type Option func(*AppProject)
+
+// InNamespace sets the destination namespace of a Deployer AppProject. Without
+// it, and with an empty namespace, the destination is the product's name, as
+// before. The AppProject's name does not move: it stays `<product>-<cluster>`,
+// so a product installed for several customers (each install a product of its
+// own, in a namespace of its own) has one AppProject per install.
+func InNamespace(namespace string) Option {
+	return func(ap *AppProject) {
+		if namespace != "" {
+			ap.DestNamespace = namespace
+		}
+	}
+}
+
 // Deployer is a product's AppProject on a cluster: destination the product's
-// namespace (named after the product), one deployer role held by group.
-func Deployer(product, cluster, group string) AppProject {
+// namespace (named after the product unless InNamespace names another), one
+// deployer role held by group.
+func Deployer(product, cluster, group string, opts ...Option) AppProject {
 	name := Name(product, cluster)
 
-	return AppProject{
+	ap := AppProject{
 		Name:          name,
 		DestCluster:   cluster,
 		DestNamespace: product,
@@ -73,6 +91,12 @@ func Deployer(product, cluster, group string) AppProject {
 			Policies: Policies(name, DeployerRole, DeployerActions),
 		}},
 	}
+
+	for _, opt := range opts {
+		opt(&ap)
+	}
+
+	return ap
 }
 
 // Sort orders AppProjects by name, the order every render lists them in.
