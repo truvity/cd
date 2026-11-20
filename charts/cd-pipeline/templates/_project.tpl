@@ -18,6 +18,8 @@ Stages, as YAML documents. Call with (dict "root" . "p" <project map>).
 {{- if $p.customers -}}
 {{- fail (printf "cd-pipeline: projects.%s.customers needs stageOrder: a customer's chain of Stages is derived" $name) -}}
 {{- end -}}
+{{- include "cd-pipeline.checkCompanions" $p -}}
+{{- $companionsOf := $p.sourceCompanions | default dict -}}
 
 {{- /* Project: cluster-scoped, so an installation that hands the rest of the
 pipeline to another party may render it elsewhere (createProject: false). */ -}}
@@ -31,13 +33,13 @@ pipeline to another party may render it elsewhere (createProject: false). */ -}}
 {{- /* A project with customers has a Warehouse for each customer and none
        of its own (cd-pipeline.derive). */ -}}
 {{- if not $p.customerWarehousesOnly -}}
-{{- include "cd-pipeline.warehouse" (dict "root" $r "name" $name "whName" $whName "wh" $wh "chart" $chart "subs" $wh.subscriptions "where" "chart") -}}
+{{- include "cd-pipeline.warehouse" (dict "root" $r "name" $name "whName" $whName "wh" $wh "chart" $chart "subs" $wh.subscriptions "where" "chart" "companions" $p.companions) -}}
 {{- end -}}
 {{- /* A Warehouse per further source, <warehouse>-<source>, with the same
        interval and Freight policy; `warehouse.subscriptions` is `chart`'s alone. */ -}}
 {{- $sources := $p.sources | default dict -}}
 {{- range $sn := keys $sources | sortAlpha -}}
-{{- include "cd-pipeline.warehouse" (dict "root" $r "name" $name "whName" (printf "%s-%s" $whName $sn) "wh" $wh "chart" (index $sources $sn) "subs" list "where" (printf "sources.%s" $sn)) -}}
+{{- include "cd-pipeline.warehouse" (dict "root" $r "name" $name "whName" (printf "%s-%s" $whName $sn) "wh" $wh "chart" (index $sources $sn) "subs" list "where" (printf "sources.%s" $sn) "companions" (index $companionsOf $sn | default $p.companions)) -}}
 {{- end -}}
 
 {{- /* The credentials a promotion writes back with: one ExternalSecret per project namespace. */ -}}
@@ -98,6 +100,7 @@ pipeline to another party may render it elsewhere (createProject: false). */ -}}
 {{- if not (hasKey $sources .) -}}{{- fail (printf "cd-pipeline: projects.%s.stages.%s.source: %q is not a key of sources" $name $s.name .) -}}{{- end -}}
 {{- $ps = deepCopy $p -}}
 {{- $_ := set $ps "chart" (index $sources .) -}}
+{{- with index $companionsOf . -}}{{- $_ := set $ps "companions" . -}}{{- end -}}
 {{- $sw = printf "%s-%s" $whName . -}}
 {{- end -}}
 {{- if $s.from -}}
@@ -120,16 +123,14 @@ One Warehouse: a chart (or image) subscription to the chart given, unless
 {{- $chart := .chart | default dict -}}
 {{- $wh := .wh -}}
 {{- $subs := .subs -}}
+{{- if and $subs .companions -}}
+{{- fail (printf "cd-pipeline: projects.%s sets companions and warehouse.subscriptions; the subscriptions are verbatim, so the companions would not be in the Freight" $name) -}}
+{{- end -}}
 {{- if not $subs -}}
-{{- $sub := dict "repoURL" (required (printf "cd-pipeline: projects.%s.%s.repoURL is required (or warehouse.subscriptions)" $name .where) $chart.repoURL) "semverConstraint" (required (printf "cd-pipeline: projects.%s.%s.semver is required" $name .where) $chart.semver) "discoveryLimit" ($chart.discoveryLimit | default 20) -}}
-{{- if $chart.name -}}{{- $_ := set $sub "name" $chart.name -}}{{- end -}}
-{{- $mode := include "cd-pipeline.chartMode" (dict "name" $name "chart" $chart) | fromYaml -}}
-{{- if $mode.image -}}
-{{- /* An OCI chart whose tags carry a `v`: Helm's tag listing drops them, so subscribe as an image. */ -}}
-{{- $sub = dict "repoURL" $mode.repo "imageSelectionStrategy" "SemVer" "strictSemvers" $mode.strict "constraint" $chart.semver "discoveryLimit" ($chart.discoveryLimit | default 20) -}}
-{{- $subs = list (dict "image" $sub) -}}
-{{- else -}}
-{{- $subs = list (dict "chart" $sub) -}}
+{{- $subs = list (include "cd-pipeline.subscription" (dict "name" $name "chart" $chart "where" .where) | fromYaml) -}}
+{{- /* Every companion beside the chart: one Freight holds them all. */ -}}
+{{- range $cn := keys (.companions | default dict) | sortAlpha -}}
+{{- $subs = append $subs (include "cd-pipeline.subscription" (dict "name" $name "chart" (index $.companions $cn) "where" (printf "companions.%s" $cn)) | fromYaml) -}}
 {{- end -}}
 {{- end -}}
 {{- $spec := dict "interval" ($wh.interval | default "5m0s") "freightCreationPolicy" ($wh.freightCreationPolicy | default "Automatic") "subscriptions" $subs -}}
@@ -262,6 +263,48 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- $_ := set $spec "promotionTemplate" (dict "spec" (include "cd-pipeline.promotion" (dict "root" $r "p" $p "s" $s "stages" .stages "slug" $slug "eff" .eff) | fromYaml)) -}}
 {{- end -}}
 {{- include "cd-pipeline.doc" (dict "apiVersion" "kargo.akuity.io/v1alpha1" "kind" "Stage" "metadata" (include "cd-pipeline.meta" (dict "root" $r "name" $s.name "ns" $name "wave" $w.stage) | fromYaml) "spec" $spec) -}}
+{{- end -}}
+
+{{/*
+One Warehouse subscription to a chart map (`chart`, a source's or a
+companion's): a chart subscription, or an image one with subscribeAs image.
+As YAML for `fromYaml`. Call with (dict "name" <project> "chart" .. "where" <key path for messages>).
+*/}}
+{{- define "cd-pipeline.subscription" -}}
+{{- $name := .name -}}
+{{- $chart := .chart | default dict -}}
+{{- $sub := dict "repoURL" (required (printf "cd-pipeline: projects.%s.%s.repoURL is required (or warehouse.subscriptions)" $name .where) $chart.repoURL) "semverConstraint" (required (printf "cd-pipeline: projects.%s.%s.semver is required" $name .where) $chart.semver) "discoveryLimit" ($chart.discoveryLimit | default 20) -}}
+{{- if $chart.name -}}{{- $_ := set $sub "name" $chart.name -}}{{- end -}}
+{{- $mode := include "cd-pipeline.chartMode" (dict "name" $name "chart" $chart) | fromYaml -}}
+{{- if $mode.image -}}
+{{- /* An OCI chart whose tags carry a `v`: Helm's tag listing drops them, so subscribe as an image. */ -}}
+{{- $sub = dict "repoURL" $mode.repo "imageSelectionStrategy" "SemVer" "strictSemvers" $mode.strict "constraint" $chart.semver "discoveryLimit" ($chart.discoveryLimit | default 20) -}}
+{{- toYaml (dict "image" $sub) -}}
+{{- else -}}
+{{- toYaml (dict "chart" $sub) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+A project's companions (`companions`), checked: each one's repository is
+neither the chart's nor another companion's (the promotion reads each
+artifact of the Freight by its repository), and no Stage spells its own
+promotionTemplate (it would not write the companions' pins). Call with the
+project map.
+*/}}
+{{- define "cd-pipeline.checkCompanions" -}}
+{{- $p := . -}}
+{{- if $p.companions -}}
+{{- $seen := dict (include "cd-pipeline.chartMode" (dict "name" $p.name "chart" ($p.chart | default dict)) | fromYaml).repo "chart" -}}
+{{- range $cn := keys $p.companions | sortAlpha -}}
+{{- $repo := (include "cd-pipeline.chartMode" (dict "name" $p.name "chart" (index $p.companions $cn)) | fromYaml).repo -}}
+{{- if hasKey $seen $repo -}}{{- fail (printf "cd-pipeline: projects.%s.companions.%s: repository %s is also %s's; each artifact of the Freight is read by its repository" $p.name $cn $repo (index $seen $repo)) -}}{{- end -}}
+{{- $_ := set $seen $repo (printf "companions.%s" $cn) -}}
+{{- end -}}
+{{- range $s := ($p.stages | default list) -}}
+{{- if $s.promotionTemplate -}}{{- fail (printf "cd-pipeline: projects.%s.stages.%s.promotionTemplate is spelled out, so it would not write the pins of companions" $p.name $s.name) -}}{{- end -}}
+{{- end -}}
+{{- end -}}
 {{- end -}}
 
 {{- define "cd-pipeline.names" -}}

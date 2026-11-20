@@ -62,6 +62,17 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- range $c := $customers -}}
 {{- if hasKey $srcs $c.name -}}{{- fail (printf "cd-pipeline: projects.%s.customers: %q is listed twice" $name $c.name) -}}{{- end -}}
 {{- $_ := set $srcs $c.name ($c.chart | default $p.chart | default dict) -}}
+{{- /* A customer's own semver for a companion, in its Warehouse alone. */ -}}
+{{- with $c.companions -}}
+{{- $own := deepCopy ($p.companions | default dict) -}}
+{{- range $cn, $co := . -}}
+{{- if not (hasKey $own $cn) -}}{{- fail (printf "cd-pipeline: projects.%s.customers.%s.companions: %q is not a companion of the project" $name $c.name $cn) -}}{{- end -}}
+{{- $_ := set (index $own $cn) "semver" $co.semver -}}
+{{- end -}}
+{{- $sc := $p.sourceCompanions | default dict -}}
+{{- $_ := set $sc $c.name $own -}}
+{{- $_ := set $p "sourceCompanions" $sc -}}
+{{- end -}}
 {{- end -}}
 {{- $_ := set $p "sources" $srcs -}}
 {{- end -}}

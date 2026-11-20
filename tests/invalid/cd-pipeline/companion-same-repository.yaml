@@ -1,0 +1,27 @@
+# expect: is also chart's; each artifact of the Freight is read by its repository
+# A companion on the chart's own repository.
+git:
+  repoURL: https://git.example.com/acme/gitops.git
+promotion:
+  pinFile: versions/{stage}.yaml
+  pinKey: versions.{stage}.{pinKey}
+graph:
+  upstreams:
+    stage:
+    - dev
+projects:
+- name: docs
+  pinKey: docs
+  chart:
+    repoURL: oci://registry.example.com/charts/docs
+    semver: '>=1.0.0'
+  companions:
+    site:
+      repoURL: oci://registry.example.com/charts/docs
+      semver: '>=1.0.0'
+      subscribeAs: chart
+      pin: tag
+      pinKey: sites.{stage}.{pinKey}
+  stageOrder:
+  - dev
+  - stage

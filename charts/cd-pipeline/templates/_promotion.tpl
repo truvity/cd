@@ -47,7 +47,22 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- end -}}
 
 {{- $steps = append $steps (dict "uses" "git-clone" "retry" $retry "config" (dict "repoURL" "${{ vars.gitRepo }}" "checkout" (list (dict "branch" $pr.branch "path" "./repo")))) -}}
-{{- $steps = append $steps (dict "uses" "yaml-update" "config" (dict "path" (printf "./repo/%s" (include "cd-pipeline.fill" (dict "s" $pr.pinFile "tokens" $tokens))) "updates" (list (dict "key" (include "cd-pipeline.fill" (dict "s" $pr.pinKey "tokens" $tokens)) "value" (printf "%s%s" $prefix $version))))) -}}
+{{- $pinKey := include "cd-pipeline.fill" (dict "s" $pr.pinKey "tokens" $tokens) -}}
+{{- $updates := list (dict "key" $pinKey "value" (printf "%s%s" $prefix $version)) -}}
+{{- /* One pin per companion, in the same file and commit: the artifact of the
+       same Freight, read by its repository. */ -}}
+{{- range $cn := keys ($p.companions | default dict) | sortAlpha -}}
+{{- $co := index $p.companions $cn -}}
+{{- $key := printf "%s-%s" $pinKey $cn -}}
+{{- with $co.pinKey -}}
+{{- include "cd-pipeline.checkTokens" (dict "p" $p "where" (printf "companions.%s.pinKey" $cn) "s" .) -}}
+{{- $key = include "cd-pipeline.fill" (dict "s" . "tokens" $tokens) -}}
+{{- end -}}
+{{- $cm := include "cd-pipeline.chartMode" (dict "name" $p.name "chart" $co) | fromYaml -}}
+{{- $cfrom := include "cd-pipeline.chartFrom" (dict "repoURL" $cm.repo "name" ($co.name | default "") "vars" false "image" $cm.image) -}}
+{{- $updates = append $updates (dict "key" $key "value" (printf "%s${{ %s.%s }}" ($co.versionPrefix | default "") $cfrom (ternary (ternary "Digest" "Tag" $cm.digest) "Version" $cm.image))) -}}
+{{- end -}}
+{{- $steps = append $steps (dict "uses" "yaml-update" "config" (dict "path" (printf "./repo/%s" (include "cd-pipeline.fill" (dict "s" $pr.pinFile "tokens" $tokens))) "updates" $updates)) -}}
 {{- $steps = append $steps (dict "uses" "git-commit" "as" "commit" "retry" $retry "config" (dict "path" "./repo" "message" (include "cd-pipeline.fill" (dict "s" $pr.commitMessage "tokens" (merge (dict "version" $version) $wording))))) -}}
 {{- if eq $mode "pr" -}}
 {{- $committed := "${{ status('commit') == 'Succeeded' }}" -}}

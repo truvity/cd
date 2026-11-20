@@ -795,6 +795,72 @@
             },
             "description": "Further sources of the project's chart, by name. Each one gets a Warehouse of its own, <warehouse>-<source>; a Stage takes one with `source` (or `stageSources` when the Stages are derived). A Stage with no source takes `chart`."
           },
+          "companions": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+              "maxLength": 30
+            },
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "repoURL": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "The chart's name in an index repository; none for an OCI one."
+                },
+                "semver": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "versionPrefix": {
+                  "type": "string",
+                  "description": "Written in front of the version in the pin, for a repository whose tags carry one."
+                },
+                "discoveryLimit": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "subscribeAs": {
+                  "type": "string",
+                  "enum": [
+                    "chart",
+                    "image"
+                  ],
+                  "description": "How the Warehouse discovers the chart. `chart` (default) is a chart subscription. `image` is an image subscription with SemVer selection and `strictSemvers: false`, for an OCI chart whose tags carry a `v` (Helm's tag listing drops them, so a chart subscription finds nothing). A leading `oci://` is dropped from `repoURL` for the subscription, the promotion steps write the discovered tag as it is (the `v` stays), and `name` and `versionPrefix` are refused."
+                },
+                "pin": {
+                  "type": "string",
+                  "enum": [
+                    "tag",
+                    "digest"
+                  ],
+                  "description": "What the promotion writes as the pin. `tag` (default) is the discovered version or tag. `digest` is the artifact's digest (`imageFrom(...).Digest`), for an artifact that is deployed by what it is rather than by what it is called; it needs `subscribeAs: image`, refuses `versionPrefix`, `name` and any promoted-version check (there is no chart version in the Application to compare), and adds a `{tag}` token to `promotion.commitMessage` and `promotion.prTitle`."
+                },
+                "strictSemvers": {
+                  "type": "boolean",
+                  "description": "The image subscription's `strictSemvers`, with `subscribeAs: image`. Unset keeps `false`; a Warehouse whose live object has Kargo's own default (`true`) sets it, so the spec does not differ from the stored object forever."
+                },
+                "pinKey": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "The key the companion's pin is written under, in the same pin file and commit as the chart's: a template with the tokens of `promotion.pinKey`. Default the chart's filled key with `-<companion>` after it (`pins.dev-web` beside `pins.dev`)."
+                }
+              },
+              "required": [
+                "repoURL",
+                "semver"
+              ],
+              "description": "An artifact promoted with the chart: the same keys as `chart`, and `pinKey`."
+            },
+            "description": "Further artifacts that move with the chart in one Freight, by name, such as a static bundle released beside an api chart. Every Warehouse of the project (its own, each source's and each customer's) subscribes to the chart and to every companion, so a new version of either makes one Freight that holds both, and the pair that reaches a later Stage is the pair that ran on the one before. Each Stage writes the chart's pin and one pin per companion in one `yaml-update` of the pin file, so in one commit. A companion's repository must differ from the chart's and from every other companion's. Not with `warehouse.subscriptions` (verbatim) or spelled-out `promotionTemplate`s. The promoted-version check compares the chart alone."
+          },
           "customers": {
             "type": "array",
             "minItems": 1,
@@ -869,6 +935,28 @@
                         "semver"
                       ],
                       "description": "A further source of the project's chart: its own Warehouse, <warehouse>-<source>, and the repository the Stages that take it promote from. The same keys as `chart`; `warehouse.subscriptions` applies to `chart` alone."
+                    },
+                    "companions": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                        "maxLength": 30
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "semver": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "semver"
+                        ]
+                      },
+                      "description": "This customer's own semver for a companion of the project (`companions.<name>.semver`), in its Warehouse only: to hold one customer to a line of a shared artifact, or to let a fix of an older line reach one customer alone."
                     }
                   }
                 }
