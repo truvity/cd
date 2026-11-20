@@ -1,0 +1,49 @@
+# expect: pins.dev: 0.4.6 is outside the range the Warehouse subscribes with
+# A pin written by hand below the platform's floor.
+project:
+  name: shop
+  source:
+    chart: oci://registry.example.com/charts/shop
+    semver: '>=0.1.0 <1.0.0 || >=2.0.0'
+  clusters:
+  - dev
+  pipeline:
+    stageOrder:
+    - dev
+pins:
+  dev: 0.4.6
+values:
+  dev:
+    app:
+      config:
+        greeting: hello
+clusters:
+- dev
+platform:
+  dev:
+    clusterName: dev
+    argocdNamespace: argocd
+    applicationPrefix: dev-
+    appProject: '{product}-{cluster}'
+    chartRegistry: oci://registry.example.com/charts
+    postgres:
+      instances: 1
+      storage: 2Gi
+    events:
+      url: nats://broker.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: '{product}'
+products:
+  dev:
+    interface: 15
+    hostname: shop.dev.example.com
+pipeline:
+  project:
+    semver: '>=0.4.7'
+  git:
+    repoURL: https://git.example.com/acme/shop-delivery.git
+  promotion:
+    pinFile: pins/{stage}.yaml
+platformDigest: 7dd6495ca98d2bb5d7c4cf75a7487aab666fb487eba5950299959f354f68c2cf

@@ -5,6 +5,10 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## v0.39.0
+
+- **Added:** `cd-project` `pipeline.project.semver`, the platform's range of the project's chart, sealed by `platformDigest`. Every Warehouse of the project (`project.source`, each source, each customer) subscribes within the company's range AND the platform's, as one constraint (an OR on either side is distributed), so a floor the platform cannot install below, or a ceiling it has not prepared for, holds whatever the company's `project.yaml` says, while the company keeps its own narrower range. A pin outside that constraint is refused, and a platform range that is not a semver constraint fails the render. New case `cd-project/platform-semver` (golden) and fixtures `pin-outside-platform-range`, `platform-semver-invalid`. Unset, every existing render is byte-identical (no existing golden moves).
+
 ## v0.38.0
 
 - **Behaviour change (`cd-pipeline`, the script check only):** the ConfigMap `<slug>-<stage>-verify-promoted-version` that a Stage's promoted-version check mounts (`promotedVersion.gateImage` unset) carries the new text of `files/verify-promoted-version.sh`, with the artifact mode (`ARTIFACT_REF`) beside the chart mode; the goldens `e2e-hook`, `everything`, `graph`, `no-project` and `sources` move in that ConfigMap alone. With `ARTIFACT_REF` unset, which is every check of a chart, the script judges and reports exactly as before. Opt-out: set `promotedVersion.script` to the previous script (v0.37.0's `files/verify-promoted-version.sh`), which the ConfigMap then carries verbatim.
