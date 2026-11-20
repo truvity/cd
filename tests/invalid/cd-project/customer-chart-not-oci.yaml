@@ -1,0 +1,107 @@
+# expect: project.customers.globex.chart must be an oci:// reference
+# A customer's chart that is not an oci:// reference.
+project:
+  name: shop
+  source:
+    chart: oci://registry.example.com/charts/shop
+    infraChart: oci://registry.example.com/charts/shop-infra
+    semver: '>=1.0.0 <2.0.0'
+  customers:
+  - name: globex
+    chart: registry.example.com/charts/shop-globex
+  - initech
+  clusters:
+  - dev
+  - stage
+  pipeline:
+    stageOrder:
+    - dev
+    - stage
+pins:
+  dev-globex: 1.4.0
+  stage-globex: 1.3.2
+  dev-initech: 1.4.1
+  stage-initech: ''
+values:
+  dev-globex:
+    app:
+      config:
+        greeting: hello globex
+  dev-initech:
+    app:
+      config:
+        greeting: hello initech
+clusters:
+- dev
+- stage
+platform:
+  dev:
+    clusterName: dev
+    argocdNamespace: cd-acme-shop
+    applicationPrefix: dev-{customer}-
+    appProject: '{cluster}-{customer}-shop'
+    vendor: acme
+    applicationLabels:
+      acme.example.com/customer: '{customer}'
+    chartRegistry: oci://registry.example.com/charts
+    postgres:
+      instances: 1
+      storage: 2Gi
+    events:
+      url: nats://broker.dev.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: '{product}'
+  stage:
+    clusterName: stage
+    argocdNamespace: cd-acme-shop
+    applicationPrefix: stage-{customer}-
+    appProject: '{cluster}-{customer}-shop'
+    vendor: acme
+    applicationLabels:
+      acme.example.com/customer: '{customer}'
+    chartRegistry: oci://registry.example.com/charts
+    postgres:
+      instances: 1
+      storage: 2Gi
+    events:
+      url: nats://broker.stage.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: '{product}'
+products:
+  dev-globex:
+    interface: 15
+    hostname: globex.shop.dev.example.com
+  stage-globex:
+    interface: 15
+    hostname: globex.shop.stage.example.com
+  dev-initech:
+    interface: 15
+    hostname: initech.shop.dev.example.com
+  stage-initech:
+    interface: 15
+    hostname: initech.shop.stage.example.com
+pipeline:
+  project:
+    name: cd-{vendor}-{project}
+    vendor: acme
+    customers:
+    - globex
+    - initech
+  argocd:
+    namespace: cd-acme-shop
+  git:
+    repoURL: https://git.example.com/acme/gitops.git
+  promotion:
+    pinFile: projects/{product}/{customer}/{stage}/pin.yaml
+    commitMessage: 'chore({product}): promote {version} to {stage} for {customer}'
+    prTitle: 'chore({product}): promote to {stage} for {customer}'
+  graph:
+    applicationName: '{stage}-{customer}-{app}'
+    upstreams:
+      stage:
+      - dev
+platformDigest: 89d43aeccf0d3b4786cd868b2d50d5ae7b1493a11768bb7851000898d4bd86ec

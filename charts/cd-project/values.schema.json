@@ -167,6 +167,43 @@
             }
           }
         },
+        "customers": {
+          "type": "array",
+          "minItems": 1,
+          "description": "The customers the project is installed for, one Kargo Project for all of them: each one a customer the platform registered (pipeline.project.customers), with a Warehouse of its own, <project>-<customer>, and a chain of Stages along pipeline.stageOrder, named by pipeline.graph.stageName (default <cluster>-<customer>). Each install is keyed by its Stage's name in pins, values and products, is the service <project>-<customer> and runs in that namespace unless the platform's products name another. Refused with sources and stageSources.",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                "maxLength": 63
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                    "maxLength": 63
+                  },
+                  "chart": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The customer's application chart, oci://<repository>/<chart>, in place of project.source.chart: its Warehouse subscribes to it and its installs take every ring from it (<chart>-infra where project.source has an infraChart)."
+                  },
+                  "semver": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            ]
+          }
+        },
         "clusters": {
           "type": "array",
           "uniqueItems": true,
@@ -273,7 +310,7 @@
           }
         }
       },
-      "description": "Company-owned ring payloads per cluster of project.clusters, held to cd-company's ownership rules."
+      "description": "Company-owned ring payloads per cluster of project.clusters (per Stage, <cluster>-<customer>, with project.customers), held to cd-company's ownership rules."
     },
     "pins": {
       "type": "object",
@@ -285,7 +322,7 @@
       "additionalProperties": {
         "type": "string"
       },
-      "description": "Company-owned (Kargo writes them): the version per cluster of project.clusters; an empty string is dormant."
+      "description": "Company-owned (Kargo writes them): the version per cluster of project.clusters (per Stage with project.customers); an empty string is dormant."
     },
     "clusters": {
       "type": "array",
@@ -1171,7 +1208,7 @@
         },
         "required": []
       },
-      "description": "Platform-owned: the project's product facts, per cluster (cd-company's products.<service>)."
+      "description": "Platform-owned: the project's product facts, per cluster (per Stage with project.customers; cd-company's products.<service>)."
     },
     "pipeline": {
       "type": "object",
@@ -1350,6 +1387,11 @@
             "promotedVersion": {
               "type": "boolean",
               "description": "Every derived Stage runs the promoted-version check."
+            },
+            "stageName": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of a Stage of a customer's chain (`projects[].customers`), with the tokens `{stage}` (the Stage of `stageOrder`) and `{customer}`; default `{stage}-{customer}`."
             }
           },
           "description": "The promotion graph: with promotedVersion every derived Stage names the promoted-version check, whose objects are the platform's and never rendered here; no access subjects here."
@@ -1375,6 +1417,17 @@
               "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
               "maxLength": 63,
               "description": "Whom this installation is for: the {customer} token, as vendor."
+            },
+            "customers": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                "maxLength": 63
+              },
+              "minItems": 1,
+              "description": "The customers the platform registered for this product, each one an installation of its own: project.customers may name only these. Not with customer: a product with several customers has one Kargo Project, cd-<vendor>-<project>, and {customer} is each Stage's own."
             },
             "noAutoPromote": {
               "type": "array",
