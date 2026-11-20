@@ -1,0 +1,30 @@
+# expect: promotionTemplate is spelled out, so it would not write the pins of companions
+# A spelled-out promotion would not write the companion's pin.
+git:
+  repoURL: https://git.example.com/acme/gitops.git
+promotion:
+  pinFile: versions/{stage}.yaml
+  pinKey: versions.{stage}.{pinKey}
+graph:
+  upstreams:
+    stage:
+    - dev
+projects:
+- name: docs
+  pinKey: docs
+  chart:
+    repoURL: oci://registry.example.com/charts/docs
+    semver: '>=1.0.0'
+  companions:
+    site:
+      repoURL: oci://registry.example.com/static/docs/site
+      semver: '>=1.0.0'
+      subscribeAs: image
+      pin: digest
+      pinKey: sites.{stage}.{pinKey}
+  stages:
+  - name: dev
+    autoPromote: true
+    promotionTemplate:
+      spec:
+        steps: []

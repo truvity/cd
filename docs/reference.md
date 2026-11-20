@@ -555,6 +555,7 @@ and per project `name`, `stages` (or `stageOrder`, see [Derived Stages](#derived
 | `projects[].chart` | `repoURL`, `name` (index repositories), `semver`, `versionPrefix` (repositories whose tags carry one), `discoveryLimit`, `subscribeAs` (`chart`, the default, or `image`: an image subscription with SemVer selection and `strictSemvers: false`, for an OCI chart whose `v`-prefixed tags Helm's tag listing drops; `oci://` is dropped from the repository, the pin takes the discovered tag as it is, `name` and `versionPrefix` are refused). `pin` (`tag`, the default, or `digest`: the promotion writes the Freight image's digest; see [Promoting a digest](#promoting-a-digest)), `strictSemvers` (an image subscription's own setting; unset keeps `false`). |
 | `projects[].sources` | Further sources of the project's chart, by name (`[a-z0-9-]`, at most 30 characters), each with the keys of `chart`. Each one gets a Warehouse of its own, `<warehouse>-<source>`, with `warehouse`'s `interval` and `freightCreationPolicy` (`warehouse.subscriptions` is `chart`'s alone). A Stage that takes a source (`stages[].source`, or `stageSources` for derived Stages) requests that Warehouse's Freight, and its promotion and checks read the source in place of `chart`; see [Further sources](#further-sources). |
 | `projects[].customers` | Derived Stages only: the customers one Kargo Project delivers the product to, each a name or `{name, chart}`. Each gets a Warehouse `<warehouse>-<customer>` (on `chart`, or its own) and a chain of Stages, one for each Stage of `stageOrder`, named by `graph.stageName` (default `{stage}-{customer}`); a customer's Stages request only its Warehouse and promote only from its own, and its first Stage promotes on its own. The project has no Warehouse of its own. `{stage}` in Application names and pins is the Stage of `stageOrder`, `{customer}` the customer; approvers are one subject for each customer's Stage. Not with `sources` or `stageSources`. |
+| `projects[].companions` | Further artifacts that move with the chart in one Freight, by name, each with the keys of `chart` and a `pinKey` (default the chart's filled key with `-<companion>`). Every Warehouse of the project subscribes to the chart and to each companion; each Stage writes every pin in one `yaml-update`. A customer may hold a companion to its own `semver` (`customers[].companions.<name>.semver`). See [Companions](#companions). |
 | `projects[].warehouse` | `name` (default the project's), `interval` (`5m0s`), `freightCreationPolicy` (`Automatic`), `subscriptions`, `freightCreationCriteria`. `freightCreationCriteria.expression` (required, non-empty) is rendered verbatim as the Warehouse's `spec.freightCreationCriteria`: Kargo creates Freight from a discovery only when the expression is true, for instance `imageFrom('repo-a')?.Tag == imageFrom('repo-b')?.Tag` over two `subscriptions`, so the two images move together. It applies to the project's own Warehouse alone, not to the Warehouses of `sources`; needs a Kargo that supports it (1.11 does). Unset, nothing is rendered (`tests/cases/cd-pipeline/freight-creation-criteria`). |
 | `projects[].access.subjects[]` | `name`, `claims`, `stages`, `approve`. |
 | `projects[].access.approvers`, `.admins` | With `stageOrder`: derive one approver subject per Stage after the first, or one admin subject (see [Derived Stages](#derived-stages)). |
@@ -716,6 +717,40 @@ a platform that spells such a pipeline out can switch to the chart without
 renaming, and so losing the Freight of, any object. The one difference is
 the name of the promotion's variable that holds the repository (`chartRepo`
 here).
+
+### Companions
+
+A product whose release is more than one artifact, such as an api chart and a
+static bundle published beside it with versions of their own, promotes them
+together: `projects[].companions` names the further artifacts, each with the
+keys of `chart` (`subscribeAs: image` and `pin: digest` for a bundle deployed
+by its digest). Every Warehouse of the project (its own, each source's and
+each customer's) subscribes to the chart and to every companion, with no
+`freightCreationCriteria`, so a new version of either makes one Freight that
+holds both, and the pair that reaches a later Stage is the pair that ran on
+the Stage before it.
+
+Each Stage writes the chart's pin and then one pin per companion in the same
+`yaml-update` of the pin file, so in one commit and one pull request. A
+companion's key is its `pinKey` template (the tokens of `promotion.pinKey`),
+by default the chart's filled key with `-<companion>` after it:
+`pins.dev-globex` and `pins.dev-globex-web`. Its value is read from the
+Freight by the companion's repository (`imageFrom("<repository>").Digest`),
+so a companion's repository may be neither the chart's nor another
+companion's. The Stage watches the Applications `applications` names, so list
+every part's (`applications: [shop-api, shop-web]`).
+
+With `customers`, a shared companion makes Freight in every customer's
+Warehouse, and each customer's chain promotes it on its own; a customer held
+to its own line of a companion (`customers[].companions.<name>.semver`, in its
+Warehouse alone) takes a fix of that line without the others, as a customer's
+own `chart` does for the chart. Refused: companions with
+`warehouse.subscriptions` (verbatim, so the companions would not be in the
+Freight), a Stage that spells its own `promotionTemplate`, a customer's
+companion the project does not have, and a companion key that names a token
+the project does not set. The promoted-version check compares the chart
+alone (`tests/cases/cd-pipeline/companions`,
+`tests/cases/cd-pipeline/companions-one-install`).
 
 ### Verification
 

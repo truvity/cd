@@ -1,0 +1,395 @@
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  name: cd-acme-shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: cd-acme-shop
+  namespace: cd-acme-shop
+spec:
+  promotionPolicies:
+  - autoPromotionEnabled: true
+    stage: dev-globex
+  - autoPromotionEnabled: true
+    stage: dev-initech
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: dev-globex
+  namespace: cd-acme-shop
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shop/globex/dev/pin.yaml
+          updates:
+          - key: pins.dev-globex
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+          - key: pins.dev-globex-web
+            value: ${{ imageFrom("registry.example.com/static/shop/web").Digest }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore: promote shop ${{ chartFrom(vars.chartRepo).Version }} to
+            dev'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/gitops.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/shop/api-globex
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: shop-globex
+    sources:
+      direct: true
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: stage-globex
+  namespace: cd-acme-shop
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: dev-globex-shop-api
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+          - name: dev-globex-shop-web
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shop/globex/stage/pin.yaml
+          updates:
+          - key: pins.stage-globex
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+          - key: pins.stage-globex-web
+            value: ${{ imageFrom("registry.example.com/static/shop/web").Digest }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore: promote shop ${{ chartFrom(vars.chartRepo).Version }} to
+            stage'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore: promote shop to stage'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/gitops.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/shop/api-globex
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: shop-globex
+    sources:
+      stages:
+      - dev-globex
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: dev-initech
+  namespace: cd-acme-shop
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shop/initech/dev/pin.yaml
+          updates:
+          - key: pins.dev-initech
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+          - key: pins.dev-initech-web
+            value: ${{ imageFrom("registry.example.com/static/shop/web").Digest }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore: promote shop ${{ chartFrom(vars.chartRepo).Version }} to
+            dev'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/gitops.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/shop/api-initech
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: shop-initech
+    sources:
+      direct: true
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: stage-initech
+  namespace: cd-acme-shop
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: dev-initech-shop-api
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+          - name: dev-initech-shop-web
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shop/initech/stage/pin.yaml
+          updates:
+          - key: pins.stage-initech
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+          - key: pins.stage-initech-web
+            value: ${{ imageFrom("registry.example.com/static/shop/web").Digest }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore: promote shop ${{ chartFrom(vars.chartRepo).Version }} to
+            stage'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore: promote shop to stage'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/gitops.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/shop/api-initech
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: shop-initech
+    sources:
+      stages:
+      - dev-initech
+
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  name: shop-globex
+  namespace: cd-acme-shop
+spec:
+  freightCreationPolicy: Automatic
+  interval: 5m0s
+  subscriptions:
+  - chart:
+      discoveryLimit: 20
+      repoURL: oci://registry.example.com/charts/shop/api-globex
+      semverConstraint: '>=1.0.0 <2.0.0'
+  - image:
+      constraint: '>=1.0.0'
+      discoveryLimit: 20
+      imageSelectionStrategy: SemVer
+      repoURL: registry.example.com/static/shop/web
+      strictSemvers: false
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  name: shop-initech
+  namespace: cd-acme-shop
+spec:
+  freightCreationPolicy: Automatic
+  interval: 5m0s
+  subscriptions:
+  - chart:
+      discoveryLimit: 20
+      repoURL: oci://registry.example.com/charts/shop/api-initech
+      semverConstraint: '>=1.0.0 <2.0.0'
+  - image:
+      constraint: '>=1.0.0 <2.0.0'
+      discoveryLimit: 20
+      imageSelectionStrategy: SemVer
+      repoURL: registry.example.com/static/shop/web
+      strictSemvers: false

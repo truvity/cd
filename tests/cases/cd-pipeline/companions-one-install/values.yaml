@@ -1,0 +1,26 @@
+# A product with one installation and a companion: the Warehouse subscribes to
+# the chart and the site bundle, and each Stage writes the chart's version
+# (versions.<stage>.docs) and the bundle's digest under the companion's own
+# key template (sites.<stage>.docs) in one yaml-update.
+git:
+  repoURL: https://git.example.com/acme/gitops.git
+promotion:
+  pinFile: "versions/{stage}.yaml"
+  pinKey: "versions.{stage}.{pinKey}"
+graph:
+  upstreams:
+    stage: [dev]
+projects:
+  - name: docs
+    pinKey: docs
+    chart:
+      repoURL: oci://registry.example.com/charts/docs
+      semver: ">=1.0.0"
+    companions:
+      site:
+        repoURL: oci://registry.example.com/static/docs/site
+        semver: ">=1.0.0"
+        subscribeAs: image
+        pin: digest
+        pinKey: "sites.{stage}.{pinKey}"
+    stageOrder: [dev, stage]

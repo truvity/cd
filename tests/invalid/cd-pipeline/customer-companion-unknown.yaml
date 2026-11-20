@@ -1,0 +1,45 @@
+# expect: customers.initech.companions: "api" is not a companion of the project
+# A customer holds a companion the project does not have.
+git:
+  repoURL: https://git.example.com/acme/gitops.git
+promotion:
+  pinFile: projects/{slug}/{customer}/{stage}/pin.yaml
+  pinKey: pins.{stage}-{customer}
+graph:
+  upstreams:
+    stage:
+    - dev
+  applicationName: '{stage}-{customer}-{app}'
+projects:
+- name: cd-acme-shop
+  slug: shop
+  vendor: acme
+  warehouse:
+    name: shop
+  chart:
+    repoURL: oci://registry.example.com/charts/shop/api
+    semver: '>=1.0.0 <2.0.0'
+  companions:
+    web:
+      repoURL: oci://registry.example.com/static/shop/web
+      semver: '>=1.0.0'
+      subscribeAs: image
+      pin: digest
+  customers:
+  - name: globex
+    chart:
+      repoURL: oci://registry.example.com/charts/shop/api-globex
+      semver: '>=1.0.0 <2.0.0'
+  - name: initech
+    chart:
+      repoURL: oci://registry.example.com/charts/shop/api-initech
+      semver: '>=1.0.0 <2.0.0'
+    companions:
+      api:
+        semver: '>=1.0.0'
+  applications:
+  - shop-api
+  - shop-web
+  stageOrder:
+  - dev
+  - stage

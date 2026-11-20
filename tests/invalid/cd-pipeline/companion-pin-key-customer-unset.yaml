@@ -1,0 +1,27 @@
+# expect: companions.site.pinKey names {customer} but the project has no customer
+# A companion's key names a customer the project does not have.
+git:
+  repoURL: https://git.example.com/acme/gitops.git
+promotion:
+  pinFile: versions/{stage}.yaml
+  pinKey: versions.{stage}.{pinKey}
+graph:
+  upstreams:
+    stage:
+    - dev
+projects:
+- name: docs
+  pinKey: docs
+  chart:
+    repoURL: oci://registry.example.com/charts/docs
+    semver: '>=1.0.0'
+  companions:
+    site:
+      repoURL: oci://registry.example.com/static/docs/site
+      semver: '>=1.0.0'
+      subscribeAs: image
+      pin: digest
+      pinKey: sites.{stage}.{customer}
+  stageOrder:
+  - dev
+  - stage
