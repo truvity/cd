@@ -1,0 +1,13 @@
+# expect: sets customers and sources or stageSources
+git:
+  repoURL: https://git.example.com/acme/environments.git
+graph:
+  upstreams:
+    stage: [dev]
+projects:
+  - name: shop
+    chart: {repoURL: oci://registry.example.com/charts/shop, semver: ">=1.0.0"}
+    sources:
+      preview: {repoURL: oci://preview.example.com/charts/shop, semver: ">=1.0.0-0"}
+    customers: [globex]
+    stageOrder: [dev, stage]

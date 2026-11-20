@@ -221,3 +221,23 @@ func TestProductCarriesGitPromotionAndKind(t *testing.T) {
 		}
 	})
 }
+
+// A product with several customers carries them to its row, as a copy; with
+// none the row is the one installation it was.
+func TestProductCarriesCustomers(t *testing.T) {
+	in := ProductInput{Name: "shop", Customers: []string{"globex", "initech"}}
+	row := Product(in, "oci://registry.example.com", []string{"dev"}, map[string][]string{"dev": {PinKey("shop")}}, nil)
+
+	if !slices.Equal(row.Customers, []string{"globex", "initech"}) {
+		t.Fatalf("Customers = %v", row.Customers)
+	}
+
+	in.Customers[0] = "changed"
+	if row.Customers[0] != "globex" {
+		t.Errorf("the row shares the input's slice: %v", row.Customers)
+	}
+
+	if one := Product(ProductInput{Name: "shop"}, "oci://registry.example.com", nil, nil, nil); one.Customers != nil {
+		t.Errorf("no customers: Customers = %v, want nil", one.Customers)
+	}
+}

@@ -17,7 +17,11 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- $upstream := $s.from | default "" -}}
 {{- $mode := $s.mode | default (ternary "pr" "direct" (ne $upstream "")) -}}
 {{- $retry := dict "errorThreshold" $pr.retry.errorThreshold "timeout" $pr.retry.timeout -}}
-{{- $tokens := merge (dict "stage" $s.name "pinKey" ($p.pinKey | default "")) (include "cd-pipeline.projectTokens" $p | fromYaml) -}}
+{{- /* A Stage of a customer's chain fills `{stage}` with its Stage of
+       stageOrder (the cluster) and `{customer}` with its customer. */ -}}
+{{- $own := dict "stage" ($s.env | default $s.name) "pinKey" ($p.pinKey | default "") -}}
+{{- with $s.customer -}}{{- $_ := set $own "customer" . -}}{{- end -}}
+{{- $tokens := merge $own (include "cd-pipeline.projectTokens" $p | fromYaml) -}}
 {{- range $k := list "pinFile" "pinKey" "commitMessage" "prTitle" -}}
 {{- include "cd-pipeline.checkTokens" (dict "p" $p "where" (printf "promotion.%s" $k) "s" (index $pr $k)) -}}
 {{- end -}}
