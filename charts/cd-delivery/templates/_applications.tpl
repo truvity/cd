@@ -27,7 +27,7 @@ that passes its own dict gets the same refusal of an unknown key from
 {{- end -}}
 {{- if eq $kind "static-site" -}}
 {{- /* A site is two Applications of one chart release, pinned by a digest. */ -}}
-{{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s (kind static-site)" $name) "got" $p "allowed" (list "kind" "pin" "chartVersion" "repository" "artifact" "namespace" "values" "platformValues")) -}}
+{{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s (kind static-site)" $name) "got" $p "allowed" (list "kind" "pin" "chartVersion" "repository" "artifact" "namespace" "values" "platformValues" "applicationName" "vendor" "customer")) -}}
 {{- $docs = append $docs (include "cd-delivery.staticSiteProduct" (dict "plat" $plat "name" $name "p" $p)) -}}
 {{- else if eq $kind "chart" -}}
 {{- /* One chart, one Application: no rings, no platform facts handed down. */ -}}
@@ -132,9 +132,17 @@ None of them may set what the chart writes. Call with
 {{- include "cd-delivery.assertUnwritten" (dict "what" $what "channel" (printf "%s.%s" $channel $ring) "payload" (index (get $p $channel) $ring) "paths" (get $written $ring)) -}}
 {{- end -}}
 {{- end -}}
+{{- /* As a product's: one site of a product for one customer, beside the
+       sites of other customers in the same call. */ -}}
+{{- $plat := .plat -}}
+{{- if or $p.vendor $p.customer -}}
+{{- $plat = deepCopy $plat -}}
+{{- with $p.vendor -}}{{- $_ := set $plat "vendor" . -}}{{- end -}}
+{{- with $p.customer -}}{{- $_ := set $plat "customer" . -}}{{- end -}}
+{{- end -}}
 {{- $docs := list -}}
 {{- range $ring := list "infra" "app" -}}
-{{- $ctx := dict "plat" $.plat "name" $name "p" $p "i" 0 "kind" "static-site" "chart" "static-site" "revision" (toString $version) "releaseName" $name -}}
+{{- $ctx := dict "plat" $plat "name" $name "p" $p "i" 0 "kind" "static-site" "chart" "static-site" "revision" (toString $version) "releaseName" $name -}}
 {{- $docs = append $docs (include "cd-delivery.application" (dict "ctx" $ctx "ring" $ring "values" (deepCopy (get $composed $ring)))) -}}
 {{- end -}}
 {{- join "\n" $docs -}}

@@ -39,11 +39,20 @@
         "properties": {
           "products": {
             "additionalProperties": {
-              "propertyNames": {
-                "enum": [
-                  "namespace"
-                ]
-              }
+              "anyOf": [
+                {
+                  "required": [
+                    "chartVersion"
+                  ]
+                },
+                {
+                  "propertyNames": {
+                    "enum": [
+                      "namespace"
+                    ]
+                  }
+                }
+              ]
             }
           }
         }
@@ -52,9 +61,18 @@
         "properties": {
           "products": {
             "additionalProperties": {
-              "required": [
-                "interface",
-                "hostname"
+              "anyOf": [
+                {
+                  "required": [
+                    "chartVersion"
+                  ]
+                },
+                {
+                  "required": [
+                    "interface",
+                    "hostname"
+                  ]
+                }
               ]
             }
           }
@@ -198,10 +216,68 @@
                   "semver": {
                     "type": "string",
                     "minLength": 1
+                  },
+                  "companions": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                      "maxLength": 30
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "semver"
+                      ],
+                      "properties": {
+                        "semver": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    },
+                    "description": "This customer's own semver for a companion of project.companions, in its Warehouse alone: to hold one customer to a line of the shared artifact, or to let a fix of an older line reach that customer only."
                   }
                 }
               }
             ]
+          }
+        },
+        "companions": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "maxLength": 30
+          },
+          "description": "Artifacts released beside the chart and promoted with it in one Freight, by name: today a static bundle served by the platform's static-site chart (kind static-site). Each Warehouse subscribes to the chart and to every companion, and each Stage writes the chart's pin and the companion's digest, <pin key>-<name>, in one commit. Beside each install (a cluster, or a customer's Stage) the companion is an install of its own keyed <key>-<name> in pins, values and products, the service <service>-<name> in the install's namespace; the platform's products.<key>-<name> give its chartVersion and platformValues.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "artifact",
+              "semver"
+            ],
+            "properties": {
+              "artifact": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^(oci://)?[^:@]+$",
+                "description": "The artifact's repository, <registry>/<path>, without a tag or digest: what the Warehouse subscribes to and the static-site chart serves at the pinned digest."
+              },
+              "semver": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "static-site"
+                ],
+                "description": "The kind of the companion's install: static-site (default and only)."
+              }
+            }
           }
         },
         "clusters": {
@@ -1176,17 +1252,17 @@
             "minLength": 1,
             "maxLength": 63,
             "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
-            "description": "Kind `product` only: the middle of the product's Application names (default the product's name). Installs of one product for several customers name it alike and take the customer in `platform.applicationPrefix` (`{customer}`)."
+            "description": "Kinds `product` and `static-site`: the middle of the product's Application names (default the product's name). Installs of one product for several customers name it alike and take the customer in `platform.applicationPrefix` (`{customer}`)."
           },
           "vendor": {
             "type": "string",
             "minLength": 1,
-            "description": "Kind `product` only: this product's `{vendor}` in the platform's name patterns, over `platform.vendor`."
+            "description": "Kinds `product` and `static-site`: this product's `{vendor}` in the platform's name patterns, over `platform.vendor`."
           },
           "customer": {
             "type": "string",
             "minLength": 1,
-            "description": "Kind `product` only: this product's `{customer}` in the platform's name patterns, over `platform.customer`: one install of a product for one customer."
+            "description": "Kinds `product` and `static-site`: this product's `{customer}` in the platform's name patterns, over `platform.customer`: one install of a product for one customer."
           },
           "chartVersion": {
             "type": "string",

@@ -25,8 +25,8 @@ Call with the chart's root context.
 {{- range $kind := list "pins" "values" -}}
   {{- range $c := keys (index $v $kind) | sortAlpha -}}
     {{- if not (has $c $keys) -}}
-      {{- if $p.customers -}}
-        {{- fail (printf "cd-project: %s.%s: %q is not the Stage of a customer of project.customers on a cluster of project.clusters (%s)" $kind $c $c (join ", " $keys)) -}}
+      {{- if or $p.customers $p.companions -}}
+        {{- fail (printf "cd-project: %s.%s: %q is not the Stage of a customer of project.customers on a cluster of project.clusters, or such a key with -<companion> after it (%s)" $kind $c $c (join ", " $keys)) -}}
       {{- end -}}
       {{- fail (printf "cd-project: %s.%s: %q is not a cluster of project.clusters" $kind $c $c) -}}
     {{- end -}}
@@ -93,12 +93,18 @@ Call with the chart's root context.
       {{- $services = append $services $i.service -}}
       {{- $_ := set $at $i.service $i.key -}}
       {{- if hasKey $v.products $i.key -}}
-        {{- $facts := include "cd-project.facts" (dict "cluster" $i.key "product" (index $v.products $i.key) "source" $i.source) | fromYaml -}}
+        {{- $facts := dict -}}
+        {{- if $i.companion -}}
+          {{- $facts = include "cd-project.companionFacts" (dict "key" $i.key "product" (index $v.products $i.key) "companion" (index $p.companions $i.companion) "namespace" $i.namespace) | fromYaml -}}
+        {{- else -}}
+          {{- $facts = include "cd-project.facts" (dict "cluster" $i.key "product" (index $v.products $i.key) "source" $i.source) | fromYaml -}}
+        {{- end -}}
         {{- /* A customer's install: its own {customer}, and the project's
-               name in the middle of its Application names. */ -}}
+               name (with the companion's) in the middle of its Application
+               names. */ -}}
         {{- with $i.customer -}}
           {{- $_ := set $facts "customer" . -}}
-          {{- $_ := set $facts "applicationName" $name -}}
+          {{- $_ := set $facts "applicationName" (ternary (printf "%s-%s" $name $i.companion) $name (not (empty $i.companion))) -}}
         {{- end -}}
         {{- $_ := set $products $i.service $facts -}}
       {{- end -}}
@@ -176,13 +182,29 @@ Call with the chart's root context.
   {{- $_ := set $project "sources" $sources -}}
 {{- end -}}
 {{- with $p.pipeline.stageSources -}}{{- $_ := set $project "stageSources" . -}}{{- end -}}
+{{- /* The companions move with the chart in one Freight: each one an image
+       subscription pinned by digest, its pin `<chart's pin key>-<name>`, and
+       its Application (`<project>-<name>`) watched beside the project's. */ -}}
+{{- with $p.companions -}}
+  {{- $companions := dict -}}
+  {{- $apps := list $p.name -}}
+  {{- range $cn := keys . | sortAlpha -}}
+    {{- $co := index $p.companions $cn -}}
+    {{- $_ := set $companions $cn (dict "repoURL" (trimPrefix "oci://" $co.artifact) "semver" $co.semver "subscribeAs" "image" "pin" "digest") -}}
+    {{- $apps = append $apps (printf "%s-%s" $p.name $cn) -}}
+  {{- end -}}
+  {{- $_ := set $project "companions" $companions -}}
+  {{- $_ := set $project "applications" $apps -}}
+{{- end -}}
 {{- with (include "cd-project.installs" . | fromYaml).customers -}}
   {{- $customers := list -}}
   {{- range $c := . -}}
     {{- $cc := dict "repoURL" $c.source.chart "semver" $c.source.semver -}}
     {{- if hasKey $c.source "versionPrefix" -}}{{- $_ := set $cc "versionPrefix" $c.source.versionPrefix -}}{{- end -}}
     {{- with $c.source.subscribeAs -}}{{- $_ := set $cc "subscribeAs" . -}}{{- end -}}
-    {{- $customers = append $customers (dict "name" $c.name "chart" $cc) -}}
+    {{- $entry := dict "name" $c.name "chart" $cc -}}
+    {{- with $c.companions -}}{{- $_ := set $entry "companions" . -}}{{- end -}}
+    {{- $customers = append $customers $entry -}}
   {{- end -}}
   {{- $_ := set $project "customers" $customers -}}
 {{- end -}}
@@ -250,7 +272,14 @@ source of its own). Call with the chart's root context.
     {{- if hasKey $src "infraChart" -}}{{- $_ := set $src "infraChart" (printf "%s-infra" .) -}}{{- end -}}
   {{- end -}}
   {{- with $c.semver -}}{{- $_ := set $src "semver" . -}}{{- end -}}
-  {{- $customers = append $customers (dict "name" $c.name "source" $src) -}}
+  {{- range $cn := keys ($c.companions | default dict) | sortAlpha -}}
+    {{- if not (hasKey ($p.companions | default dict) $cn) -}}
+      {{- fail (printf "cd-project: project.customers.%s.companions: %q is not a companion of project.companions" $c.name $cn) -}}
+    {{- end -}}
+  {{- end -}}
+  {{- $cust := dict "name" $c.name "source" $src -}}
+  {{- with $c.companions -}}{{- $_ := set $cust "companions" . -}}{{- end -}}
+  {{- $customers = append $customers $cust -}}
   {{- range $cl := $p.clusters -}}
     {{- $key := include "cd-pipeline.fill" (dict "s" $stageName "tokens" (dict "stage" $cl "customer" $c.name)) -}}
     {{- if not (regexMatch "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$" $key) -}}
@@ -268,7 +297,47 @@ source of its own). Call with the chart's root context.
     {{- $installs = append $installs (dict "key" $cl "cluster" $cl "service" $p.name "source" (include "cd-project.clusterSource" (dict "project" $p "cluster" $cl) | fromYaml)) -}}
   {{- end -}}
 {{- end -}}
-{{- toYaml (dict "installs" $installs "customers" $customers) -}}
+{{- /* Each companion beside each install: `<key>-<companion>`, the service
+       `<service>-<companion>`, in the install's namespace. */ -}}
+{{- $parts := list -}}
+{{- range $i := $installs -}}
+  {{- range $cn := keys ($p.companions | default dict) | sortAlpha -}}
+    {{- $part := dict "key" (printf "%s-%s" $i.key $cn) "cluster" $i.cluster "service" (printf "%s-%s" $i.service $cn) "companion" $cn "namespace" $i.service -}}
+    {{- with $i.customer -}}{{- $_ := set $part "customer" . -}}{{- end -}}
+    {{- $parts = append $parts $part -}}
+  {{- end -}}
+{{- end -}}
+{{- $all := concat $installs $parts -}}
+{{- $seenKeys := dict -}}
+{{- range $i := $all -}}
+  {{- if hasKey $seenKeys $i.key -}}
+    {{- fail (printf "cd-project: %q is the key of two installs (a cluster or Stage and a companion beside another): name the companion or the cluster apart" $i.key) -}}
+  {{- end -}}
+  {{- $_ := set $seenKeys $i.key true -}}
+{{- end -}}
+{{- toYaml (dict "installs" $all "customers" $customers) -}}
+{{- end -}}
+
+{{/*
+A companion's product facts on one install: the platform's
+(`products.<key>-<companion>`: chartVersion, platformValues, a namespace of
+its own) with the company's artifact in them and the kind static-site. The
+artifact is the company's (project.companions.<name>.artifact), like the
+chart source, so a product that names one, or a kind, is refused. The
+namespace is the install's unless the platform names another.
+As YAML for `fromYaml`. Call with (dict "key" .. "product" .. "companion" .. "namespace" ..).
+*/}}
+{{- define "cd-project.companionFacts" -}}
+{{- range $k := list "artifact" "kind" -}}
+  {{- if hasKey $.product $k -}}
+    {{- fail (printf "cd-project: products.%s.%s: a companion's artifact and kind are the company's (project.companions)" $.key $k) -}}
+  {{- end -}}
+{{- end -}}
+{{- $facts := deepCopy .product -}}
+{{- $_ := set $facts "kind" "static-site" -}}
+{{- $_ := set $facts "artifact" (dict "ref" (trimPrefix "oci://" .companion.artifact)) -}}
+{{- if not (hasKey $facts "namespace") -}}{{- $_ := set $facts "namespace" .namespace -}}{{- end -}}
+{{- toYaml $facts -}}
 {{- end -}}
 
 {{/*

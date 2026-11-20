@@ -102,6 +102,64 @@ func stageNameTemplate(values map[string]any) string {
 // Stage's name, with the customer and the project's name as the middle of
 // its Application names in its facts.
 func companySlice(values map[string]any, cluster string) map[string]any {
+	out := installsSlice(values, cluster)
+	addCompanions(values, cluster, out)
+	return out
+}
+
+// addCompanions puts each companion of project.companions beside each
+// install of the slice: the service <service>-<companion>, keyed
+// <key>-<companion> in pins, values and products, a static site of the
+// company's artifact in the install's namespace (unless the platform names
+// one), with the customer and <project>-<companion> as its Application
+// names' middle where the install is a customer's.
+func addCompanions(values map[string]any, cluster string, out map[string]any) {
+	project := values["project"].(map[string]any)
+	name := project["name"].(string)
+	companions := parity.Map(project["companions"])
+	if len(companions) == 0 {
+		return
+	}
+	type install struct{ key, service, customer string }
+	var installs []install
+	if customers := projectCustomers(project); len(customers) > 0 {
+		for _, c := range customers {
+			key := strings.NewReplacer("{stage}", cluster, "{customer}", c[0]).Replace(stageNameTemplate(values))
+			installs = append(installs, install{key, name + "-" + c[0], c[0]})
+		}
+	} else {
+		installs = append(installs, install{cluster, name, ""})
+	}
+	names := slices.Sorted(maps.Keys(companions))
+	for _, in := range installs {
+		for _, cn := range names {
+			key, service := in.key+"-"+cn, in.service+"-"+cn
+			out["services"] = append(out["services"].([]any), service)
+			if pin, ok := parity.Map(values["pins"])[key]; ok {
+				out["pins"].(map[string]any)[service] = pin
+			}
+			if payload, ok := parity.Map(values["values"])[key]; ok {
+				out["values"].(map[string]any)[service] = payload
+			}
+			if product, ok := parity.Map(values["products"])[key]; ok {
+				facts := maps.Clone(product.(map[string]any))
+				facts["kind"] = "static-site"
+				facts["artifact"] = map[string]any{"ref": strings.TrimPrefix(parity.Map(companions[cn])["artifact"].(string), "oci://")}
+				if _, ok := facts["namespace"]; !ok {
+					facts["namespace"] = in.service
+				}
+				if in.customer != "" {
+					facts["customer"] = in.customer
+					facts["applicationName"] = name + "-" + cn
+				}
+				out["products"].(map[string]any)[service] = facts
+			}
+		}
+	}
+}
+
+// installsSlice is companySlice without the companions.
+func installsSlice(values map[string]any, cluster string) map[string]any {
 	project := values["project"].(map[string]any)
 	name := project["name"].(string)
 	if customers := projectCustomers(project); len(customers) > 0 {
@@ -269,10 +327,27 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 			// project's semver.
 			if customers := projectCustomers(project); len(customers) > 0 {
 				var list []any
-				for _, c := range customers {
-					list = append(list, map[string]any{"name": c[0], "chart": map[string]any{"repoURL": c[1], "semver": source["semver"]}})
+				for i, c := range customers {
+					entry := map[string]any{"name": c[0], "chart": map[string]any{"repoURL": c[1], "semver": source["semver"]}}
+					if own, ok := parity.Map(parity.List(project["customers"])[i])["companions"]; ok {
+						entry["companions"] = own
+					}
+					list = append(list, entry)
 				}
 				p["customers"] = list
+			}
+			// The companions: image subscriptions pinned by digest, and their
+			// Applications watched beside the project's.
+			if companions := parity.Map(project["companions"]); len(companions) > 0 {
+				subs := map[string]any{}
+				apps := []any{project["name"]}
+				for _, cn := range slices.Sorted(maps.Keys(companions)) {
+					co := parity.Map(companions[cn])
+					subs[cn] = map[string]any{"repoURL": strings.TrimPrefix(co["artifact"].(string), "oci://"), "semver": co["semver"], "subscribeAs": "image", "pin": "digest"}
+					apps = append(apps, project["name"].(string)+"-"+cn)
+				}
+				p["companions"] = subs
+				p["applications"] = apps
 			}
 			if named, ok := project["sources"]; ok {
 				sources := map[string]any{}
