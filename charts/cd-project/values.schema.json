@@ -1132,7 +1132,24 @@
             "minLength": 1,
             "maxLength": 63,
             "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
-            "description": "Kinds `chart` and `static-site` only: the destination namespace (default the product's name)."
+            "description": "The destination namespace (default the product's name). A product of kind `product` that names one keeps its name for its release, its Helm objects and its pins: one install of a product in its own namespace."
+          },
+          "applicationName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 63,
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "description": "Kind `product` only: the middle of the product's Application names (default the product's name). Installs of one product for several customers name it alike and take the customer in `platform.applicationPrefix` (`{customer}`)."
+          },
+          "vendor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Kind `product` only: this product's `{vendor}` in the platform's name patterns, over `platform.vendor`."
+          },
+          "customer": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Kind `product` only: this product's `{customer}` in the platform's name patterns, over `platform.customer`: one install of a product for one customer."
           },
           "chartVersion": {
             "type": "string",

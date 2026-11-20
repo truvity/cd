@@ -1,0 +1,42 @@
+# One product installed for two customers in one call: each install is its
+# own product key (its release, Helm objects and pins), names its namespace
+# and its customer, installs the shared charts (`chart`) and shares the
+# middle of the Application names (`applicationName`). The customer goes in
+# the prefix and the AppProject: east-globex-shop in shop-globex under
+# shop-east-globex, and east-initech-shop in shop-initech under
+# shop-east-initech. Everything else is cd-delivery/installation-tokens.
+platform:
+  clusterName: east
+  argocdNamespace: cd-acme-shop
+  applicationPrefix: "east-{customer}-"
+  appProject: "shop-{cluster}-{customer}"
+  vendor: acme
+  applicationLabels:
+    acme.example.com/installation: "{vendor}-{customer}-{product}"
+  chartRegistry: oci://registry.example.com/charts
+  postgres:
+    instances: 1
+    storage: 2Gi
+  events:
+    url: nats://broker.example:4222
+    storage: file
+    replicas: 1
+    maxAge: 24h
+    account: "{product}"
+products:
+  shop-globex:
+    pin: 1.0.0
+    interface: 1
+    chart: shop
+    namespace: shop-globex
+    applicationName: shop
+    customer: globex
+    hostname: globex.shop.example.com
+  shop-initech:
+    pin: 1.1.0
+    interface: 1
+    chart: shop
+    namespace: shop-initech
+    applicationName: shop
+    customer: initech
+    hostname: initech.shop.example.com

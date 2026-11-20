@@ -328,11 +328,11 @@ tls:
   peers:
     {{- if ge $i 6 }}
     {{- range (required (printf "cd-delivery: products.%s.e2e.peerComponents is required" $name) $e2e.peerComponents) }}
-    - namespace: {{ $name | quote }}
+    - namespace: {{ $p.namespace | default $name | quote }}
       serviceAccount: {{ printf "%s-%s" $name . | quote }}
     {{- end }}
     {{- else }}
-    - namespace: {{ $name | quote }}
+    - namespace: {{ $p.namespace | default $name | quote }}
       serviceAccount: {{ $name | quote }}
     {{- end }}
 {{- end }}
