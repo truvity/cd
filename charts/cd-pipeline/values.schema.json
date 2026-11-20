@@ -266,6 +266,10 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "objects": {
+          "type": "boolean",
+          "description": "false: a Stage names its gate, `<slug>-<stage>-metrics-gate`, and the gate's ServiceAccount, ConfigMap and AnalysisTemplate are rendered by the cluster's owner under the same names, not here; none of the other settings is read then."
+        },
         "gateImage": {
           "type": "string",
           "description": "The promotion-gate image (ghcr.io/truvity/cd/promotion-gate). Set: the gate runs `/ko-app/promotion-gate metrics-gate`, with no script ConfigMap and no jq volume. Empty (the default): the shell script."

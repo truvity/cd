@@ -1,0 +1,23 @@
+# The metrics gate by reference (metricsGate.objects false): the gated Stages
+# name `<slug>-<stage>-metrics-gate` beside the promoted-version check, and
+# neither check renders an object here. Their ServiceAccounts, ConfigMaps and
+# AnalysisTemplates are whoever owns the cluster the checks run on. dev is not
+# gated; stage and prod are.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+promotedVersion:
+  objects: false
+metricsGate:
+  objects: false
+graph:
+  upstreams:
+    stage: [dev]
+    prod: [stage]
+  promotedVersion: true
+projects:
+  - name: shop
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    stageOrder: [dev, stage, prod]
+    metricsGateStages: [stage, prod]
