@@ -199,6 +199,44 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- end -}}
 {{- end -}}
 
+{{- /* One promoted-version check per companion, beside the chart's: each
+       part of the release must be rendered by one of the Stage's
+       Applications, so a part none renders fails on its own instead of
+       being skipped. A companion pinned by digest is judged by its
+       artifact (ARTIFACT_REF and the digest in the Applications' values),
+       one pinned by tag as a chart of its own repository. */ -}}
+{{- $verArgs := list $verArg -}}
+{{- if $verif.promotedVersion -}}
+{{- $pv := $v.promotedVersion -}}
+{{- $ns := $v.argocd.namespace -}}
+{{- range $cn := keys ($p.companions | default dict) | sortAlpha -}}
+{{- $co := index $p.companions $cn -}}
+{{- $cm := include "cd-pipeline.chartMode" (dict "name" $name "chart" $co) | fromYaml -}}
+{{- $arg := printf "%s-%s" $cn (ternary "digest" "version" $cm.digest) -}}
+{{- $from := include "cd-pipeline.chartFrom" (dict "repoURL" $cm.repo "name" ($co.name | default "") "vars" false "image" $cm.image) -}}
+{{- $verArgs = append $verArgs (dict "name" $arg "value" (printf "${{ %s.%s }}" $from (ternary (ternary "Digest" "Tag" $cm.digest) "Version" $cm.image))) -}}
+{{- $at := printf "%s-%s-promoted-%s" $slug $s.name $cn -}}
+{{- $templates = append $templates $at -}}
+{{- if ne (toString $pv.objects) "false" -}}
+{{- $env := list (dict "name" "APPS" "value" (join " " $s.applications)) (dict "name" "CHART_REPO" "value" (ternary "" ($co.repoURL | default "") $cm.digest)) (dict "name" "CHART_NAME" "value" ($co.name | default "")) (dict "name" "EXPECTED" "value" (printf "%s{{args.%s}}" (ternary "" ($co.versionPrefix | default "") $cm.digest) $arg)) -}}
+{{- if $cm.digest -}}{{- $env = append $env (dict "name" "ARTIFACT_REF" "value" $cm.repo) -}}{{- end -}}
+{{- $env = concat $env (list (dict "name" "WAIT_SECONDS" "value" (toString (int $pv.waitSeconds))) (dict "name" "POLL_SECONDS" "value" (toString (int $pv.pollSeconds)))) -}}
+{{- $sa := printf "kargo-verify-%s" $s.name -}}
+{{- if $pv.gateImage -}}
+{{- if ne $ns "argocd" -}}{{- $env = append $env (dict "name" "ARGOCD_NAMESPACE" "value" $ns) -}}{{- end -}}
+{{- include "cd-pipeline.jobCheck" (dict "root" $r "name" $at "ns" $name "metric" "promoted-version" "args" (list $arg) "sa" $sa "image" $pv.gateImage "command" (list "/ko-app/promotion-gate" "promoted-version") "env" $env "deadline" (add (int $pv.waitSeconds) $v.jobs.headroomSeconds)) -}}
+{{- else -}}
+{{- $cmName := printf "%s-%s-verify-promoted-version" $slug $s.name -}}
+{{- $env = append $env (dict "name" "JQ" "value" "/opt/jq/jq") -}}
+{{- if ne $ns "argocd" -}}{{- $env = append $env (dict "name" "ARGOCD_NAMESPACE" "value" $ns) -}}{{- end -}}
+{{- $mounts := list (dict "name" "script" "mountPath" "/scripts" "readOnly" true) (dict "name" "jq-tool" "mountPath" "/opt/jq" "readOnly" true) -}}
+{{- $vols := list (include "cd-pipeline.scriptVolume" (dict "configMap" $cmName) | fromYaml) (dict "name" "jq-tool" "image" (dict "reference" (required "cd-pipeline: promotedVersion.jqImage is required" $pv.jqImage) "pullPolicy" "IfNotPresent")) -}}
+{{- include "cd-pipeline.jobCheck" (dict "root" $r "name" $at "ns" $name "metric" "promoted-version" "args" (list $arg) "sa" $sa "image" (required "cd-pipeline: promotedVersion.image is required" $pv.image) "command" (list "/bin/sh" "/scripts/verify-promoted-version.sh") "env" $env "mounts" $mounts "volumes" $vols "deadline" (add (int $pv.waitSeconds) $v.jobs.headroomSeconds)) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
 {{- /* The end-to-end operation check: that the Promotion's sync of the end-to-end Application ran the suite hook for the promoted version and it succeeded. */ -}}
 {{- if $s.e2eApplication -}}
 {{- $pv := $v.promotedVersion -}}
@@ -255,7 +293,7 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- $sources := ternary (dict "stages" (list $upstream)) (dict "direct" true) (ne $upstream "") -}}
 {{- $spec := dict "requestedFreight" (list (dict "origin" (dict "kind" "Warehouse" "name" .whName) "sources" $sources)) -}}
 {{- if $templates -}}
-{{- $_ := set $spec "verification" (dict "analysisTemplates" (include "cd-pipeline.names" $templates | fromYamlArray) "args" (list $verArg)) -}}
+{{- $_ := set $spec "verification" (dict "analysisTemplates" (include "cd-pipeline.names" $templates | fromYamlArray) "args" $verArgs) -}}
 {{- end -}}
 {{- if $s.promotionTemplate -}}
 {{- $_ := set $spec "promotionTemplate" $s.promotionTemplate -}}

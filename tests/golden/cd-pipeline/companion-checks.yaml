@@ -1,0 +1,1091 @@
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: kargo-verify-dev-globex
+  namespace: cd-acme-shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: kargo-verify-stage-globex
+  namespace: cd-acme-shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: kargo-verify-dev-initech
+  namespace: cd-acme-shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: kargo-verify-stage-initech
+  namespace: cd-acme-shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: kargo-verify-cd-acme-shop-dev-globex
+  namespace: argocd
+rules:
+- apiGroups:
+  - argoproj.io
+  resourceNames:
+  - dev-globex-shop-api
+  - dev-globex-shop-web
+  resources:
+  - applications
+  verbs:
+  - get
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: kargo-verify-cd-acme-shop-stage-globex
+  namespace: argocd
+rules:
+- apiGroups:
+  - argoproj.io
+  resourceNames:
+  - stage-globex-shop-api
+  - stage-globex-shop-web
+  resources:
+  - applications
+  verbs:
+  - get
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: kargo-verify-cd-acme-shop-dev-initech
+  namespace: argocd
+rules:
+- apiGroups:
+  - argoproj.io
+  resourceNames:
+  - dev-initech-shop-api
+  - dev-initech-shop-web
+  resources:
+  - applications
+  verbs:
+  - get
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: kargo-verify-cd-acme-shop-stage-initech
+  namespace: argocd
+rules:
+- apiGroups:
+  - argoproj.io
+  resourceNames:
+  - stage-initech-shop-api
+  - stage-initech-shop-web
+  resources:
+  - applications
+  verbs:
+  - get
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: kargo-verify-cd-acme-shop-dev-globex
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-verify-cd-acme-shop-dev-globex
+subjects:
+- kind: ServiceAccount
+  name: kargo-verify-dev-globex
+  namespace: cd-acme-shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: kargo-verify-cd-acme-shop-stage-globex
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-verify-cd-acme-shop-stage-globex
+subjects:
+- kind: ServiceAccount
+  name: kargo-verify-stage-globex
+  namespace: cd-acme-shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: kargo-verify-cd-acme-shop-dev-initech
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-verify-cd-acme-shop-dev-initech
+subjects:
+- kind: ServiceAccount
+  name: kargo-verify-dev-initech
+  namespace: cd-acme-shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: kargo-verify-cd-acme-shop-stage-initech
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-verify-cd-acme-shop-stage-initech
+subjects:
+- kind: ServiceAccount
+  name: kargo-verify-stage-initech
+  namespace: cd-acme-shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: shop-dev-globex-promoted-version
+  namespace: cd-acme-shop
+spec:
+  args:
+  - name: chart-version
+  metrics:
+  - count: 1
+    failureLimit: 0
+    name: promoted-version
+    provider:
+      job:
+        spec:
+          activeDeadlineSeconds: 1620
+          backoffLimit: 0
+          template:
+            spec:
+              containers:
+              - command:
+                - /ko-app/promotion-gate
+                - promoted-version
+                env:
+                - name: APPS
+                  value: dev-globex-shop-api dev-globex-shop-web
+                - name: CHART_REPO
+                  value: oci://registry.example.com/charts/shop/api-globex
+                - name: CHART_NAME
+                  value: ""
+                - name: EXPECTED
+                  value: '{{args.chart-version}}'
+                - name: WAIT_SECONDS
+                  value: "1500"
+                - name: POLL_SECONDS
+                  value: "15"
+                image: ghcr.io/example/promotion-gate@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+                name: check
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 65532
+                runAsNonRoot: true
+                runAsUser: 65532
+                seccompProfile:
+                  type: RuntimeDefault
+              serviceAccountName: kargo-verify-dev-globex
+          ttlSecondsAfterFinished: 21600
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: shop-dev-globex-promoted-web
+  namespace: cd-acme-shop
+spec:
+  args:
+  - name: web-digest
+  metrics:
+  - count: 1
+    failureLimit: 0
+    name: promoted-version
+    provider:
+      job:
+        spec:
+          activeDeadlineSeconds: 1620
+          backoffLimit: 0
+          template:
+            spec:
+              containers:
+              - command:
+                - /ko-app/promotion-gate
+                - promoted-version
+                env:
+                - name: APPS
+                  value: dev-globex-shop-api dev-globex-shop-web
+                - name: CHART_REPO
+                  value: ""
+                - name: CHART_NAME
+                  value: ""
+                - name: EXPECTED
+                  value: '{{args.web-digest}}'
+                - name: ARTIFACT_REF
+                  value: registry.example.com/static/shop/web
+                - name: WAIT_SECONDS
+                  value: "1500"
+                - name: POLL_SECONDS
+                  value: "15"
+                image: ghcr.io/example/promotion-gate@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+                name: check
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 65532
+                runAsNonRoot: true
+                runAsUser: 65532
+                seccompProfile:
+                  type: RuntimeDefault
+              serviceAccountName: kargo-verify-dev-globex
+          ttlSecondsAfterFinished: 21600
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: shop-stage-globex-promoted-version
+  namespace: cd-acme-shop
+spec:
+  args:
+  - name: chart-version
+  metrics:
+  - count: 1
+    failureLimit: 0
+    name: promoted-version
+    provider:
+      job:
+        spec:
+          activeDeadlineSeconds: 1620
+          backoffLimit: 0
+          template:
+            spec:
+              containers:
+              - command:
+                - /ko-app/promotion-gate
+                - promoted-version
+                env:
+                - name: APPS
+                  value: stage-globex-shop-api stage-globex-shop-web
+                - name: CHART_REPO
+                  value: oci://registry.example.com/charts/shop/api-globex
+                - name: CHART_NAME
+                  value: ""
+                - name: EXPECTED
+                  value: '{{args.chart-version}}'
+                - name: WAIT_SECONDS
+                  value: "1500"
+                - name: POLL_SECONDS
+                  value: "15"
+                image: ghcr.io/example/promotion-gate@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+                name: check
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 65532
+                runAsNonRoot: true
+                runAsUser: 65532
+                seccompProfile:
+                  type: RuntimeDefault
+              serviceAccountName: kargo-verify-stage-globex
+          ttlSecondsAfterFinished: 21600
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: shop-stage-globex-promoted-web
+  namespace: cd-acme-shop
+spec:
+  args:
+  - name: web-digest
+  metrics:
+  - count: 1
+    failureLimit: 0
+    name: promoted-version
+    provider:
+      job:
+        spec:
+          activeDeadlineSeconds: 1620
+          backoffLimit: 0
+          template:
+            spec:
+              containers:
+              - command:
+                - /ko-app/promotion-gate
+                - promoted-version
+                env:
+                - name: APPS
+                  value: stage-globex-shop-api stage-globex-shop-web
+                - name: CHART_REPO
+                  value: ""
+                - name: CHART_NAME
+                  value: ""
+                - name: EXPECTED
+                  value: '{{args.web-digest}}'
+                - name: ARTIFACT_REF
+                  value: registry.example.com/static/shop/web
+                - name: WAIT_SECONDS
+                  value: "1500"
+                - name: POLL_SECONDS
+                  value: "15"
+                image: ghcr.io/example/promotion-gate@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+                name: check
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 65532
+                runAsNonRoot: true
+                runAsUser: 65532
+                seccompProfile:
+                  type: RuntimeDefault
+              serviceAccountName: kargo-verify-stage-globex
+          ttlSecondsAfterFinished: 21600
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: shop-dev-initech-promoted-version
+  namespace: cd-acme-shop
+spec:
+  args:
+  - name: chart-version
+  metrics:
+  - count: 1
+    failureLimit: 0
+    name: promoted-version
+    provider:
+      job:
+        spec:
+          activeDeadlineSeconds: 1620
+          backoffLimit: 0
+          template:
+            spec:
+              containers:
+              - command:
+                - /ko-app/promotion-gate
+                - promoted-version
+                env:
+                - name: APPS
+                  value: dev-initech-shop-api dev-initech-shop-web
+                - name: CHART_REPO
+                  value: oci://registry.example.com/charts/shop/api-initech
+                - name: CHART_NAME
+                  value: ""
+                - name: EXPECTED
+                  value: '{{args.chart-version}}'
+                - name: WAIT_SECONDS
+                  value: "1500"
+                - name: POLL_SECONDS
+                  value: "15"
+                image: ghcr.io/example/promotion-gate@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+                name: check
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 65532
+                runAsNonRoot: true
+                runAsUser: 65532
+                seccompProfile:
+                  type: RuntimeDefault
+              serviceAccountName: kargo-verify-dev-initech
+          ttlSecondsAfterFinished: 21600
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: shop-dev-initech-promoted-web
+  namespace: cd-acme-shop
+spec:
+  args:
+  - name: web-digest
+  metrics:
+  - count: 1
+    failureLimit: 0
+    name: promoted-version
+    provider:
+      job:
+        spec:
+          activeDeadlineSeconds: 1620
+          backoffLimit: 0
+          template:
+            spec:
+              containers:
+              - command:
+                - /ko-app/promotion-gate
+                - promoted-version
+                env:
+                - name: APPS
+                  value: dev-initech-shop-api dev-initech-shop-web
+                - name: CHART_REPO
+                  value: ""
+                - name: CHART_NAME
+                  value: ""
+                - name: EXPECTED
+                  value: '{{args.web-digest}}'
+                - name: ARTIFACT_REF
+                  value: registry.example.com/static/shop/web
+                - name: WAIT_SECONDS
+                  value: "1500"
+                - name: POLL_SECONDS
+                  value: "15"
+                image: ghcr.io/example/promotion-gate@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+                name: check
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 65532
+                runAsNonRoot: true
+                runAsUser: 65532
+                seccompProfile:
+                  type: RuntimeDefault
+              serviceAccountName: kargo-verify-dev-initech
+          ttlSecondsAfterFinished: 21600
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: shop-stage-initech-promoted-version
+  namespace: cd-acme-shop
+spec:
+  args:
+  - name: chart-version
+  metrics:
+  - count: 1
+    failureLimit: 0
+    name: promoted-version
+    provider:
+      job:
+        spec:
+          activeDeadlineSeconds: 1620
+          backoffLimit: 0
+          template:
+            spec:
+              containers:
+              - command:
+                - /ko-app/promotion-gate
+                - promoted-version
+                env:
+                - name: APPS
+                  value: stage-initech-shop-api stage-initech-shop-web
+                - name: CHART_REPO
+                  value: oci://registry.example.com/charts/shop/api-initech
+                - name: CHART_NAME
+                  value: ""
+                - name: EXPECTED
+                  value: '{{args.chart-version}}'
+                - name: WAIT_SECONDS
+                  value: "1500"
+                - name: POLL_SECONDS
+                  value: "15"
+                image: ghcr.io/example/promotion-gate@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+                name: check
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 65532
+                runAsNonRoot: true
+                runAsUser: 65532
+                seccompProfile:
+                  type: RuntimeDefault
+              serviceAccountName: kargo-verify-stage-initech
+          ttlSecondsAfterFinished: 21600
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: shop-stage-initech-promoted-web
+  namespace: cd-acme-shop
+spec:
+  args:
+  - name: web-digest
+  metrics:
+  - count: 1
+    failureLimit: 0
+    name: promoted-version
+    provider:
+      job:
+        spec:
+          activeDeadlineSeconds: 1620
+          backoffLimit: 0
+          template:
+            spec:
+              containers:
+              - command:
+                - /ko-app/promotion-gate
+                - promoted-version
+                env:
+                - name: APPS
+                  value: stage-initech-shop-api stage-initech-shop-web
+                - name: CHART_REPO
+                  value: ""
+                - name: CHART_NAME
+                  value: ""
+                - name: EXPECTED
+                  value: '{{args.web-digest}}'
+                - name: ARTIFACT_REF
+                  value: registry.example.com/static/shop/web
+                - name: WAIT_SECONDS
+                  value: "1500"
+                - name: POLL_SECONDS
+                  value: "15"
+                image: ghcr.io/example/promotion-gate@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+                name: check
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 65532
+                runAsNonRoot: true
+                runAsUser: 65532
+                seccompProfile:
+                  type: RuntimeDefault
+              serviceAccountName: kargo-verify-stage-initech
+          ttlSecondsAfterFinished: 21600
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  name: cd-acme-shop
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: cd-acme-shop
+  namespace: cd-acme-shop
+spec:
+  promotionPolicies:
+  - autoPromotionEnabled: true
+    stage: dev-globex
+  - autoPromotionEnabled: true
+    stage: dev-initech
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: dev-globex
+  namespace: cd-acme-shop
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shop/globex/dev/pin.yaml
+          updates:
+          - key: pins.dev-globex
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+          - key: pins.dev-globex-web
+            value: ${{ imageFrom("registry.example.com/static/shop/web").Digest }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore: promote shop ${{ chartFrom(vars.chartRepo).Version }} to
+            dev'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/gitops.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/shop/api-globex
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: shop-globex
+    sources:
+      direct: true
+  verification:
+    analysisTemplates:
+    - name: shop-dev-globex-promoted-version
+    - name: shop-dev-globex-promoted-web
+    args:
+    - name: chart-version
+      value: ${{ chartFrom("oci://registry.example.com/charts/shop/api-globex").Version
+        }}
+    - name: web-digest
+      value: ${{ imageFrom("registry.example.com/static/shop/web").Digest }}
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: stage-globex
+  namespace: cd-acme-shop
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: dev-globex-shop-api
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+          - name: dev-globex-shop-web
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shop/globex/stage/pin.yaml
+          updates:
+          - key: pins.stage-globex
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+          - key: pins.stage-globex-web
+            value: ${{ imageFrom("registry.example.com/static/shop/web").Digest }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore: promote shop ${{ chartFrom(vars.chartRepo).Version }} to
+            stage'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore: promote shop to stage'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/gitops.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/shop/api-globex
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: shop-globex
+    sources:
+      stages:
+      - dev-globex
+  verification:
+    analysisTemplates:
+    - name: shop-stage-globex-promoted-version
+    - name: shop-stage-globex-promoted-web
+    args:
+    - name: chart-version
+      value: ${{ chartFrom("oci://registry.example.com/charts/shop/api-globex").Version
+        }}
+    - name: web-digest
+      value: ${{ imageFrom("registry.example.com/static/shop/web").Digest }}
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: dev-initech
+  namespace: cd-acme-shop
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shop/initech/dev/pin.yaml
+          updates:
+          - key: pins.dev-initech
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+          - key: pins.dev-initech-web
+            value: ${{ imageFrom("registry.example.com/static/shop/web").Digest }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore: promote shop ${{ chartFrom(vars.chartRepo).Version }} to
+            dev'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/gitops.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/shop/api-initech
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: shop-initech
+    sources:
+      direct: true
+  verification:
+    analysisTemplates:
+    - name: shop-dev-initech-promoted-version
+    - name: shop-dev-initech-promoted-web
+    args:
+    - name: chart-version
+      value: ${{ chartFrom("oci://registry.example.com/charts/shop/api-initech").Version
+        }}
+    - name: web-digest
+      value: ${{ imageFrom("registry.example.com/static/shop/web").Digest }}
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: stage-initech
+  namespace: cd-acme-shop
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: dev-initech-shop-api
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+          - name: dev-initech-shop-web
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shop/initech/stage/pin.yaml
+          updates:
+          - key: pins.stage-initech
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+          - key: pins.stage-initech-web
+            value: ${{ imageFrom("registry.example.com/static/shop/web").Digest }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore: promote shop ${{ chartFrom(vars.chartRepo).Version }} to
+            stage'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore: promote shop to stage'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/gitops.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/shop/api-initech
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: shop-initech
+    sources:
+      stages:
+      - dev-initech
+  verification:
+    analysisTemplates:
+    - name: shop-stage-initech-promoted-version
+    - name: shop-stage-initech-promoted-web
+    args:
+    - name: chart-version
+      value: ${{ chartFrom("oci://registry.example.com/charts/shop/api-initech").Version
+        }}
+    - name: web-digest
+      value: ${{ imageFrom("registry.example.com/static/shop/web").Digest }}
+
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  name: shop-globex
+  namespace: cd-acme-shop
+spec:
+  freightCreationPolicy: Automatic
+  interval: 5m0s
+  subscriptions:
+  - chart:
+      discoveryLimit: 20
+      repoURL: oci://registry.example.com/charts/shop/api-globex
+      semverConstraint: '>=1.0.0 <2.0.0'
+  - image:
+      constraint: '>=1.0.0'
+      discoveryLimit: 20
+      imageSelectionStrategy: SemVer
+      repoURL: registry.example.com/static/shop/web
+      strictSemvers: false
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  name: shop-initech
+  namespace: cd-acme-shop
+spec:
+  freightCreationPolicy: Automatic
+  interval: 5m0s
+  subscriptions:
+  - chart:
+      discoveryLimit: 20
+      repoURL: oci://registry.example.com/charts/shop/api-initech
+      semverConstraint: '>=1.0.0 <2.0.0'
+  - image:
+      constraint: '>=1.0.0 <2.0.0'
+      discoveryLimit: 20
+      imageSelectionStrategy: SemVer
+      repoURL: registry.example.com/static/shop/web
+      strictSemvers: false

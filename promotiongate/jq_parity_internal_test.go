@@ -221,6 +221,76 @@ func TestJQParityPromotedVersion(t *testing.T) {
 	}
 }
 
+func TestJQParityPromotedArtifact(t *testing.T) {
+	t.Parallel()
+
+	jq := requireJQ(t)
+
+	script, err := os.ReadFile(filepath.Join("..", "charts", "cd-pipeline", "files", "verify-promoted-version.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m := regexp.MustCompile(`(?s)--arg ref "\$ARTIFACT_REF" --arg exp "\$EXPECTED" '(.*?)'\n`).FindSubmatch(script)
+	if m == nil {
+		t.Fatal("the artifact program is not in the script any more")
+	}
+
+	program := string(m[1])
+
+	const ref = "registry.example.com/static/shop/web"
+
+	src := func(vo string) string { return `{"repoURL":"oci://r/charts","chart":"static-site","helm":{"valuesObject":` + vo + `}}` }
+	at := func(d string) string { return src(`{"site":{"artifact":{"ref":"` + ref + `","digest":"` + d + `"}}}`) }
+	ok := `"status":{"sync":{"status":"Synced","comparedTo":{"source":` + at("sha256:b") + `}},"health":{"status":"Healthy"}}`
+	apps := []string{
+		`{}`, `null`, `"x"`, `not json`,
+		`{"spec":"x"}`,
+		`{"spec":{"source":null}}`,
+		`{"spec":{"sources":[]}}`,
+		`{"spec":{"sources":{}}}`,
+		`{"spec":{"sources":"x"}}`,
+		`{"spec":{"sources":[null]}}`,
+		`{"spec":{"sources":[false]}}`,
+		`{"spec":{"sources":[1]}}`,
+		`{"spec":{"source":{"helm":"x"}}}`,
+		`{"spec":{"source":{"helm":{"valuesObject":"x"}}}}`,
+		`{"spec":{"source":{"helm":{"valuesObject":false}}}}`,
+		`{"spec":{"source":{"helm":{"valuesObject":"` + ref + `"}}}}`,
+		`{"spec":{"source":{"helm":{"valuesObject":[1,"` + ref + `",{"a":null}]}}}}`,
+		`{"spec":{"source":` + src(`{}`) + `}}`,
+		`{"spec":{"source":` + at("sha256:a") + `}}`,
+		`{"spec":{"source":` + at("sha256:b") + `}}`,
+		`{"spec":{"sources":[` + at("sha256:b") + `,` + at("sha256:a") + `,{"repoURL":"git"}]}}`,
+		`{"spec":{"source":` + at("sha256:b") + `},"status":"x"}`,
+		`{"spec":{"source":` + at("sha256:b") + `},"status":{"sync":{"comparedTo":{"source":` + at("sha256:a") + `}}}}`,
+		`{"spec":{"source":` + at("sha256:b") + `},"status":{"sync":{"comparedTo":{"sources":[false]}}}}`,
+		`{"spec":{"source":` + at("sha256:b") + `},"status":{"sync":{"comparedTo":{"source":` + at("sha256:b") + `}},"operationState":{"phase":"Running"}}}`,
+		`{"spec":{"source":` + at("sha256:b") + `},"status":{"sync":{"status":3,"comparedTo":{"source":` + at("sha256:b") + `}}}}`,
+		`{"spec":{"source":` + at("sha256:b") + `},"status":{"sync":{"status":"Synced","comparedTo":{"source":` + at("sha256:b") + `}},"health":{"status":"Degraded"}}}`,
+		`{"spec":{"source":` + at("sha256:b") + `},` + ok + `}`,
+		`{"spec":{"source":` + at("sha256:b") + `},` + ok + `} {"spec":{"source":` + at("sha256:a") + `}}`,
+	}
+
+	for _, args := range [][2]string{{ref, "sha256:b"}, {ref, "sha256:a"}, {"registry.example.com/other", "sha256:b"}} {
+		for _, app := range apps {
+			wantOut, wantOK := runJQ(t, jq, app, program, "--arg", "ref", args[0], "--arg", "exp", args[1])
+			gotOut, gotOK := jqRaw(app, io.Discard, func(v any) ([]string, error) {
+				s, err := judgeArtifact(v, args[0], args[1])
+				if err != nil {
+					return nil, err
+				}
+
+				return []string{s}, nil
+			})
+
+			if gotOut != wantOut || gotOK != wantOK {
+				t.Errorf("judgeArtifact %v over %s:\n jq: %q ok=%v\n go: %q ok=%v", args, app, wantOut, wantOK, gotOut, gotOK)
+			}
+		}
+	}
+}
+
 // The awk the scripts compared and rounded with (busybox's, as in the curl
 // image they ran in), against the Go port. Skipped where no busybox is
 // installed.

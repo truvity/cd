@@ -422,3 +422,57 @@ func TestPromotedVersionConfigFromEnv(t *testing.T) {
 		t.Errorf("unset CHART_NAME: %v", err)
 	}
 }
+
+// site renders a static site's Application: the platform's chart at its own
+// version, the artifact and its digest in the Helm values; compared with
+// cmpDigest ("" = never compared).
+func site(ref, specDigest, cmpDigest, sync, health string) string {
+	src := func(digest string) string {
+		return fmt.Sprintf(`{"repoURL":"oci://registry.example.com/charts","chart":"static-site","targetRevision":"3.12.0","helm":{"valuesObject":{"site":{"artifact":{"ref":%q,"digest":%q}}}}}`, ref, digest)
+	}
+
+	cmp := `{}`
+	if cmpDigest != "" {
+		cmp = `{"source":` + src(cmpDigest) + `}`
+	}
+
+	return fmt.Sprintf(`{"spec":{"source":%s},"status":{"sync":{"status":%q,"comparedTo":%s},"health":{"status":%q}}}`, src(specDigest), sync, cmp, health)
+}
+
+const (
+	bundle  = "registry.example.com/static/shop/web"
+	digestA = "sha256:aaaa"
+	digestB = "sha256:bbbb"
+)
+
+// An artifact deployed by its digest (ARTIFACT_REF): the site whose values
+// name the artifact is judged by the digest, the chart's Application beside
+// it is skipped, and the wait ends when the promoted digest is compared,
+// Synced and Healthy.
+func TestPromotedVersionJudgesAnArtifactByItsDigest(t *testing.T) {
+	t.Parallel()
+
+	r := runPromotedVersion(t, map[string][]string{
+		"shop-web": {
+			site(bundle, digestA, digestA, "Synced", "Healthy"),
+			site(bundle, digestB, digestA, "Synced", "Healthy"),
+			site(bundle, digestB, digestB, "Synced", "Healthy"),
+		},
+		"shop": {application(ociRepo, "", want, want, "Synced", "Healthy", "")},
+	}, map[string]string{"APPS": "shop shop-web", "CHART_REPO": "", "ARTIFACT_REF": bundle, "EXPECTED": digestB})
+	wantPV(t, r, 0,
+		"  shop-web: spec does not name "+digestB+" yet (parent app-of-apps not synced?)",
+		"  shop-web: spec names "+digestB+" but the last comparison did not",
+		"promoted version "+digestB+" is rendered and Synced/Healthy:\n  shop: renders no source of "+bundle+"\n  shop-web: at "+digestB+"\n")
+}
+
+// A part of a release that no Application renders fails on its own, though
+// the Stage's other part is there.
+func TestPromotedVersionFailsWhenNoneRendersTheArtifact(t *testing.T) {
+	t.Parallel()
+
+	r := runPromotedVersion(t, map[string][]string{
+		"shop": {application(ociRepo, "", want, want, "Synced", "Healthy", "")},
+	}, map[string]string{"CHART_REPO": "", "ARTIFACT_REF": bundle, "EXPECTED": digestB})
+	wantPV(t, r, 1, "FAIL: none of the Applications (shop) renders a source from "+bundle+" -- check the Stage's applications:\n  shop: renders no source of "+bundle+"\n")
+}

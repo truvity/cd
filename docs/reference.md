@@ -748,9 +748,24 @@ own `chart` does for the chart. Refused: companions with
 `warehouse.subscriptions` (verbatim, so the companions would not be in the
 Freight), a Stage that spells its own `promotionTemplate`, a customer's
 companion the project does not have, and a companion key that names a token
-the project does not set. The promoted-version check compares the chart
-alone (`tests/cases/cd-pipeline/companions`,
+the project does not set (`tests/cases/cd-pipeline/companions`,
 `tests/cases/cd-pipeline/companions-one-install`).
+
+With the promoted-version check on, each companion has a check of its own
+beside the chart's, `<slug>-<stage>-promoted-<companion>`, with the Stage's
+argument `<companion>-digest` (`imageFrom("<repository>").Digest`) or
+`<companion>-version`. One check per part means a part that none of the
+Stage's Applications renders fails on its own; one check for all parts would
+skip it as long as another part matched. A companion pinned by digest is
+judged by its artifact: an Application renders it when a source's Helm values
+name the repository (`ARTIFACT_REF`), and it is at the promoted version when
+they name the digest too, compared (`status.sync.comparedTo`), Synced and
+Healthy. A companion pinned by tag is judged as a chart of its own
+repository. Both runtimes take it, the script and the promotion-gate image
+(`tests/cases/cd-pipeline/companion-checks`). With
+`promotedVersion.objects: false` (a platform rendering a company's pipeline,
+cd-project) the Stage names the companions' checks and the platform renders
+them, as it does the chart's.
 
 ### Verification
 

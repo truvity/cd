@@ -17,9 +17,17 @@
 # in-cluster API (curl and jq); the Role the chart renders allows `get` on
 # exactly the Applications the Stage names.
 #
+# With ARTIFACT_REF set the check is of an artifact deployed by its digest
+# (a static bundle the platform's chart serves), not of a chart: an
+# Application renders it when a source's Helm values name ARTIFACT_REF, and is
+# at the promoted version when they name EXPECTED (the digest) too. One check
+# runs per part of a release, so a part that no Application renders fails on
+# its own rather than being skipped beside another part that matched.
+#
 # Env: APPS (space separated Application names), CHART_REPO, CHART_NAME
-# (empty for OCI repos), EXPECTED (the targetRevision, prefix included),
-# ARGOCD_NAMESPACE (default argocd), WAIT_SECONDS, POLL_SECONDS, JQ.
+# (empty for OCI repos), EXPECTED (the targetRevision, prefix included, or
+# the digest with ARTIFACT_REF), ARTIFACT_REF (optional), ARGOCD_NAMESPACE
+# (default argocd), WAIT_SECONDS, POLL_SECONDS, JQ.
 set -u
 
 JQ="${JQ:-jq}"
@@ -27,6 +35,9 @@ API="https://kubernetes.default.svc"
 SA=/var/run/secrets/kubernetes.io/serviceaccount
 started=$(date +%s)
 last=""
+ARTIFACT_REF="${ARTIFACT_REF:-}"
+what="$CHART_REPO"
+[ -n "$ARTIFACT_REF" ] && what="$ARTIFACT_REF"
 
 # One line per Application: "<verdict> <message>".
 # verdict: skip (renders none of this chart), ok, wait.
@@ -52,6 +63,25 @@ judge() {
 	    else "ok at \($exp)" end'
 }
 
+# The same verdicts for an artifact deployed by its digest (ARTIFACT_REF):
+# its sources are those whose Helm values name the artifact.
+judge_artifact() {
+	"$JQ" -r --arg ref "$ARTIFACT_REF" --arg exp "$EXPECTED" '
+	  def names($s): (.helm.valuesObject // {}) | [.. | strings] | any(. == $s);
+	  def mine: map(select(. != null and names($ref)));
+	  ((.spec.sources // [.spec.source]) | mine) as $spec
+	  | ((.status.sync.comparedTo.sources // [.status.sync.comparedTo.source]) | mine) as $cmp
+	  | if ($spec | length) == 0 then "skip renders no source of \($ref)"
+	    elif ($spec | all(names($exp)) | not) then
+	      "wait spec does not name \($exp) yet (parent app-of-apps not synced?)"
+	    elif (($cmp | length) == 0) or ($cmp | all(names($exp)) | not) then
+	      "wait spec names \($exp) but the last comparison did not"
+	    elif (.status.operationState.phase // "") == "Running" then "wait a sync operation is still Running"
+	    elif (.status.sync.status // "") != "Synced" then "wait sync status \(.status.sync.status // "unknown")"
+	    elif (.status.health.status // "") != "Healthy" then "wait health \(.status.health.status // "unknown")"
+	    else "ok at \($exp)" end'
+}
+
 while :; do
 	pending=""
 	matched=0
@@ -66,7 +96,11 @@ while :; do
 		if [ "$code" != "200" ]; then
 			line="wait cannot read Application (HTTP $code)"
 		else
-			line=$(printf '%s' "$body" | judge)
+			if [ -n "$ARTIFACT_REF" ]; then
+				line=$(printf '%s' "$body" | judge_artifact)
+			else
+				line=$(printf '%s' "$body" | judge)
+			fi
 		fi
 		verdict=${line%% *}
 		msg=${line#* }
@@ -85,7 +119,7 @@ while :; do
 	fi
 
 	if [ "$matched" -eq 0 ]; then
-		echo "FAIL: none of the Applications ($APPS) renders a source from $CHART_REPO -- check the Stage's applications:$report"
+		echo "FAIL: none of the Applications ($APPS) renders a source from $what -- check the Stage's applications:$report"
 		exit 1
 	fi
 
