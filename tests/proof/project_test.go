@@ -273,6 +273,25 @@ func TestProjectChildrenAreCompanyRenders(t *testing.T) {
 	}
 }
 
+// withPlatformRange is a company's range within the platform's: both ANDed
+// (a space), an OR on either side distributed; the company's alone where the
+// platform gives none.
+func withPlatformRange(own, platform string) string {
+	if platform == "" {
+		return own
+	}
+
+	var out []string
+
+	for _, a := range strings.Split(own, "||") {
+		for _, b := range strings.Split(platform, "||") {
+			out = append(out, strings.TrimSpace(a)+" "+strings.TrimSpace(b))
+		}
+	}
+
+	return strings.Join(out, " || ")
+}
+
 // TestProjectPipelineIsCdPipelines proves the Kargo objects are cd-pipeline's
 // own: the chart renders, byte for byte, the objects cd-pipeline renders for
 // the same project with createProject false and the platform's settings.
@@ -290,6 +309,10 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 					chart[key] = v
 				}
 			}
+			// The platform's range (pipeline.project.semver), ANDed with
+			// every range the company gives its Warehouses.
+			platformRange, _ := parity.Map(parity.Map(values["pipeline"])["project"])["semver"].(string)
+			chart["semver"] = withPlatformRange(chart["semver"].(string), platformRange)
 			p := map[string]any{"name": project["name"], "createProject": false, "chart": chart}
 			for _, key := range []string{"stageOrder", "autoPromote", "upstreams", "stageSources"} {
 				if v, ok := pipeline[key]; ok {
@@ -328,7 +351,7 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 			if customers := projectCustomers(project); len(customers) > 0 {
 				var list []any
 				for i, c := range customers {
-					entry := map[string]any{"name": c[0], "chart": map[string]any{"repoURL": c[1], "semver": source["semver"]}}
+					entry := map[string]any{"name": c[0], "chart": map[string]any{"repoURL": c[1], "semver": withPlatformRange(source["semver"].(string), platformRange)}}
 					if own, ok := parity.Map(parity.List(project["customers"])[i])["companions"]; ok {
 						entry["companions"] = own
 					}
@@ -353,7 +376,7 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 				sources := map[string]any{}
 				for sn, sv := range parity.Map(named) {
 					s := parity.Map(sv)
-					sc := map[string]any{"repoURL": s["chart"], "semver": s["semver"]}
+					sc := map[string]any{"repoURL": s["chart"], "semver": withPlatformRange(s["semver"].(string), platformRange)}
 					for _, key := range []string{"versionPrefix", "subscribeAs"} {
 						if v, ok := s[key]; ok {
 							sc[key] = v

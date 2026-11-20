@@ -1091,6 +1091,21 @@ customer's own `semver` for the chart, a fix of an older line of either
 reaches that customer and no other, and it is written in the company's own
 repository (`tests/cases/cd-project/companions`).
 
+### The platform's range of the chart
+
+The company's `project.source.semver` (and each source's and customer's) is
+the range its Warehouse subscribes with. The platform may seal a range of its
+own, `pipeline.project.semver`: a floor below which it cannot install the
+chart, or a ceiling it has not prepared for. Every Warehouse of the project
+then subscribes within both, as one constraint: the two ANDed, an OR on
+either side distributed (`>=0.1.0 <1.0.0 || >=2.0.0` within `>=0.4.7` is
+`>=0.1.0 <1.0.0 >=0.4.7 || >=2.0.0 >=0.4.7`), so the company keeps its own
+narrower range, for a fix of an older line, and never subscribes outside the
+platform's. A pin the company writes by hand outside that constraint is
+refused (fixture `pin-outside-platform-range`), and a platform range that is
+not a semver constraint fails the render (`platform-semver-invalid`). Unset,
+the company's range alone (`tests/cases/cd-project/platform-semver`).
+
 ### Company and platform
 
 Helm sees merged values, not which file supplied a key. Argo CD gives the

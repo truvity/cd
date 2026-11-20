@@ -1,0 +1,51 @@
+# The platform's range of the project's chart (pipeline.project.semver,
+# sealed): the Warehouse subscribes within the company's range AND the
+# platform's floor, the company's OR distributed, so it discovers neither
+# 0.4.6 (below the platform's floor) nor 1.x (outside the company's range).
+# The pin, 0.5.2, is inside both.
+
+# Company files.
+project:
+  name: shop
+  source:
+    chart: oci://registry.example.com/charts/shop
+    semver: ">=0.1.0 <1.0.0 || >=2.0.0"
+  clusters: [dev]
+  pipeline:
+    stageOrder: [dev]
+pins:
+  dev: "0.5.2"
+values:
+  dev:
+    app:
+      config:
+        greeting: hello
+
+# The platform's valuesObject.
+clusters: [dev]
+platform:
+  dev:
+    clusterName: dev
+    argocdNamespace: argocd
+    applicationPrefix: dev-
+    appProject: "{product}-{cluster}"
+    chartRegistry: oci://registry.example.com/charts
+    postgres: {instances: 1, storage: 2Gi}
+    events:
+      url: nats://broker.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: "{product}"
+products:
+  dev:
+    interface: 15
+    hostname: shop.dev.example.com
+pipeline:
+  project:
+    semver: ">=0.4.7"
+  git:
+    repoURL: https://git.example.com/acme/shop-delivery.git
+  promotion:
+    pinFile: "pins/{stage}.yaml"
+platformDigest: "7dd6495ca98d2bb5d7c4cf75a7487aab666fb487eba5950299959f354f68c2cf"

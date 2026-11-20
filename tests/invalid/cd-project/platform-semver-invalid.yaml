@@ -1,0 +1,49 @@
+# expect: improper constraint
+# The platform's range is not a semver constraint.
+project:
+  name: shop
+  source:
+    chart: oci://registry.example.com/charts/shop
+    semver: '>=0.1.0 <1.0.0 || >=2.0.0'
+  clusters:
+  - dev
+  pipeline:
+    stageOrder:
+    - dev
+pins:
+  dev: 0.5.2
+values:
+  dev:
+    app:
+      config:
+        greeting: hello
+clusters:
+- dev
+platform:
+  dev:
+    clusterName: dev
+    argocdNamespace: argocd
+    applicationPrefix: dev-
+    appProject: '{product}-{cluster}'
+    chartRegistry: oci://registry.example.com/charts
+    postgres:
+      instances: 1
+      storage: 2Gi
+    events:
+      url: nats://broker.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: '{product}'
+products:
+  dev:
+    interface: 15
+    hostname: shop.dev.example.com
+pipeline:
+  project:
+    semver: not a range
+  git:
+    repoURL: https://git.example.com/acme/shop-delivery.git
+  promotion:
+    pinFile: pins/{stage}.yaml
+platformDigest: 30ccae14cb5dbfd4421ff02b8f0048e809cb4f127d83b4e3ca28b576c2db22e5

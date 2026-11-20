@@ -32,6 +32,23 @@ Call with the chart's root context.
     {{- end -}}
   {{- end -}}
 {{- end -}}
+{{- /* The platform's range (pipeline.project.semver): every Warehouse
+       subscribes within it (cd-project.withPlatformRange), and a pin the
+       company writes by hand outside it is refused, so a version the
+       platform cannot install never reaches a cluster. */ -}}
+{{- with dig "project" "semver" "" $v.pipeline -}}
+  {{- $plat := . -}}
+  {{- $_ := semverCompare $plat "0.0.0" -}}
+  {{- range $i := $installs -}}
+    {{- $pin := index $v.pins $i.key | default "" -}}
+    {{- if and (not $i.companion) $pin -}}
+      {{- $range := include "cd-project.withPlatformRange" (dict "own" $i.source.semver "platform" $plat) -}}
+      {{- if not (semverCompare $range (trimPrefix ($i.source.versionPrefix | default "") $pin)) -}}
+        {{- fail (printf "cd-project: pins.%s: %s is outside the range the Warehouse subscribes with, %q (the company's %q within the platform's %q, pipeline.project.semver)" $i.key $pin $range $i.source.semver $plat) -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
 {{- if and $p.source.infraChart (eq ($p.source.kind | default "product") "chart") -}}
   {{- fail "cd-project: project.source.infraChart: kind chart has one ring (app) and no infra chart" -}}
 {{- end -}}
@@ -161,7 +178,8 @@ Call with the chart's root context.
 {{- $root := dict "Values" $values "Files" $.Files -}}
 {{- include "cd-pipeline.checkPinFile" (dict "where" "pipeline.promotion.pinFile" "file" $values.promotion.pinFile) -}}
 {{- $src := $p.source -}}
-{{- $chart := dict "repoURL" $src.chart "semver" $src.semver -}}
+{{- $plat := dig "project" "semver" "" $v.pipeline -}}
+{{- $chart := dict "repoURL" $src.chart "semver" (include "cd-project.withPlatformRange" (dict "own" $src.semver "platform" $plat)) -}}
 {{- if hasKey $src "versionPrefix" -}}{{- $_ := set $chart "versionPrefix" $src.versionPrefix -}}{{- end -}}
 {{- with $src.subscribeAs -}}{{- $_ := set $chart "subscribeAs" . -}}{{- end -}}
 {{- $project := dict "name" $p.name "createProject" false "chart" $chart "stageOrder" $p.pipeline.stageOrder -}}
@@ -174,7 +192,7 @@ Call with the chart's root context.
 {{- with $p.sources -}}
   {{- $sources := dict -}}
   {{- range $sn, $sv := . -}}
-    {{- $sc := dict "repoURL" $sv.chart "semver" $sv.semver -}}
+    {{- $sc := dict "repoURL" $sv.chart "semver" (include "cd-project.withPlatformRange" (dict "own" $sv.semver "platform" $plat)) -}}
     {{- if hasKey $sv "versionPrefix" -}}{{- $_ := set $sc "versionPrefix" $sv.versionPrefix -}}{{- end -}}
     {{- with $sv.subscribeAs -}}{{- $_ := set $sc "subscribeAs" . -}}{{- end -}}
     {{- $_ := set $sources $sn $sc -}}
@@ -199,7 +217,7 @@ Call with the chart's root context.
 {{- with (include "cd-project.installs" . | fromYaml).customers -}}
   {{- $customers := list -}}
   {{- range $c := . -}}
-    {{- $cc := dict "repoURL" $c.source.chart "semver" $c.source.semver -}}
+    {{- $cc := dict "repoURL" $c.source.chart "semver" (include "cd-project.withPlatformRange" (dict "own" $c.source.semver "platform" $plat)) -}}
     {{- if hasKey $c.source "versionPrefix" -}}{{- $_ := set $cc "versionPrefix" $c.source.versionPrefix -}}{{- end -}}
     {{- with $c.source.subscribeAs -}}{{- $_ := set $cc "subscribeAs" . -}}{{- end -}}
     {{- $entry := dict "name" $c.name "chart" $cc -}}
@@ -338,6 +356,27 @@ As YAML for `fromYaml`. Call with (dict "key" .. "product" .. "companion" .. "na
 {{- $_ := set $facts "artifact" (dict "ref" (trimPrefix "oci://" .companion.artifact)) -}}
 {{- if not (hasKey $facts "namespace") -}}{{- $_ := set $facts "namespace" .namespace -}}{{- end -}}
 {{- toYaml $facts -}}
+{{- end -}}
+
+{{/*
+A company's semver range within the platform's (`pipeline.project.semver`):
+both must hold, as one constraint. AND is a space; an OR (`||`) on either
+side is distributed, so `a || b` within `c` is `a c || b c`. The company's
+range alone where the platform gives none.
+Call with (dict "own" <the company's range> "platform" <the platform's, or "">).
+*/}}
+{{- define "cd-project.withPlatformRange" -}}
+{{- if not .platform -}}
+{{- .own -}}
+{{- else -}}
+{{- $out := list -}}
+{{- range $a := splitList "||" .own -}}
+  {{- range $b := splitList "||" $.platform -}}
+    {{- $out = append $out (printf "%s %s" (trim $a) (trim $b)) -}}
+  {{- end -}}
+{{- end -}}
+{{- join " || " $out -}}
+{{- end -}}
 {{- end -}}
 
 {{/*

@@ -1494,6 +1494,11 @@
               "maxLength": 63,
               "description": "Whom this installation is for: the {customer} token, as vendor."
             },
+            "semver": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The platform's range of the project's chart: every Warehouse of the project (project.source, each source, each customer) subscribes within it, the company's range AND this one, and a pin outside it is refused. For a floor below which the platform cannot install the chart, or a ceiling it has not prepared for. Unset, the company's range alone."
+            },
             "customers": {
               "type": "array",
               "uniqueItems": true,
