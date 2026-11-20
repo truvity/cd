@@ -1106,6 +1106,20 @@ refused (fixture `pin-outside-platform-range`), and a platform range that is
 not a semver constraint fails the render (`platform-semver-invalid`). Unset,
 the company's range alone (`tests/cases/cd-project/platform-semver`).
 
+### The platform's metrics gate
+
+The platform may gate a company's Stages on its metrics as it does its own:
+the sealed `pipeline.project.metricsGateStages` lists Stages of
+`project.pipeline.stageOrder`, and each names `<slug>-<stage>-metrics-gate`
+in its verification beside the promoted-version check. cd-project renders
+cd-pipeline with `metricsGate.objects: false`, so the gate's ServiceAccount,
+ConfigMap and AnalysisTemplate are never in a company's render: the platform
+renders them where the gate runs, under those names, with its own issuer,
+endpoints and bake numbers (`tests/cases/cd-project/metrics-gate`). A Stage
+that is not in `stageOrder` is refused, and the gate's own settings stay out
+of a company's reach (`pipeline.metricsGate` is refused, fixture
+`pipeline-metrics-gate`).
+
 ### Company and platform
 
 Helm sees merged values, not which file supplied a key. Argo CD gives the

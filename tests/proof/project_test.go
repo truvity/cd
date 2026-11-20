@@ -333,6 +333,11 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 			if len(held) > 0 {
 				p["noAutoPromote"] = held
 			}
+
+			// The platform's metrics gate: the Stages it seals.
+			if gated := parity.List(kargo["metricsGateStages"]); len(gated) > 0 {
+				p["metricsGateStages"] = gated
+			}
 			fill := []string{"{project}", project["name"].(string), "{product}", project["name"].(string)}
 			for _, key := range []string{"vendor", "customer"} {
 				if v, ok := kargo[key]; ok {
@@ -407,6 +412,8 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 			// cd-project names the promoted-version check and never renders
 			// its objects: the same as cd-pipeline with objects false.
 			settings["promotedVersion"] = map[string]any{"objects": false}
+			// So does the metrics gate.
+			settings["metricsGate"] = map[string]any{"objects": false}
 			settings["projects"] = []any{p}
 			want := documents(t, parity.Template(t, helm, "pipeline", "../../charts/cd-pipeline", settings))
 			got := map[string]string{}

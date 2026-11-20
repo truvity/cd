@@ -1,0 +1,71 @@
+# The platform's metrics gate on a company's project: the sealed
+# pipeline.project.metricsGateStages names the gated Stages, and each names
+# `shop-<stage>-metrics-gate` beside the promoted-version check. The gate's
+# objects are the platform's, never this render's (the kinds guard holds).
+
+# Company files.
+project:
+  name: shop
+  source:
+    chart: oci://registry.example.com/charts/shop
+    semver: ">=1.0.0 <2.0.0"
+  clusters: [dev, stage]
+  pipeline:
+    stageOrder: [dev, stage]
+pins:
+  dev: "1.2.3"
+  stage: "1.2.0"
+values:
+  dev:
+    app:
+      config:
+        greeting: hello
+
+# The platform's valuesObject.
+clusters: [dev, stage]
+platform:
+  dev:
+    clusterName: dev
+    argocdNamespace: argocd
+    applicationPrefix: dev-
+    appProject: "{product}-{cluster}"
+    chartRegistry: oci://registry.example.com/charts
+    postgres: {instances: 1, storage: 2Gi}
+    events:
+      url: nats://broker.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: "{product}"
+  stage:
+    clusterName: stage
+    argocdNamespace: argocd
+    applicationPrefix: stage-
+    appProject: "{product}-{cluster}"
+    chartRegistry: oci://registry.example.com/charts
+    postgres: {instances: 1, storage: 2Gi}
+    events:
+      url: nats://broker.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: "{product}"
+products:
+  dev:
+    interface: 15
+    hostname: shop.dev.example.com
+  stage:
+    interface: 15
+    hostname: shop.stage.example.com
+pipeline:
+  project:
+    metricsGateStages: [stage]
+  graph:
+    upstreams:
+      stage: [dev]
+    promotedVersion: true
+  git:
+    repoURL: https://git.example.com/acme/shop-delivery.git
+  promotion:
+    pinFile: "pins/{stage}.yaml"
+platformDigest: "dd66a17e4e5924030b95760ab725604bd744eb1949a12e2a4a0c94bf9b82caa5"

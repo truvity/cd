@@ -75,6 +75,11 @@ promotedVersion:
 # `issuerHost`, `token.audience` and an `endpoints` entry per gated Stage are
 # required by a gate; `image` and `jqImage` default to promotedVersion's.
 metricsGate:
+  # false: a Stage names its gate, `<slug>-<stage>-metrics-gate`, and the
+  # gate's ServiceAccount, ConfigMap and AnalysisTemplate are rendered by the
+  # cluster's owner under the same names, not here (promotedVersion.objects
+  # likewise); none of the settings below is read then.
+  objects: true
   gateImage: ""
   image: ""
   jqImage: ""

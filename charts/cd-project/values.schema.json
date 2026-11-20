@@ -1510,6 +1510,16 @@
               "minItems": 1,
               "description": "The customers the platform registered for this product, each one an installation of its own: project.customers may name only these. Not with customer: a product with several customers has one Kargo Project, cd-<vendor>-<project>, and {customer} is each Stage's own."
             },
+            "metricsGateStages": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                "maxLength": 63
+              },
+              "description": "Stages of project.pipeline.stageOrder that run the platform's metrics gate after a promotion: each names `<slug>-<stage>-metrics-gate` in its verification, and the gate's ServiceAccount, ConfigMap and AnalysisTemplate are the platform's (rendered where the gate runs, never here)."
+            },
             "noAutoPromote": {
               "type": "array",
               "uniqueItems": true,
@@ -1654,6 +1664,7 @@
         },
         "metricsGate": {
           "const": {
+            "objects": true,
             "gateImage": "",
             "image": "",
             "jqImage": "",

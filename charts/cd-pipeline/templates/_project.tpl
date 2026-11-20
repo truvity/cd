@@ -264,7 +264,15 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- /* The metrics gate (verification.metricsGate), then the Job checks of the project's own. */ -}}
 {{- $checks := $verif.checks | default list -}}
 {{- if $verif.metricsGate -}}
+{{- /* With metricsGate.objects false the Stage only names the gate: its
+       ServiceAccount, ConfigMap and AnalysisTemplate are rendered by
+       whoever owns the cluster the gate runs on, under the same names, as
+       the promoted-version check's are. */ -}}
+{{- if eq (toString $v.metricsGate.objects) "false" -}}
+{{- $templates = append $templates (printf "%s-%s-metrics-gate" $slug $s.name) -}}
+{{- else -}}
 {{- $checks = prepend $checks (include "cd-pipeline.metricsGateCheck" (dict "root" $r "p" $p "s" $s "slug" $slug) | fromYaml) -}}
+{{- end -}}
 {{- end -}}
 {{- range $c := $checks -}}
 {{- $templates = append $templates $c.name -}}

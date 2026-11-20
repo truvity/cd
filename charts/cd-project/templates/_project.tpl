@@ -73,6 +73,11 @@ Call with the chart's root context.
     {{- fail (printf "cd-project: pipeline.project.noAutoPromote: %q is not a Stage of project.pipeline.stageOrder" $s) -}}
   {{- end -}}
 {{- end -}}
+{{- range $s := (dig "project" "metricsGateStages" list $v.pipeline) -}}
+  {{- if not (has $s $order) -}}
+    {{- fail (printf "cd-project: pipeline.project.metricsGateStages: %q is not a Stage of project.pipeline.stageOrder" $s) -}}
+  {{- end -}}
+{{- end -}}
 {{- range $s := keys ($p.pipeline.upstreams | default dict) | sortAlpha -}}
   {{- if not (has $s $order) -}}
     {{- fail (printf "cd-project: project.pipeline.upstreams: %q is not a Stage of project.pipeline.stageOrder" $s) -}}
@@ -175,6 +180,11 @@ Call with the chart's root context.
        Files is there so a render that reached one still ends at the kinds
        guard. */ -}}
 {{- $_ := set $values.promotedVersion "objects" false -}}
+{{- /* So is the metrics gate's, on the Stages the platform's sealed
+       pipeline.project.metricsGateStages lists: each names
+       `<slug>-<stage>-metrics-gate`, and the gate's ServiceAccount,
+       ConfigMap and AnalysisTemplate are the platform's. */ -}}
+{{- $_ := set $values.metricsGate "objects" false -}}
 {{- $root := dict "Values" $values "Files" $.Files -}}
 {{- include "cd-pipeline.checkPinFile" (dict "where" "pipeline.promotion.pinFile" "file" $values.promotion.pinFile) -}}
 {{- $src := $p.source -}}
@@ -189,6 +199,7 @@ Call with the chart's root context.
        platform in what it seals (to quiesce a pipeline it is moving). */ -}}
 {{- with concat ($p.pipeline.noAutoPromote | default list) (dig "project" "noAutoPromote" list $v.pipeline) | uniq -}}{{- $_ := set $project "noAutoPromote" . -}}{{- end -}}
 {{- with $p.pipeline.upstreams -}}{{- $_ := set $project "upstreams" . -}}{{- end -}}
+{{- with dig "project" "metricsGateStages" list $v.pipeline -}}{{- $_ := set $project "metricsGateStages" . -}}{{- end -}}
 {{- with $p.sources -}}
   {{- $sources := dict -}}
   {{- range $sn, $sv := . -}}
