@@ -5,6 +5,10 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## v0.40.0
+
+- **Added (Go library):** a product's namespace can differ from its name. `appproject.Deployer` takes the option `appproject.InNamespace(ns)`: the AppProject keeps its name `<product>-<cluster>` and its policies and its destination becomes `ns` (empty, or no option, is the product's name, as before). `delivery.ProductInput` carries `Namespace` (cd-delivery's `products.<name>.namespace`, taken by kind `product` since v0.38.0), and `delivery.Product` collects the AppProjects whose destination is that namespace (empty is `Name`). The signatures are source-compatible: existing callers compile and get the same rows. The charts do not change. Unset, every existing render and row is byte-identical (no existing golden moves).
+
 ## v0.39.0
 
 - **Added:** the metrics gate by reference. `cd-pipeline` `metricsGate.objects` (default `true`): with `false` a gated Stage names `<slug>-<stage>-metrics-gate` and renders none of the gate's objects (ServiceAccount, ConfigMap, AnalysisTemplate), for whoever owns the cluster the gate runs on to render under that name, as `promotedVersion.objects` does for the promoted-version check. `cd-project` takes the platform's sealed `pipeline.project.metricsGateStages` (Stages of `stageOrder`, refused otherwise) and always renders with `metricsGate.objects: false`, so a company's render still holds Applications, Warehouses, Stages and ProjectConfigs only. New cases `cd-pipeline/metrics-gate-by-reference` and `cd-project/metrics-gate` (goldens) and fixture `metrics-gate-stage-unknown`. Unset, every existing render is byte-identical (no existing golden moves).
