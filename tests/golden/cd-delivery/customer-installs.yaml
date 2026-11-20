@@ -1,0 +1,207 @@
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  labels:
+    acme.example.com/installation: acme-globex-shop-globex
+  name: east-globex-shop-infra
+  namespace: cd-acme-shop
+spec:
+  destination:
+    name: east
+    namespace: shop-globex
+  project: shop-east-globex
+  sources:
+  - helm:
+      releaseName: shop-globex-infra
+      valuesObject:
+        events:
+          account: shop-globex
+          maxAge: 24h
+          replicas: 1
+          storage: file
+        postgres:
+          instances: 1
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: shop-globex-pg-runtime
+          runtimeRole: shop_globex_app
+          storage: 2Gi
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/shop-infra
+    targetRevision: 1.0.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  labels:
+    acme.example.com/installation: acme-globex-shop-globex
+  name: east-globex-shop
+  namespace: cd-acme-shop
+spec:
+  destination:
+    name: east
+    namespace: shop-globex
+  project: shop-east-globex
+  sources:
+  - helm:
+      releaseName: shop-globex
+      valuesObject:
+        database:
+          app:
+            passwordSecret: shop-globex-pg-runtime
+            role: shop_globex_app
+          host: shop-globex-infra-pg-rw
+          owner:
+            passwordSecret: shop-globex-infra-pg-app
+        events:
+          url: nats://broker.example:4222
+        route:
+          enabled: true
+          hostname: globex.shop.example.com
+        serviceAccount:
+          app:
+            name: shop-globex
+    path: .
+    repoURL: oci://registry.example.com/charts/shop
+    targetRevision: 1.0.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  labels:
+    acme.example.com/installation: acme-initech-shop-initech
+  name: east-initech-shop-infra
+  namespace: cd-acme-shop
+spec:
+  destination:
+    name: east
+    namespace: shop-initech
+  project: shop-east-initech
+  sources:
+  - helm:
+      releaseName: shop-initech-infra
+      valuesObject:
+        events:
+          account: shop-initech
+          maxAge: 24h
+          replicas: 1
+          storage: file
+        postgres:
+          instances: 1
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: shop-initech-pg-runtime
+          runtimeRole: shop_initech_app
+          storage: 2Gi
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/shop-infra
+    targetRevision: 1.1.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  labels:
+    acme.example.com/installation: acme-initech-shop-initech
+  name: east-initech-shop
+  namespace: cd-acme-shop
+spec:
+  destination:
+    name: east
+    namespace: shop-initech
+  project: shop-east-initech
+  sources:
+  - helm:
+      releaseName: shop-initech
+      valuesObject:
+        database:
+          app:
+            passwordSecret: shop-initech-pg-runtime
+            role: shop_initech_app
+          host: shop-initech-infra-pg-rw
+          owner:
+            passwordSecret: shop-initech-infra-pg-app
+        events:
+          url: nats://broker.example:4222
+        route:
+          enabled: true
+          hostname: initech.shop.example.com
+        serviceAccount:
+          app:
+            name: shop-initech
+    path: .
+    repoURL: oci://registry.example.com/charts/shop
+    targetRevision: 1.1.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false

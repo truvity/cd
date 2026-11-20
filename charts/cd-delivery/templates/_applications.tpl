@@ -34,7 +34,7 @@ that passes its own dict gets the same refusal of an unknown key from
 {{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s (kind chart)" $name) "got" $p "allowed" (list "kind" "pin" "repository" "chart" "namespace" "values")) -}}
 {{- $docs = append $docs (include "cd-delivery.chartProduct" (dict "plat" $plat "name" $name "p" $p)) -}}
 {{- else -}}
-{{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s" $name) "got" $p "allowed" (list "kind" "pin" "interface" "repository" "chart" "hostname" "parentRef" "surfaces" "bucketSlug" "workloadIdentity" "natsIdentity" "mtls" "postgres" "e2e" "faro" "alerts" "dashboards" "identityProviders" "access" "product" "values" "ignoreDifferences" "platformValues" "layers")) -}}
+{{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s" $name) "got" $p "allowed" (list "kind" "pin" "interface" "repository" "chart" "hostname" "parentRef" "surfaces" "bucketSlug" "workloadIdentity" "natsIdentity" "mtls" "postgres" "e2e" "faro" "alerts" "dashboards" "identityProviders" "access" "product" "values" "ignoreDifferences" "platformValues" "layers" "namespace" "applicationName" "vendor" "customer")) -}}
 {{- $docs = append $docs (include "cd-delivery.product" (dict "plat" $plat "name" $name "p" $p)) -}}
 {{- end -}}
 {{- end -}}
@@ -49,6 +49,15 @@ Call with (dict "plat" <platform> "name" <product> "p" <product map>).
 */}}
 {{- define "cd-delivery.product" -}}
 {{- $plat := .plat -}}
+{{- /* A product may name its own vendor and customer: one install of a
+       product for one customer, beside the installs for other customers in
+       the same call. They lay over the platform's for this product's
+       {vendor} and {customer} tokens. */ -}}
+{{- if or .p.vendor .p.customer -}}
+{{- $plat = deepCopy $plat -}}
+{{- with .p.vendor -}}{{- $_ := set $plat "vendor" . -}}{{- end -}}
+{{- with .p.customer -}}{{- $_ := set $plat "customer" . -}}{{- end -}}
+{{- end -}}
 {{- $name := .name -}}
 {{- $p := .p -}}
 {{- $i := int (include "cd-delivery.interface" (dict "name" $name "p" $p)) -}}
@@ -184,7 +193,10 @@ ring composed. Call with (dict "ctx" <product ctx> "ring" infra|app|e2e
 {{- end -}}
 {{- if not (hasKey $plat "applicationPrefix") -}}{{- fail "cd-delivery: platform.applicationPrefix is required (it may be empty)" -}}{{- end -}}
 {{- $kind := $c.kind | default $p.kind | default "product" -}}
-{{- $meta := dict "name" (printf "%s%s%s" (include "cd-delivery.fillInstallation" (dict "plat" $plat "what" "platform.applicationPrefix" "s" (toString $plat.applicationPrefix))) $name $nameSuffix) "namespace" (required "cd-delivery: platform.argocdNamespace is required" $plat.argocdNamespace) "annotations" (dict) -}}
+{{- /* The middle of the Application's name is the product's, unless it
+       names its own (`applicationName`): installs of one product for several
+       customers then share it, and the customer goes in the prefix. */ -}}
+{{- $meta := dict "name" (printf "%s%s%s" (include "cd-delivery.fillInstallation" (dict "plat" $plat "what" "platform.applicationPrefix" "s" (toString $plat.applicationPrefix))) ($p.applicationName | default $name) $nameSuffix) "namespace" (required "cd-delivery: platform.argocdNamespace is required" $plat.argocdNamespace) "annotations" (dict) -}}
 {{- $e2eOpts := $p.e2e | default dict -}}
 {{- /* A Kargo Stage may only sync an Application that names it. Only the
        end-to-end Application is ever handed to a Stage this way. */ -}}

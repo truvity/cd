@@ -282,7 +282,9 @@ required below must be present, and a key the chart does not read is refused.
 | `products.<name>.platformValues.{infra,app,e2e}` | The platform's own payload per ring, merged over what the chart composed and under `layers` and `values`. In `cd-company` the paths it sets are reserved against the company's `values`. See [Platform values and layers](#platform-values-and-layers). |
 | `products.<name>.layers[]` | Ordered `{name, since, required, values.{infra,app,e2e}}`: a payload the platform sets only for a pin at or above `since`. |
 | `products.<name>.kind` | `product` (default), `chart` or `static-site`: see [Kinds](#kinds). |
-| `products.<name>.namespace` | Kinds `chart` and `static-site` only: the destination namespace (default the product's name). |
+| `products.<name>.namespace` | The destination namespace (default the product's name). A product of kind `product` that names one keeps its key for its release, its Helm objects and its pins. |
+| `products.<name>.applicationName` | Kind `product` only: the middle of the product's Application names (default the key); installs of one product for several customers name it alike. |
+| `products.<name>.vendor`, `.customer` | Kind `product` only: this product's `{vendor}` and `{customer}`, over `platform.vendor` and `platform.customer`. |
 | `products.<name>.chartVersion`, `.artifact.ref` | Kind `static-site` only: the release of the two charts, and the repository of the site artifact without a tag. Both required. |
 | `platform.staticSite.{infraLabels,siteAnnotations}` | Labels for the infrastructure Application and annotations for the site Application of every `static-site` product, verbatim. Unset: none. |
 
