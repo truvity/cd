@@ -405,6 +405,11 @@ project, as it always was.
   name becomes cd-pipeline's `slug`, which the Applications a Stage watches,
   the pin key and the check names are made from, so none of those move. The
   Warehouse keeps the project's own name too.
+- warehouse: the name of the project's Warehouse, `pipeline.project.warehouse`
+  as given (the platform's naming convention: the product, or
+  `<product>-<customer>` for a product built for each customer). A further
+  source's Warehouse is `<warehouse>-<source>`, and a customer's
+  `<warehouse>-<customer>`. Unset, the project's own name.
 - vendor, customer: the tokens of the same names in cd-pipeline's templates.
 
 The name is the platform's alone: `pipeline` is sealed by platformDigest and
@@ -427,6 +432,12 @@ Call with the chart's root context.
   {{- $_ := set $out "slug" $p.name -}}
   {{- /* The Warehouse keeps the project's own name: the Project is renamed, the product is not. */ -}}
   {{- $_ := set $out "warehouse" (dict "name" $p.name) -}}
+{{- end -}}
+{{- with $k.warehouse -}}
+  {{- if not (regexMatch "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$" .) -}}
+    {{- fail (printf "cd-project: pipeline.project.warehouse %q is not a Kubernetes object name (lower-case letters, digits and -, at most 63)" .) -}}
+  {{- end -}}
+  {{- $_ := set $out "warehouse" (dict "name" .) -}}
 {{- end -}}
 {{- toYaml $out -}}
 {{- end -}}

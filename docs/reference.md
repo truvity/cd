@@ -866,7 +866,7 @@ as well (`tests/proof/project_test.go` holds every case to the same list).
 ```yaml
 # Company files (Helm deep-merges them; per-cluster files are keyed by cluster).
 project:
-  name: shop                       # the service name and, unless pipeline.project.name says otherwise, the Kargo namespace and Warehouse
+  name: shop                       # the service name and, unless pipeline.project says otherwise, the Kargo namespace and Warehouse
   source:
     chart: oci://registry.example.com/charts/shop
     kind: product                  # optional: product (default; three rings) or chart (app ring only)
@@ -975,8 +975,7 @@ in `stageOrder` (the company's `noAutoPromote` or the platform's); a
 that names `{vendor}` or `{customer}` where the platform gives none;
 a `stageSources` value that is not a key of `project.sources`; a source whose
 chart is not `oci://` or not `source.chart`'s `<chart>`; a Stage whose
-upstream takes another source; a cluster with
-no pin (`""` is dormant), a non-dormant one with no `products.<cluster>`. Ring
+upstream takes another source; a non-dormant cluster (a cluster with no pin, or `""`, is dormant) with no `products.<cluster>`. Ring
 payloads are held to cd-company's ownership rules by cd-company's own code: the
 fixed reserved paths, and whatever the platform sets for the cluster through
 `products.<cluster>.platformValues` and its open layers, dormant or not.
@@ -1001,12 +1000,27 @@ is `cd-acme-globex-shop`. What is named from the slug does not move: the
 Applications (`<applicationPrefix><project>`), the Applications a Stage
 watches (`graph.applicationName`), the pin key (`pins.<stage>`), the workload
 namespace and the names of the checks. What is named from the Project does:
-the namespace of the Kargo objects, the ProjectConfig, the Warehouse (and the
-Warehouses of `project.sources`, `<Kargo Project>-<source>`), and cd-pipeline's
-`{project}` token, so a `promotion.commitMessage` that should keep saying
+the namespace of the Kargo objects, the ProjectConfig, and cd-pipeline's
+`{project}` token (the Warehouse keeps `project.name` unless the platform names
+it, below), so a `promotion.commitMessage` that should keep saying
 `shop` names `{slug}` or `{product}`. A Kargo Project cannot be renamed: a new
 name is a new Project, created by the platform like the old one, with a new
 Freight history; the pins in the repository stay.
+
+The Warehouse is named by the platform too, apart from the Kargo Project:
+
+```yaml
+pipeline:
+  project:
+    warehouse: shop-globex   # the product, or <product>-<customer>
+```
+
+`pipeline.project.warehouse` is the name of the project's Warehouse as given;
+a further source's is `<warehouse>-<source>` and a customer's
+`<warehouse>-<customer>`, and every Stage requests its Freight from them
+(`tests/cases/cd-project/warehouse`). Unset, the Warehouse is `project.name`.
+A Warehouse cannot be renamed in place: a new name is a new Warehouse, and its
+Freight starts again. A name that is not an object name is refused.
 
 Where the Applications live, and under which AppProject, is the platform's as
 it always was, per cluster:

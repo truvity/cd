@@ -5,6 +5,10 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## v0.42.0
+
+- **Added:** `cd-project` `pipeline.project.warehouse`, the name of the project's Warehouse, sealed by `platformDigest` with the rest of `pipeline`. The platform can give the Warehouse its convention's name (the product, or `<product>-<customer>` for a product built for each customer) whatever the company's `project.name` is. A further source's Warehouse is `<warehouse>-<source>` and a customer's `<warehouse>-<customer>`, and every Stage requests its Freight from them. A name that is not an object name is refused. A Warehouse cannot be renamed in place: setting a new name on a running project creates a new Warehouse, and its Freight starts again. New case `cd-project/warehouse` (golden) and fixture `warehouse-not-a-name`. Unset, the Warehouse keeps `project.name` and every existing render is byte-identical (no existing golden moves).
+
 ## v0.41.0
 
 - **Behaviour change (`cd-project`):** a missing pin is dormant. A cluster of `project.clusters` (a customer's Stage, a companion's key) with no key in `pins`, which is what an absent `<cluster>/pin.yaml` gives, renders no Applications, as `""` does; before, the render failed with `missing pins.<service>`. A new project needs no hand-written `pins: {<cluster>: ""}`. Kargo's `yaml-update` still needs the file to exist when it writes the first pin. `cd-company` keeps refusing a missing pin. New case `cd-project/missing-pin` (golden, identical to `full`); the negative fixture `cd-project/missing-pin` is removed. Every existing render is byte-identical (no existing golden moves).

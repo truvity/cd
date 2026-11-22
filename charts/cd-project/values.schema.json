@@ -1482,6 +1482,11 @@
               "minLength": 1,
               "description": "The Kargo Project, and so the namespace of the Warehouse, Stages and ProjectConfig (and, by default, the Warehouse's name); tokens {project} and {product} (project.name), {vendor}, {customer}. Unset, it is project.name. With it project.name is the slug: Application names, the pin key and check names stay. A Kargo Project cannot be renamed: a new name is a new Project with a new Freight history."
             },
+            "warehouse": {
+              "type": "string",
+              "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$",
+              "description": "The name of the project's Warehouse, as given: the product, or <product>-<customer> for a product built for each customer. A further source's Warehouse is <warehouse>-<source>, a customer's <warehouse>-<customer>. Unset, project.name. A Warehouse cannot be renamed in place: a new name is a new Warehouse, and its Freight starts again."
+            },
             "vendor": {
               "type": "string",
               "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",

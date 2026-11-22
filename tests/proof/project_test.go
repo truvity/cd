@@ -357,6 +357,10 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 				// The Warehouse keeps the project's own name.
 				p["warehouse"] = map[string]any{"name": project["name"]}
 			}
+			// The platform names the Warehouse (pipeline.project.warehouse).
+			if warehouse, ok := kargo["warehouse"]; ok {
+				p["warehouse"] = map[string]any{"name": warehouse}
+			}
 			// Each customer is a source of its own: its chart, at the
 			// project's semver.
 			if customers := projectCustomers(project); len(customers) > 0 {
