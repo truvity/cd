@@ -892,8 +892,14 @@ values:                            # values/<cluster>.yaml
 pins:                              # pins/<cluster>.yaml, written by Kargo
   dev: "1.4.0"
   stage: "1.3.2"
-  prod: ""                         # dormant
+  prod: ""                         # dormant; so is a cluster with no pin at all
 ```
+
+A cluster of `project.clusters` with no key in `pins` (its pin file is absent)
+is dormant, exactly as `""` is: it renders no Applications, and its Stage
+exists. A new project needs no hand-written `pins: {<cluster>: ""}`. Kargo's
+`yaml-update` does not create a file, so the pin file must exist by the time
+the cluster's Stage is first promoted into.
 
 ```yaml
 # The platform's valuesObject.
