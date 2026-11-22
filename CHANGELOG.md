@@ -5,6 +5,10 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## v0.41.0
+
+- **Behaviour change (`cd-project`):** a missing pin is dormant. A cluster of `project.clusters` (a customer's Stage, a companion's key) with no key in `pins`, which is what an absent `<cluster>/pin.yaml` gives, renders no Applications, as `""` does; before, the render failed with `missing pins.<service>`. A new project needs no hand-written `pins: {<cluster>: ""}`. Kargo's `yaml-update` still needs the file to exist when it writes the first pin. `cd-company` keeps refusing a missing pin. New case `cd-project/missing-pin` (golden, identical to `full`); the negative fixture `cd-project/missing-pin` is removed. Every existing render is byte-identical (no existing golden moves).
+
 ## v0.40.0
 
 - **Added (Go library):** a product's namespace can differ from its name. `appproject.Deployer` takes the option `appproject.InNamespace(ns)`: the AppProject keeps its name `<product>-<cluster>` and its policies and its destination becomes `ns` (empty, or no option, is the product's name, as before). `delivery.ProductInput` carries `Namespace` (cd-delivery's `products.<name>.namespace`, taken by kind `product` since v0.38.0), and `delivery.Product` collects the AppProjects whose destination is that namespace (empty is `Name`). The signatures are source-compatible: existing callers compile and get the same rows. The charts do not change. Unset, every existing render and row is byte-identical (no existing golden moves).

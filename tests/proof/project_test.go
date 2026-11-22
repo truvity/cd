@@ -135,6 +135,8 @@ func addCompanions(values map[string]any, cluster string, out map[string]any) {
 		for _, cn := range names {
 			key, service := in.key+"-"+cn, in.service+"-"+cn
 			out["services"] = append(out["services"].([]any), service)
+			// A Stage with no pin is dormant: cd-project hands cd-company "".
+			out["pins"].(map[string]any)[service] = ""
 			if pin, ok := parity.Map(values["pins"])[key]; ok {
 				out["pins"].(map[string]any)[service] = pin
 			}
@@ -174,6 +176,8 @@ func installsSlice(values map[string]any, cluster string) map[string]any {
 			service := name + "-" + c[0]
 			key := strings.NewReplacer("{stage}", cluster, "{customer}", c[0]).Replace(stageNameTemplate(values))
 			out["services"] = append(out["services"].([]any), service)
+			// A Stage with no pin is dormant: cd-project hands cd-company "".
+			out["pins"].(map[string]any)[service] = ""
 			if pin, ok := parity.Map(values["pins"])[key]; ok {
 				out["pins"].(map[string]any)[service] = pin
 			}
@@ -203,6 +207,8 @@ func installsSlice(values map[string]any, cluster string) map[string]any {
 		"values":   map[string]any{},
 		"products": map[string]any{},
 	}
+	// A cluster with no pin is dormant: cd-project hands cd-company "".
+	out["pins"] = map[string]any{name: ""}
 	if pin, ok := parity.Map(values["pins"])[cluster]; ok {
 		out["pins"] = map[string]any{name: pin}
 	}

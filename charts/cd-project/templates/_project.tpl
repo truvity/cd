@@ -130,7 +130,10 @@ Call with the chart's root context.
         {{- end -}}
         {{- $_ := set $products $i.service $facts -}}
       {{- end -}}
-      {{- if hasKey $v.pins $i.key -}}{{- $_ := set $pins $i.service (index $v.pins $i.key) -}}{{- end -}}
+      {{- /* A cluster with no pin is dormant: its pin file is absent until
+             Kargo writes the first version, so a new project carries no
+             `pins: {<cluster>: ""}` by hand. */ -}}
+      {{- $_ := set $pins $i.service (get $v.pins $i.key | default "") -}}
       {{- if hasKey $v.values $i.key -}}{{- $_ := set $values $i.service (index $v.values $i.key) -}}{{- end -}}
     {{- end -}}
   {{- end -}}

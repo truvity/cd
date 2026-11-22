@@ -227,7 +227,7 @@ def generated_project_schema(root):
             },
             "pins": {
                 "type": "object", "propertyNames": NAME, "additionalProperties": {"type": "string"},
-                "description": "Company-owned (Kargo writes them): the version per cluster of project.clusters (per Stage with project.customers); an empty string is dormant.",
+                "description": "Company-owned (Kargo writes them): the version per cluster of project.clusters (per Stage with project.customers); an empty string is dormant, and so is a cluster (or Stage) with no key.",
             },
             "clusters": dict(names, minItems=1, description="Platform-owned: the clusters the platform registered for this project."),
             "platform": {
