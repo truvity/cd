@@ -64,10 +64,14 @@ type (
 		// without credentials leaves it off and still gets the skip.
 		RequireECR bool
 
-		work     string // per-run scratch for value files
-		pullMu   sync.Mutex
-		pulls    map[string]*pullOnce
-		logins   map[string]*pullOnce // ECR host -> login outcome (err only)
+		work   string // per-run scratch for value files
+		pullMu sync.Mutex
+		pulls  map[string]*pullOnce
+		logins map[string]*pullOnce // ECR host -> login outcome (err only)
+		// loginMu serialises `helm registry login` across hosts: each login
+		// reads the one isolated registry config, adds its host and writes
+		// it back, so two at once drop a host's credential.
+		loginMu  sync.Mutex
 		renders  map[string]*renderOnce
 		sem      chan struct{}
 		explicit bool
@@ -321,7 +325,13 @@ func (g *Gate) ecrLogin(ctx context.Context, host string) error {
 		return fmt.Errorf("aws ecr get-login-password returned no password")
 	}
 
-	if _, err := g.helmStdin(ctx, &pw, "registry", "login", host, "--username", "AWS", "--password-stdin"); err != nil {
+	// The password is fetched in parallel; the write of the shared registry
+	// config is not (loginMu).
+	g.loginMu.Lock()
+	_, err := g.helmStdin(ctx, &pw, "registry", "login", host, "--username", "AWS", "--password-stdin")
+	g.loginMu.Unlock()
+
+	if err != nil {
 		return fmt.Errorf("helm registry login: %w", err)
 	}
 

@@ -5,6 +5,10 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## v0.43.1
+
+- **Fixed (`chartgate`):** a gate that pulls from two private ECR registries at once (a company's devel and stable registries) lost one registry's credential at random, and that registry's pulls failed with `basic credential not found`. Each `helm registry login` reads the gate's one isolated registry config, adds its host and writes it back, so two logins that overlapped kept only the later host. The logins are now serialised; the password is still fetched in parallel. New test `TestECRLoginsOfTwoHostsKeepBothCredentials`. No chart and no render changes.
+
 ## v0.43.0
 
 - **Added:** a project split across two releases of `cd-project`, one per Kargo Project, while it moves cluster by cluster, both from the company's one `project.yaml`. The platform's sealed `pipeline.project.stages` makes a release the leading part: it renders those leading Stages of `stageOrder` alone, Applications and Stages, with the company's lists narrowed to them and unused further sources left out. `pipeline.project.handedOver` makes a release the rest: it renders no Applications for those clusters and needs no platform facts for them, and keeps their Stages, held. Refused: `stages` that are not the head of `stageOrder`, a kept Stage whose upstream the split leaves out, both keys at once, an unknown or all-cluster `handedOver`, and either key with customers or companions. New cases `cd-project/split-leading` and `split-rest` (goldens; `split-rest` is `sources` without dev's Applications and with dev held) and fixtures `split-stages-not-leading`, `split-upstream-left-out`, `split-stages-and-handed-over`, `split-handed-over-unknown`, `split-handed-over-all`. Unset, every existing render is byte-identical (no existing golden moves).
