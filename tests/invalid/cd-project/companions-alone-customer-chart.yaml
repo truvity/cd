@@ -1,0 +1,125 @@
+# expect: names a chart (chart, semver or sources), and the project has no chart
+# A customer of a project of companions alone names a chart.
+project:
+  name: shop
+  sources:
+    preview: {}
+  companions:
+    web:
+      artifact: registry.example.com/static/shop/web
+      semver: '>=1.0.0'
+      sources:
+        preview:
+          artifact: preview.example.com/static/shop/web
+          semver: '>=1.0.0-0'
+  customers:
+  - name: globex
+    chart: oci://registry.example.com/charts/shop-globex
+  - initech
+  clusters:
+  - dev
+  - stage
+  pipeline:
+    stageOrder:
+    - dev
+    - stage
+    stageSources:
+      dev: preview
+    upstreams:
+      stage: []
+pins:
+  dev-globex-web: sha256:1111111111111111111111111111111111111111111111111111111111111111
+  stage-globex-web: sha256:2222222222222222222222222222222222222222222222222222222222222222
+  dev-initech-web: sha256:3333333333333333333333333333333333333333333333333333333333333333
+  stage-initech-web: ''
+values:
+  dev-globex-web:
+    app:
+      site:
+        notFoundPage: 404.html
+clusters:
+- dev
+- stage
+platform:
+  dev:
+    clusterName: dev
+    argocdNamespace: cd-acme-shop
+    applicationPrefix: dev-{customer}-
+    appProject: '{cluster}-{customer}-shop'
+    vendor: acme
+    applicationLabels:
+      acme.example.com/customer: '{customer}'
+    chartRegistry: oci://registry.example.com/charts
+    postgres:
+      instances: 1
+      storage: 2Gi
+    events:
+      url: nats://broker.dev.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: '{product}'
+  stage:
+    clusterName: stage
+    argocdNamespace: cd-acme-shop
+    applicationPrefix: stage-{customer}-
+    appProject: '{cluster}-{customer}-shop'
+    vendor: acme
+    applicationLabels:
+      acme.example.com/customer: '{customer}'
+    chartRegistry: oci://registry.example.com/charts
+    postgres:
+      instances: 1
+      storage: 2Gi
+    events:
+      url: nats://broker.stage.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: '{product}'
+products:
+  dev-globex-web:
+    chartVersion: 3.12.0
+    platformValues:
+      app:
+        registry:
+          auth: ecr
+  stage-globex-web:
+    chartVersion: 3.12.0
+    platformValues:
+      app:
+        registry:
+          auth: ecr
+  dev-initech-web:
+    chartVersion: 3.12.0
+    platformValues:
+      app:
+        registry:
+          auth: ecr
+  stage-initech-web:
+    chartVersion: 3.12.0
+    platformValues:
+      app:
+        registry:
+          auth: ecr
+pipeline:
+  project:
+    name: cd-{vendor}-{project}
+    vendor: acme
+    customers:
+    - globex
+    - initech
+  argocd:
+    namespace: cd-acme-shop
+  git:
+    repoURL: https://git.example.com/acme/gitops.git
+  promotion:
+    pinFile: projects/{product}/{customer}/{stage}/pin.yaml
+    commitMessage: 'chore({product}): promote {version} to {stage} for {customer}'
+    prTitle: 'chore({product}): promote to {stage} for {customer}'
+  graph:
+    applicationName: '{stage}-{customer}-{app}'
+    upstreams:
+      stage:
+      - dev
+platformDigest: 49ef212ba63b088d94e6ff6362003db519d75498b871f84cde50cfe37ea1053f

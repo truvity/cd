@@ -70,7 +70,8 @@ func documents(t *testing.T, raw []byte) map[string]string {
 func projectCustomers(project map[string]any) [][2]string {
 	var out [][2]string
 	for _, entry := range parity.List(project["customers"]) {
-		chart := project["source"].(map[string]any)["chart"].(string)
+		// A project of companions alone has no chart.
+		chart, _ := parity.Map(project["source"])["chart"].(string)
 		if name, ok := entry.(string); ok {
 			out = append(out, [2]string{name, chart})
 			continue
@@ -220,6 +221,10 @@ func installsSlice(values map[string]any, cluster string) map[string]any {
 			"products": map[string]any{},
 		}
 		for i, c := range customers {
+			// A project of companions alone installs no chart.
+			if project["source"] == nil {
+				continue
+			}
 			// On a cluster whose Stage takes a further source, the
 			// customer's chart from it.
 			if src := stageSource(project, cluster); src != "" {
@@ -251,6 +256,15 @@ func installsSlice(values map[string]any, cluster string) map[string]any {
 			}
 		}
 		return out
+	}
+	if project["source"] == nil {
+		return map[string]any{
+			"platform": values["platform"].(map[string]any)[cluster],
+			"services": []any{},
+			"pins":     map[string]any{},
+			"values":   map[string]any{},
+			"products": map[string]any{},
+		}
 	}
 	out := map[string]any{
 		"platform": values["platform"].(map[string]any)[cluster],
@@ -432,19 +446,23 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 		t.Run(filepath.Base(filepath.Dir(path)), func(t *testing.T) {
 			values := companyValues(t, path)
 			project, handed := splitView(t, values)
-			source := project["source"].(map[string]any)
+			source := parity.Map(project["source"])
 			pipeline := project["pipeline"].(map[string]any)
-			chart := map[string]any{"repoURL": source["chart"], "semver": source["semver"]}
-			for _, key := range []string{"versionPrefix", "subscribeAs"} {
-				if v, ok := source[key]; ok {
-					chart[key] = v
-				}
-			}
 			// The platform's range (pipeline.project.semver), ANDed with
 			// every range the company gives its Warehouses.
 			platformRange, _ := parity.Map(parity.Map(values["pipeline"])["project"])["semver"].(string)
-			chart["semver"] = withPlatformRange(chart["semver"].(string), platformRange)
-			p := map[string]any{"name": project["name"], "createProject": false, "chart": chart}
+			p := map[string]any{"name": project["name"], "createProject": false}
+			// A project of companions alone has no chart.
+			if len(source) > 0 {
+				chart := map[string]any{"repoURL": source["chart"], "semver": source["semver"]}
+				for _, key := range []string{"versionPrefix", "subscribeAs"} {
+					if v, ok := source[key]; ok {
+						chart[key] = v
+					}
+				}
+				chart["semver"] = withPlatformRange(chart["semver"].(string), platformRange)
+				p["chart"] = chart
+			}
 			for _, key := range []string{"stageOrder", "autoPromote", "upstreams", "stageSources"} {
 				if v, ok := pipeline[key]; ok {
 					p[key] = v
@@ -491,7 +509,10 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 			if customers := projectCustomers(project); len(customers) > 0 {
 				var list []any
 				for i, c := range customers {
-					entry := map[string]any{"name": c[0], "chart": map[string]any{"repoURL": c[1], "semver": withPlatformRange(source["semver"].(string), platformRange)}}
+					entry := map[string]any{"name": c[0]}
+					if len(source) > 0 {
+						entry["chart"] = map[string]any{"repoURL": c[1], "semver": withPlatformRange(source["semver"].(string), platformRange)}
+					}
 					if own, ok := parity.Map(parity.List(project["customers"])[i])["companions"]; ok {
 						entry["companions"] = own
 					}
@@ -542,6 +563,10 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 					apps = append(apps, apps[0].(string)+"-"+cn)
 				}
 				p["companions"] = subs
+				// With companions alone no chart's install is watched.
+				if len(source) == 0 {
+					apps = apps[1:]
+				}
 				p["applications"] = apps
 			} else if base := installName(values, ""); len(projectCustomers(project)) > 0 && base != project["name"] {
 				// The Stages watch the installs by the platform's name.
@@ -551,6 +576,10 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 				sources := map[string]any{}
 				for sn, sv := range parity.Map(named) {
 					s := parity.Map(sv)
+					if len(source) == 0 {
+						sources[sn] = map[string]any{}
+						continue
+					}
 					sc := map[string]any{"repoURL": s["chart"], "semver": withPlatformRange(s["semver"].(string), platformRange)}
 					for _, key := range []string{"versionPrefix", "subscribeAs"} {
 						if v, ok := s[key]; ok {

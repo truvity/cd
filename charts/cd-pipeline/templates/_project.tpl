@@ -148,7 +148,12 @@ One Warehouse: a chart (or image) subscription to the chart given, unless
 {{- fail (printf "cd-pipeline: projects.%s sets companions and warehouse.subscriptions; the subscriptions are verbatim, so the companions would not be in the Freight" $name) -}}
 {{- end -}}
 {{- if not $subs -}}
+{{- /* A project of companions alone (no chart, cd-pipeline.chartless)
+       subscribes to them and nothing else. */ -}}
+{{- $subs = list -}}
+{{- if or $chart.repoURL (not .companions) -}}
 {{- $subs = list (include "cd-pipeline.subscription" (dict "name" $name "chart" $chart "where" .where) | fromYaml) -}}
+{{- end -}}
 {{- /* Every companion beside the chart: one Freight holds them all. */ -}}
 {{- range $cn := keys (.companions | default dict) | sortAlpha -}}
 {{- $subs = append $subs (include "cd-pipeline.subscription" (dict "name" $name "chart" (index $.companions $cn) "where" (printf "companions.%s" $cn)) | fromYaml) -}}
@@ -180,12 +185,15 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- $prefix := $chart.versionPrefix | default "" -}}
 {{- $upstream := $s.from | default "" -}}
 {{- $mode := include "cd-pipeline.chartMode" (dict "name" $name "chart" $chart) | fromYaml -}}
+{{- $chartless := include "cd-pipeline.chartless" (dict "chart" $chart "companions" $p.companions) | eq "true" -}}
+{{- if and $chartless $s.e2eApplication -}}{{- fail (printf "cd-pipeline: projects.%s.stages.%s: an end-to-end check compares a chart version, and the project has companions and no chart" $name $s.name) -}}{{- end -}}
+{{- if and $chartless ($s.verification | default dict).metricsGate -}}{{- fail (printf "cd-pipeline: projects.%s.stages.%s: the metrics gate compares a chart version, and the project has companions and no chart" $name $s.name) -}}{{- end -}}
 {{- $verArg := dict "name" "chart-version" "value" (printf "${{ %s.%s }}" (include "cd-pipeline.chartFrom" (dict "repoURL" $mode.repo "name" $chartName "vars" false "image" $mode.image)) (ternary "Tag" "Version" $mode.image)) -}}
 {{- $verif := $s.verification | default dict -}}
 {{- $templates := list -}}
 
 {{- /* The promoted-version check: that the Applications of this Stage render the promoted chart. */ -}}
-{{- if $verif.promotedVersion -}}
+{{- if and $verif.promotedVersion (not $chartless) -}}
 {{- if $mode.digest -}}{{- fail (printf "cd-pipeline: projects.%s.stages.%s.verification.promotedVersion: a digest pin has no chart version to compare with the Application's" $name $s.name) -}}{{- end -}}
 {{- $pv := $v.promotedVersion -}}
 {{- $apps := required (printf "cd-pipeline: projects.%s.stages.%s.applications is required for the promoted-version check" $name $s.name) $s.applications -}}
@@ -226,7 +234,7 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
        being skipped. A companion pinned by digest is judged by its
        artifact (ARTIFACT_REF and the digest in the Applications' values),
        one pinned by tag as a chart of its own repository. */ -}}
-{{- $verArgs := list $verArg -}}
+{{- $verArgs := ternary list (list $verArg) $chartless -}}
 {{- if $verif.promotedVersion -}}
 {{- $pv := $v.promotedVersion -}}
 {{- $ns := $v.argocd.namespace -}}
@@ -395,4 +403,17 @@ Call with (dict "companions" <map> "source" <name or "">).
 {{- $_ := set $out $cn $c -}}
 {{- end -}}
 {{- toYaml $out -}}
+{{- end -}}
+
+{{/*
+"true" when a project (or one Stage's source) has companions and no chart: a
+release of static bundles alone, say, whose api is not delivered here yet.
+Its Warehouses subscribe to the companions alone, its Stages write their pins
+alone and check their versions alone; an end-to-end check and a metrics gate,
+which compare a chart version, are refused. Adding the chart later adds its
+subscription, pin and check beside them, and moves none of theirs.
+Call with (dict "chart" <chart map> "companions" <map>).
+*/}}
+{{- define "cd-pipeline.chartless" -}}
+{{- and (empty (.chart | default dict).repoURL) (not (empty .companions)) -}}
 {{- end -}}

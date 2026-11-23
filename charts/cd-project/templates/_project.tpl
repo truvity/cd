@@ -32,6 +32,24 @@ Call with the chart's root context.
     {{- fail (printf "cd-project: pipeline.project.installName %q gives %q, which is not a name (lower-case letters, digits and -; tokens {project}, {customer}, and {vendor} where pipeline.project sets it)" . $probe) -}}
   {{- end -}}
 {{- end -}}
+{{- /* A project of companions alone: no chart (project.source), the
+       companions installed beside a Stage's key, and nothing that names a
+       chart. */ -}}
+{{- if not $p.source -}}
+  {{- if not $p.companions -}}
+    {{- fail "cd-project: project.source is required: a project installs a chart, unless it releases companions alone (project.companions)" -}}
+  {{- end -}}
+  {{- range $entry := ($p.customers | default list) -}}
+    {{- if and (kindIs "map" $entry) (or $entry.chart $entry.semver $entry.sources) -}}
+      {{- fail (printf "cd-project: project.customers.%s names a chart (chart, semver or sources), and the project has no chart (project.source): its companions are its release" $entry.name) -}}
+    {{- end -}}
+  {{- end -}}
+  {{- range $sn, $sv := ($p.sources | default dict) -}}
+    {{- if $sv -}}
+      {{- fail (printf "cd-project: project.sources.%s names a chart, and the project has no chart (project.source): a source names its companions only (project.companions.<name>.sources.%s)" $sn $sn) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
 {{- $installs := (include "cd-project.installs" . | fromYaml).installs -}}
 {{- $keys := list -}}
 {{- range $i := $installs -}}{{- $keys = append $keys $i.key -}}{{- end -}}
@@ -62,7 +80,7 @@ Call with the chart's root context.
     {{- end -}}
   {{- end -}}
 {{- end -}}
-{{- if and $p.source.infraChart (eq ($p.source.kind | default "product") "chart") -}}
+{{- if and (dig "infraChart" "" ($p.source | default dict)) (eq (dig "kind" "product" ($p.source | default dict)) "chart") -}}
   {{- fail "cd-project: project.source.infraChart: kind chart has one ring (app) and no infra chart" -}}
 {{- end -}}
 {{- $order := $p.pipeline.stageOrder -}}
@@ -97,8 +115,8 @@ Call with the chart's root context.
   {{- end -}}
 {{- end -}}
 {{- $sources := $p.sources | default dict -}}
-{{- $chartName := last (splitList "/" $p.source.chart) -}}
-{{- range $sn := keys $sources | sortAlpha -}}
+{{- $chartName := last (splitList "/" (dig "chart" "" ($p.source | default dict))) -}}
+{{- range $sn := ternary (keys $sources | sortAlpha) list (not (empty $p.source)) -}}
   {{- $sc := (index $sources $sn).chart -}}
   {{- if not (hasPrefix "oci://" $sc) -}}
     {{- fail (printf "cd-project: project.sources.%s.chart must be an oci:// reference (<repository>/<chart>), got %q" $sn $sc) -}}
@@ -318,10 +336,15 @@ Call with the chart's root context.
 {{- include "cd-pipeline.checkPinFile" (dict "where" "pipeline.promotion.pinFile" "file" $values.promotion.pinFile) -}}
 {{- $src := $p.source -}}
 {{- $plat := dig "project" "semver" "" $v.pipeline -}}
+{{- $project := dict "name" $p.name "createProject" false "stageOrder" $p.pipeline.stageOrder -}}
+{{- /* A project of companions alone has no chart: cd-pipeline subscribes to
+       the companions and writes their pins alone. */ -}}
+{{- with $src -}}
 {{- $chart := dict "repoURL" $src.chart "semver" (include "cd-project.withPlatformRange" (dict "own" $src.semver "platform" $plat)) -}}
 {{- if hasKey $src "versionPrefix" -}}{{- $_ := set $chart "versionPrefix" $src.versionPrefix -}}{{- end -}}
 {{- with $src.subscribeAs -}}{{- $_ := set $chart "subscribeAs" . -}}{{- end -}}
-{{- $project := dict "name" $p.name "createProject" false "chart" $chart "stageOrder" $p.pipeline.stageOrder -}}
+{{- $_ := set $project "chart" $chart -}}
+{{- end -}}
 {{- $project = merge (include "cd-project.kargoProject" . | fromYaml) $project -}}
 {{- with $p.pipeline.autoPromote -}}{{- $_ := set $project "autoPromote" . -}}{{- end -}}
 {{- /* Either side may hold a Stage back: the company in its own file, the
@@ -332,6 +355,11 @@ Call with the chart's root context.
 {{- with $p.sources -}}
   {{- $sources := dict -}}
   {{- range $sn, $sv := . -}}
+    {{- if not $src -}}
+      {{- /* Companions alone: the source names theirs only. */ -}}
+      {{- $_ := set $sources $sn dict -}}
+      {{- continue -}}
+    {{- end -}}
     {{- $sc := dict "repoURL" $sv.chart "semver" (include "cd-project.withPlatformRange" (dict "own" $sv.semver "platform" $plat)) -}}
     {{- if hasKey $sv "versionPrefix" -}}{{- $_ := set $sc "versionPrefix" $sv.versionPrefix -}}{{- end -}}
     {{- with $sv.subscribeAs -}}{{- $_ := set $sc "subscribeAs" . -}}{{- end -}}
@@ -371,15 +399,20 @@ Call with the chart's root context.
     {{- $apps = append $apps (printf "%s-%s" $base $cn) -}}
   {{- end -}}
   {{- $_ := set $project "companions" $companions -}}
+  {{- /* With companions alone there is no install of a chart to watch. */ -}}
+  {{- if not $src -}}{{- $apps = rest $apps -}}{{- end -}}
   {{- $_ := set $project "applications" $apps -}}
 {{- end -}}
 {{- with (include "cd-project.installs" . | fromYaml).customers -}}
   {{- $customers := list -}}
   {{- range $c := . -}}
+    {{- $entry := dict "name" $c.name -}}
+    {{- with $src -}}
     {{- $cc := dict "repoURL" $c.source.chart "semver" (include "cd-project.withPlatformRange" (dict "own" $c.source.semver "platform" $plat)) -}}
     {{- if hasKey $c.source "versionPrefix" -}}{{- $_ := set $cc "versionPrefix" $c.source.versionPrefix -}}{{- end -}}
     {{- with $c.source.subscribeAs -}}{{- $_ := set $cc "subscribeAs" . -}}{{- end -}}
-    {{- $entry := dict "name" $c.name "chart" $cc -}}
+    {{- $_ := set $entry "chart" $cc -}}
+    {{- end -}}
     {{- with $c.companions -}}{{- $_ := set $entry "companions" . -}}{{- end -}}
     {{- /* The customer's chart from each further source it names. */ -}}
     {{- with $c.sources -}}
@@ -450,7 +483,7 @@ Call with the chart's root context.
     {{- fail (printf "cd-project: project.customers: %q is listed twice" $c.name) -}}
   {{- end -}}
   {{- $_ := set $seen $c.name true -}}
-  {{- $src := deepCopy $p.source -}}
+  {{- $src := deepCopy ($p.source | default dict) -}}
   {{- with $c.chart -}}
     {{- if not (hasPrefix "oci://" .) -}}
       {{- fail (printf "cd-project: project.customers.%s.chart must be an oci:// reference (<repository>/<chart>), got %q" $c.name .) -}}
@@ -474,7 +507,7 @@ Call with the chart's root context.
       {{- fail (printf "cd-project: project.customers.%s.sources: %q is not a key of project.sources" $c.name $sn) -}}
     {{- end -}}
   {{- end -}}
-  {{- range $sn := keys ($p.sources | default dict) | sortAlpha -}}
+  {{- range $sn := ternary (keys ($p.sources | default dict) | sortAlpha) list (not (empty $p.source)) -}}
     {{- $sv := index $p.sources $sn -}}
     {{- $chart := index ($c.sources | default dict) $sn | default $sv.chart -}}
     {{- if not (hasPrefix "oci://" $chart) -}}
@@ -510,14 +543,16 @@ Call with the chart's root context.
            comes from the customer's chart of that source. */ -}}
     {{- $isrc := $src -}}
     {{- $ss := index ($p.pipeline.stageSources | default dict) $cl | default "" -}}
-    {{- with $ss -}}
-      {{- $isrc = include "cd-project.overSource" (dict "source" $src "over" (index $custSources .)) | fromYaml -}}
+    {{- if and $ss $p.source -}}
+      {{- $isrc = include "cd-project.overSource" (dict "source" $src "over" (index $custSources $ss)) | fromYaml -}}
     {{- end -}}
     {{- $installs = append $installs (dict "key" $key "cluster" $cl "customer" $c.name "service" (printf "%s-%s" $p.name $c.name) "source" $isrc "stageSource" $ss) -}}
   {{- end -}}
 {{- else -}}
   {{- range $cl := $p.clusters -}}
-    {{- $installs = append $installs (dict "key" $cl "cluster" $cl "service" $p.name "source" (include "cd-project.clusterSource" (dict "project" $p "cluster" $cl) | fromYaml) "stageSource" (index ($p.pipeline.stageSources | default dict) $cl | default "")) -}}
+    {{- $csrc := dict -}}
+    {{- if $p.source -}}{{- $csrc = include "cd-project.clusterSource" (dict "project" $p "cluster" $cl) | fromYaml -}}{{- end -}}
+    {{- $installs = append $installs (dict "key" $cl "cluster" $cl "service" $p.name "source" $csrc "stageSource" (index ($p.pipeline.stageSources | default dict) $cl | default "")) -}}
   {{- end -}}
 {{- end -}}
 {{- /* Each companion beside each install: `<key>-<companion>`, the service
@@ -530,7 +565,9 @@ Call with the chart's root context.
     {{- $parts = append $parts $part -}}
   {{- end -}}
 {{- end -}}
-{{- $all := concat $installs $parts -}}
+{{- /* A project of companions alone installs its companions and no chart:
+       the Stage's own key names nothing. */ -}}
+{{- $all := ternary (concat $installs $parts) $parts (not (empty $p.source)) -}}
 {{- $seenKeys := dict -}}
 {{- range $i := $all -}}
   {{- if hasKey $seenKeys $i.key -}}
