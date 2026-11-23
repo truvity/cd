@@ -5,7 +5,7 @@ Stages, as YAML documents. Call with (dict "root" . "p" <project map>).
 {{- define "cd-pipeline.project" -}}
 {{- $r := .root -}}
 {{- $v := $r.Values -}}
-{{- $p := .p -}}
+{{- $p := deepCopy .p -}}
 {{- $w := $v.waves -}}
 {{- $name := $p.name -}}
 {{- $slug := $p.slug | default $name -}}
@@ -18,8 +18,29 @@ Stages, as YAML documents. Call with (dict "root" . "p" <project map>).
 {{- if $p.customers -}}
 {{- fail (printf "cd-pipeline: projects.%s.customers needs stageOrder: a customer's chain of Stages is derived" $name) -}}
 {{- end -}}
-{{- include "cd-pipeline.checkCompanions" $p -}}
+{{- /* The companions of each further source: a companion may name its
+       artifact from a source (companions.<name>.sources.<source>), so that
+       a Warehouse of preview charts holds preview artifacts beside them.
+       The customers' sources were filled by cd-pipeline.derive. */ -}}
 {{- $companionsOf := $p.sourceCompanions | default dict -}}
+{{- with $p.companions -}}
+{{- $named := $p.namedSources | default (keys ($p.sources | default dict)) -}}
+{{- range $cn := keys . | sortAlpha -}}
+{{- range $sn := keys ((index $p.companions $cn).sources | default dict) | sortAlpha -}}
+{{- if not (has $sn $named) -}}{{- fail (printf "cd-pipeline: projects.%s.companions.%s.sources: %q is not a key of sources" $name $cn $sn) -}}{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- range $sn := keys ($p.sources | default dict) | sortAlpha -}}
+{{- if not (hasKey $companionsOf $sn) -}}
+{{- $_ := set $companionsOf $sn (include "cd-pipeline.companionsFrom" (dict "companions" $p.companions "source" $sn) | fromYaml) -}}
+{{- end -}}
+{{- end -}}
+{{- $_ := set $p "companions" (include "cd-pipeline.companionsFrom" (dict "companions" $p.companions "source" "") | fromYaml) -}}
+{{- end -}}
+{{- include "cd-pipeline.checkCompanions" $p -}}
+{{- range $sn := keys $companionsOf | sortAlpha -}}
+{{- include "cd-pipeline.checkCompanions" (dict "name" (printf "%s (source %s)" $name $sn) "chart" (index $p.sources $sn) "companions" (index $companionsOf $sn)) -}}
+{{- end -}}
 
 {{- /* Project: cluster-scoped, so an installation that hands the rest of the
 pipeline to another party may render it elsewhere (createProject: false). */ -}}
@@ -356,5 +377,22 @@ project map.
 {{- define "cd-pipeline.names" -}}
 {{- $out := list -}}
 {{- range $n := . -}}{{- $out = append $out (dict "name" $n) -}}{{- end -}}
+{{- toYaml $out -}}
+{{- end -}}
+
+{{/*
+A project's companions as one source's Warehouse subscribes to them: each
+companion with its `sources.<source>` laid over it (its repository and range
+from that source), and without `sources`. With source "", the companions as
+they are, without `sources`. As YAML for `fromYaml`.
+Call with (dict "companions" <map> "source" <name or "">).
+*/}}
+{{- define "cd-pipeline.companionsFrom" -}}
+{{- $out := dict -}}
+{{- range $cn, $co := .companions -}}
+{{- $c := omit $co "sources" -}}
+{{- with $.source -}}{{- with index ($co.sources | default dict) . -}}{{- $c = merge (deepCopy .) $c -}}{{- end -}}{{- end -}}
+{{- $_ := set $out $cn $c -}}
+{{- end -}}
 {{- toYaml $out -}}
 {{- end -}}

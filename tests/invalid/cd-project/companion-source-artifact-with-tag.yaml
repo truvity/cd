@@ -1,40 +1,57 @@
-# expect: project.customers is set with project.sources
-# Customers beside further sources: each customer is a source of its own.
+# expect: at '/project/companions/web/sources/preview/artifact'
+# A companion's artifact from a source names its repository, without a tag: the Stage pins the digest.
+# Company files.
 project:
   name: shop
   source:
     chart: oci://registry.example.com/charts/shop
     infraChart: oci://registry.example.com/charts/shop-infra
-    semver: '>=1.0.0 <2.0.0'
-  customers:
-  - name: globex
-    chart: oci://registry.example.com/charts/shop-globex
-  - initech
-  clusters:
-  - dev
-  - stage
-  pipeline:
-    stageOrder:
-    - dev
-    - stage
+    semver: ">=1.0.0 <2.0.0"
   sources:
     preview:
       chart: oci://preview.example.com/charts/shop
-      semver: '>=1.0.0-0 <2.0.0'
+      semver: ">=1.0.0-0 <2.0.0"
+  companions:
+    web:
+      artifact: registry.example.com/static/shop/web
+      semver: ">=1.0.0"
+      sources:
+        preview:
+          artifact: preview.example.com/static/shop/web:1.0.0
+          semver: ">=1.0.0-0"
+  customers:
+    - name: globex
+      chart: oci://registry.example.com/charts/shop-globex
+      sources:
+        preview: oci://preview.example.com/charts/shop-globex
+    - name: initech
+      companions:
+        web:
+          semver: ">=1.0.0 <2.0.0"
+  clusters: [dev, stage]
+  pipeline:
+    stageOrder: [dev, stage]
+    stageSources: {dev: preview}
+    upstreams: {stage: []}
 pins:
-  dev-globex: 1.4.0
-  stage-globex: 1.3.2
-  dev-initech: 1.4.1
-  stage-initech: ''
+  dev-globex: "1.4.0"
+  dev-globex-web: "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+  stage-globex: "1.3.2"
+  stage-globex-web: "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+  dev-initech: "1.4.1"
+  dev-initech-web: "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+  stage-initech: ""
+  stage-initech-web: ""
 values:
   dev-globex:
     app:
       config:
         greeting: hello globex
-  dev-initech:
+  dev-globex-web:
     app:
-      config:
-        greeting: hello initech
+      site: {notFoundPage: 404.html}
+
+# The platform's valuesObject.
 clusters:
 - dev
 - stage
@@ -88,6 +105,30 @@ products:
   stage-initech:
     interface: 15
     hostname: initech.shop.stage.example.com
+  dev-globex-web:
+    chartVersion: 3.12.0
+    platformValues:
+      app:
+        registry:
+          auth: ecr
+  stage-globex-web:
+    chartVersion: 3.12.0
+    platformValues:
+      app:
+        registry:
+          auth: ecr
+  dev-initech-web:
+    chartVersion: 3.12.0
+    platformValues:
+      app:
+        registry:
+          auth: ecr
+  stage-initech-web:
+    chartVersion: 3.12.0
+    platformValues:
+      app:
+        registry:
+          auth: ecr
 pipeline:
   project:
     name: cd-{vendor}-{project}
@@ -108,4 +149,4 @@ pipeline:
     upstreams:
       stage:
       - dev
-platformDigest: 89d43aeccf0d3b4786cd868b2d50d5ae7b1493a11768bb7851000898d4bd86ec
+platformDigest: 60a6f190b26cf9bfb2faf9d6a70c35641cbf94d78f77e91956d45c1c3d06565e

@@ -855,6 +855,63 @@
                   "type": "string",
                   "minLength": 1,
                   "description": "The key the companion's pin is written under, in the same pin file and commit as the chart's: a template with the tokens of `promotion.pinKey`. Default the chart's filled key with `-<companion>` after it (`pins.dev-web` beside `pins.dev`)."
+                },
+                "sources": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                    "maxLength": 30
+                  },
+                  "additionalProperties": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "repoURL": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "The chart's name in an index repository; none for an OCI one."
+                      },
+                      "semver": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "versionPrefix": {
+                        "type": "string",
+                        "description": "Written in front of the version in the pin, for a repository whose tags carry one."
+                      },
+                      "discoveryLimit": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "subscribeAs": {
+                        "type": "string",
+                        "enum": [
+                          "chart",
+                          "image"
+                        ],
+                        "description": "How the Warehouse discovers the chart. `chart` (default) is a chart subscription. `image` is an image subscription with SemVer selection and `strictSemvers: false`, for an OCI chart whose tags carry a `v` (Helm's tag listing drops them, so a chart subscription finds nothing). A leading `oci://` is dropped from `repoURL` for the subscription, the promotion steps write the discovered tag as it is (the `v` stays), and `name` and `versionPrefix` are refused."
+                      },
+                      "pin": {
+                        "type": "string",
+                        "enum": [
+                          "tag",
+                          "digest"
+                        ],
+                        "description": "What the promotion writes as the pin. `tag` (default) is the discovered version or tag. `digest` is the artifact's digest (`imageFrom(...).Digest`), for an artifact that is deployed by what it is rather than by what it is called; it needs `subscribeAs: image`, refuses `versionPrefix`, `name` and any promoted-version check (there is no chart version in the Application to compare), and adds a `{tag}` token to `promotion.commitMessage` and `promotion.prTitle`."
+                      },
+                      "strictSemvers": {
+                        "type": "boolean",
+                        "description": "The image subscription's `strictSemvers`, with `subscribeAs: image`. Unset keeps `false`; a Warehouse whose live object has Kargo's own default (`true`) sets it, so the spec does not differ from the stored object forever."
+                      }
+                    },
+                    "description": "The companion's artifact from that source, laid over the companion's own keys (usually `repoURL`, and `semver` for its prerelease line)."
+                  },
+                  "description": "The companion from a further source, by the source's name (a key of `sources`): each Warehouse of that source (`<warehouse>-<source>`, or a customer's `<warehouse>-<customer>-<source>`) subscribes to it in place of the companion, and its Stages promote it. A source not named here subscribes to the companion as it is."
                 }
               },
               "required": [
@@ -868,7 +925,7 @@
           "customers": {
             "type": "array",
             "minItems": 1,
-            "description": "Derived Stages only (`stageOrder`): the customers of a product that one Kargo Project delivers. Each customer gets a Warehouse `<warehouse>-<customer>` on the project's `chart` (or its own `chart`) and its own chain of Stages, one for each Stage of `stageOrder`, named by `graph.stageName`; a customer's Stages request only its Warehouse, promote only from its own Stages, and the first of its chain promotes on its own. The project renders no Warehouse of its own. `{stage}` in Application names and pins stays the Stage of `stageOrder`, and `{customer}` is the customer. Not with `sources` or `stageSources`.",
+            "description": "Derived Stages only (`stageOrder`): the customers of a product that one Kargo Project delivers. Each customer gets a Warehouse `<warehouse>-<customer>` on the project's `chart` (or its own `chart`) and its own chain of Stages, one for each Stage of `stageOrder`, named by `graph.stageName`; a customer's Stages request only its Warehouse, promote only from its own Stages, and the first of its chain promotes on its own. The project renders no Warehouse of its own. `{stage}` in Application names and pins stays the Stage of `stageOrder`, and `{customer}` is the customer. With `sources`, each customer also gets a Warehouse `<warehouse>-<customer>-<source>` for each source, and the customer's Stage of a Stage that `stageSources` names takes it: a customer's preview builds on its first Stage, its releases on the next.",
             "items": {
               "oneOf": [
                 {
@@ -961,6 +1018,67 @@
                         ]
                       },
                       "description": "This customer's own semver for a companion of the project (`companions.<name>.semver`), in its Warehouse only: to hold one customer to a line of a shared artifact, or to let a fix of an older line reach one customer alone."
+                    },
+                    "sources": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                        "maxLength": 30
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "repoURL": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "The chart's name in an index repository; none for an OCI one."
+                          },
+                          "semver": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "versionPrefix": {
+                            "type": "string",
+                            "description": "Written in front of the version in the pin, for a repository whose tags carry one."
+                          },
+                          "discoveryLimit": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "subscribeAs": {
+                            "type": "string",
+                            "enum": [
+                              "chart",
+                              "image"
+                            ],
+                            "description": "How the Warehouse discovers the chart. `chart` (default) is a chart subscription. `image` is an image subscription with SemVer selection and `strictSemvers: false`, for an OCI chart whose tags carry a `v` (Helm's tag listing drops them, so a chart subscription finds nothing). A leading `oci://` is dropped from `repoURL` for the subscription, the promotion steps write the discovered tag as it is (the `v` stays), and `name` and `versionPrefix` are refused."
+                          },
+                          "pin": {
+                            "type": "string",
+                            "enum": [
+                              "tag",
+                              "digest"
+                            ],
+                            "description": "What the promotion writes as the pin. `tag` (default) is the discovered version or tag. `digest` is the artifact's digest (`imageFrom(...).Digest`), for an artifact that is deployed by what it is rather than by what it is called; it needs `subscribeAs: image`, refuses `versionPrefix`, `name` and any promoted-version check (there is no chart version in the Application to compare), and adds a `{tag}` token to `promotion.commitMessage` and `promotion.prTitle`."
+                          },
+                          "strictSemvers": {
+                            "type": "boolean",
+                            "description": "The image subscription's `strictSemvers`, with `subscribeAs: image`. Unset keeps `false`; a Warehouse whose live object has Kargo's own default (`true`) sets it, so the spec does not differ from the stored object forever."
+                          }
+                        },
+                        "required": [
+                          "repoURL",
+                          "semver"
+                        ],
+                        "description": "A further source of the project's chart: its own Warehouse, <warehouse>-<source>, and the repository the Stages that take it promote from. The same keys as `chart`; `warehouse.subscriptions` applies to `chart` alone."
+                      },
+                      "description": "This customer's chart from a further source, by the source's name (a key of `sources`): its Warehouse `<warehouse>-<customer>-<source>` subscribes to it. A source not named here gives the customer the project's `sources.<source>`."
                     }
                   }
                 }

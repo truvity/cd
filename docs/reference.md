@@ -558,8 +558,8 @@ and per project `name`, `stages` (or `stageOrder`, see [Derived Stages](#derived
 | `projects[].vendor`, `.customer` | Who makes the product and whom this installation is for: the `{vendor}` and `{customer}` tokens of the project's name templates. Optional; see [Project tokens](#project-tokens). |
 | `projects[].chart` | `repoURL`, `name` (index repositories), `semver`, `versionPrefix` (repositories whose tags carry one), `discoveryLimit`, `subscribeAs` (`chart`, the default, or `image`: an image subscription with SemVer selection and `strictSemvers: false`, for an OCI chart whose `v`-prefixed tags Helm's tag listing drops; `oci://` is dropped from the repository, the pin takes the discovered tag as it is, `name` and `versionPrefix` are refused). `pin` (`tag`, the default, or `digest`: the promotion writes the Freight image's digest; see [Promoting a digest](#promoting-a-digest)), `strictSemvers` (an image subscription's own setting; unset keeps `false`). |
 | `projects[].sources` | Further sources of the project's chart, by name (`[a-z0-9-]`, at most 30 characters), each with the keys of `chart`. Each one gets a Warehouse of its own, `<warehouse>-<source>`, with `warehouse`'s `interval` and `freightCreationPolicy` (`warehouse.subscriptions` is `chart`'s alone). A Stage that takes a source (`stages[].source`, or `stageSources` for derived Stages) requests that Warehouse's Freight, and its promotion and checks read the source in place of `chart`; see [Further sources](#further-sources). |
-| `projects[].customers` | Derived Stages only: the customers one Kargo Project delivers the product to, each a name or `{name, chart}`. Each gets a Warehouse `<warehouse>-<customer>` (on `chart`, or its own) and a chain of Stages, one for each Stage of `stageOrder`, named by `graph.stageName` (default `{stage}-{customer}`); a customer's Stages request only its Warehouse and promote only from its own, and its first Stage promotes on its own. The project has no Warehouse of its own. `{stage}` in Application names and pins is the Stage of `stageOrder`, `{customer}` the customer; approvers are one subject for each customer's Stage. Not with `sources` or `stageSources`. |
-| `projects[].companions` | Further artifacts that move with the chart in one Freight, by name, each with the keys of `chart` and a `pinKey` (default the chart's filled key with `-<companion>`). Every Warehouse of the project subscribes to the chart and to each companion; each Stage writes every pin in one `yaml-update`. A customer may hold a companion to its own `semver` (`customers[].companions.<name>.semver`). See [Companions](#companions). |
+| `projects[].customers` | Derived Stages only: the customers one Kargo Project delivers the product to, each a name or `{name, chart}`. Each gets a Warehouse `<warehouse>-<customer>` (on `chart`, or its own) and a chain of Stages, one for each Stage of `stageOrder`, named by `graph.stageName` (default `{stage}-{customer}`); a customer's Stages request only its Warehouse and promote only from its own, and its first Stage promotes on its own. The project has no Warehouse of its own. `{stage}` in Application names and pins is the Stage of `stageOrder`, `{customer}` the customer; approvers are one subject for each customer's Stage. With `sources`, each customer also has a Warehouse `<warehouse>-<customer>-<source>` for each source (on `customers[].sources.<source>`, else `sources.<source>`), which its Stage of a Stage `stageSources` names takes. |
+| `projects[].companions` | Further artifacts that move with the chart in one Freight, by name, each with the keys of `chart` and a `pinKey` (default the chart's filled key with `-<companion>`). Every Warehouse of the project subscribes to the chart and to each companion; each Stage writes every pin in one `yaml-update`. A customer may hold a companion to its own `semver` (`customers[].companions.<name>.semver`); a companion may name its artifact from a further source (`companions.<name>.sources.<source>`, the keys of `chart` laid over its own), which that source's Warehouses subscribe to. See [Companions](#companions). |
 | `projects[].warehouse` | `name` (default the project's), `interval` (`5m0s`), `freightCreationPolicy` (`Automatic`), `subscriptions`, `freightCreationCriteria`. `freightCreationCriteria.expression` (required, non-empty) is rendered verbatim as the Warehouse's `spec.freightCreationCriteria`: Kargo creates Freight from a discovery only when the expression is true, for instance `imageFrom('repo-a')?.Tag == imageFrom('repo-b')?.Tag` over two `subscriptions`, so the two images move together. It applies to the project's own Warehouse alone, not to the Warehouses of `sources`; needs a Kargo that supports it (1.11 does). Unset, nothing is rendered (`tests/cases/cd-pipeline/freight-creation-criteria`). |
 | `projects[].access.subjects[]` | `name`, `claims`, `stages`, `approve`. |
 | `projects[].access.approvers`, `.admins` | With `stageOrder`: derive one approver subject per Stage after the first, or one admin subject (see [Derived Stages](#derived-stages)). |
@@ -748,7 +748,23 @@ With `customers`, a shared companion makes Freight in every customer's
 Warehouse, and each customer's chain promotes it on its own; a customer held
 to its own line of a companion (`customers[].companions.<name>.semver`, in its
 Warehouse alone) takes a fix of that line without the others, as a customer's
-own `chart` does for the chart. Refused: companions with
+own `chart` does for the chart.
+
+A companion from a further source: `companions.<name>.sources.<source>`, with
+the keys of `chart` laid over the companion's own (usually `repoURL`, and
+`semver` for its prerelease line), is what every Warehouse of that source
+subscribes to in place of the companion, so a Warehouse of preview charts
+holds preview bundles beside them and the Stages that take it promote both
+from there. With `customers` and `sources` each customer has a Warehouse of
+each source, `<warehouse>-<customer>-<source>`, on its chart from that source
+(`customers[].sources.<source>`, the keys of `chart`, else `sources.<source>`)
+and every companion from that source; a customer's Stage of a Stage that
+`stageSources` names takes it, and a Stage with no upstream that is not the
+first of `stageOrder` promotes by pull request, as without customers. A
+customer's own companion `semver` holds in its released Warehouse only.
+Refused besides: a customer's or a companion's source that is not a key of
+`sources`, and a customer whose Warehouse of a source is another customer's
+name (`tests/cases/cd-pipeline/customer-sources`). Refused: companions with
 `warehouse.subscriptions` (verbatim, so the companions would not be in the
 Freight), a Stage that spells its own `promotionTemplate`, a customer's
 companion the project does not have, and a companion key that names a token
@@ -1101,8 +1117,7 @@ names the ones it installs in `project.customers`, each a name or
 `{name, chart, semver}` with a chart of its own in place of
 `project.source.chart` (`infraChart`, where `project.source` has one, becomes
 `<chart>-infra`). A name the platform did not register, a name given twice, a
-platform list with no company list (or the other way round) and
-`project.sources` or `project.pipeline.stageSources` beside it are refused.
+platform list with no company list (or the other way round) are refused.
 
 Each customer gets a Warehouse, `<project>-<customer>`, and a chain of Stages
 along `project.pipeline.stageOrder`, named by `pipeline.graph.stageName`
@@ -1117,6 +1132,17 @@ products name another, its namespace; its Applications take the customer as
 defaults to `pins.<graph.stageName>`, so a Stage writes the key its install
 reads, and `promotion.pinFile` may name `{customer}` to give each customer a
 file of its own (`tests/cases/cd-project/customers`).
+
+With `project.sources` (preview builds on the first Stage, say), each customer
+has a Warehouse of each source too, `<project>-<customer>-<source>`, on its
+chart from that source: `project.customers[].sources.<source>`, an `oci://`
+reference, else `project.sources.<source>.chart`. The source's `semver`,
+`versionPrefix` and `subscribeAs` hold. A customer with a chart of its own
+names its own for each source, since a source gives the same chart from
+another repository; one that does not is refused. A customer's install on a
+cluster whose Stage takes the source (`project.pipeline.stageSources`) takes
+every ring from that chart, and its companions serve the artifact of that
+source (below) (`tests/cases/cd-project/customer-sources`).
 
 ### Companions of a project
 
@@ -1146,6 +1172,14 @@ A customer may hold the shared bundle to its own line,
 customer's own `semver` for the chart, a fix of an older line of either
 reaches that customer and no other, and it is written in the company's own
 repository (`tests/cases/cd-project/companions`).
+
+A companion from a further source of `project.sources`:
+`project.companions.<name>.sources.<source>.artifact` (and `semver`, default
+the companion's). Every Warehouse of that source subscribes to it, and an
+install on a cluster whose Stage takes the source serves it, so the digest
+the Stage promotes and the repository the site pulls it from agree. A source
+not named keeps the companion's own artifact. A source that is not a key of
+`project.sources`, and an artifact with a tag or digest, are refused.
 
 ### The platform's range of the chart
 

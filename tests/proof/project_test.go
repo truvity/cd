@@ -84,6 +84,34 @@ func projectCustomers(project map[string]any) [][2]string {
 	return out
 }
 
+// stageSource is the further source a cluster's Stage takes
+// (project.pipeline.stageSources), "" for project.source.
+func stageSource(project map[string]any, cluster string) string {
+	src, _ := parity.Map(parity.Map(project["pipeline"])["stageSources"])[cluster].(string)
+	return src
+}
+
+// customerSourceChart is customer i's chart from a further source: its own
+// (project.customers[i].sources.<source>), else project.sources.<source>.chart.
+func customerSourceChart(project map[string]any, i int, source string) string {
+	if own, ok := parity.Map(parity.Map(parity.List(project["customers"])[i])["sources"])[source].(string); ok {
+		return own
+	}
+	return parity.Map(parity.Map(project["sources"])[source])["chart"].(string)
+}
+
+// companionArtifact is the artifact a companion's install serves on a
+// cluster: the one of the source its Stage takes
+// (project.companions.<name>.sources.<source>), else the companion's own.
+func companionArtifact(companion map[string]any, source string) string {
+	if source != "" {
+		if art, ok := parity.Map(parity.Map(companion["sources"])[source])["artifact"].(string); ok {
+			return art
+		}
+	}
+	return companion["artifact"].(string)
+}
+
 // stageNameTemplate is the platform's pipeline.graph.stageName, default
 // {stage}-{customer}.
 func stageNameTemplate(values map[string]any) string {
@@ -146,7 +174,7 @@ func addCompanions(values map[string]any, cluster string, out map[string]any) {
 			if product, ok := parity.Map(values["products"])[key]; ok {
 				facts := maps.Clone(product.(map[string]any))
 				facts["kind"] = "static-site"
-				facts["artifact"] = map[string]any{"ref": strings.TrimPrefix(parity.Map(companions[cn])["artifact"].(string), "oci://")}
+				facts["artifact"] = map[string]any{"ref": strings.TrimPrefix(companionArtifact(parity.Map(companions[cn]), stageSource(project, cluster)), "oci://")}
 				if _, ok := facts["namespace"]; !ok {
 					facts["namespace"] = in.service
 				}
@@ -172,7 +200,12 @@ func installsSlice(values map[string]any, cluster string) map[string]any {
 			"values":   map[string]any{},
 			"products": map[string]any{},
 		}
-		for _, c := range customers {
+		for i, c := range customers {
+			// On a cluster whose Stage takes a further source, the
+			// customer's chart from it.
+			if src := stageSource(project, cluster); src != "" {
+				c[1] = customerSourceChart(project, i, src)
+			}
 			service := name + "-" + c[0]
 			key := strings.NewReplacer("{stage}", cluster, "{customer}", c[0]).Replace(stageNameTemplate(values))
 			out["services"] = append(out["services"].([]any), service)
@@ -443,6 +476,22 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 					if own, ok := parity.Map(parity.List(project["customers"])[i])["companions"]; ok {
 						entry["companions"] = own
 					}
+					// The customer's own chart from a further source, with
+					// that source's range and keys.
+					if own := parity.Map(parity.Map(parity.List(project["customers"])[i])["sources"]); len(own) > 0 {
+						sources := map[string]any{}
+						for sn, chart := range own {
+							s := parity.Map(parity.Map(project["sources"])[sn])
+							sc := map[string]any{"repoURL": chart, "semver": withPlatformRange(s["semver"].(string), platformRange)}
+							for _, key := range []string{"versionPrefix", "subscribeAs"} {
+								if v, ok := s[key]; ok {
+									sc[key] = v
+								}
+							}
+							sources[sn] = sc
+						}
+						entry["sources"] = sources
+					}
 					list = append(list, entry)
 				}
 				p["customers"] = list
@@ -454,7 +503,20 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 				apps := []any{project["name"]}
 				for _, cn := range slices.Sorted(maps.Keys(companions)) {
 					co := parity.Map(companions[cn])
-					subs[cn] = map[string]any{"repoURL": strings.TrimPrefix(co["artifact"].(string), "oci://"), "semver": co["semver"], "subscribeAs": "image", "pin": "digest"}
+					sub := map[string]any{"repoURL": strings.TrimPrefix(co["artifact"].(string), "oci://"), "semver": co["semver"], "subscribeAs": "image", "pin": "digest"}
+					// The companion from each further source it names.
+					if named := parity.Map(co["sources"]); len(named) > 0 {
+						from := map[string]any{}
+						for sn, sv := range named {
+							one := map[string]any{"repoURL": strings.TrimPrefix(parity.Map(sv)["artifact"].(string), "oci://")}
+							if semver, ok := parity.Map(sv)["semver"]; ok {
+								one["semver"] = semver
+							}
+							from[sn] = one
+						}
+						sub["sources"] = from
+					}
+					subs[cn] = sub
 					apps = append(apps, project["name"].(string)+"-"+cn)
 				}
 				p["companions"] = subs
