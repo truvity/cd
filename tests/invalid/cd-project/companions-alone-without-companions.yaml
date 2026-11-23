@@ -1,0 +1,84 @@
+# expect: project.source is required
+# A project with neither a chart nor companions installs nothing.
+project:
+  name: shop
+  sources:
+    preview: {}
+  customers:
+  - globex
+  - initech
+  clusters:
+  - dev
+  - stage
+  pipeline:
+    stageOrder:
+    - dev
+    - stage
+    stageSources:
+      dev: preview
+    upstreams:
+      stage: []
+pins: {}
+values: {}
+clusters:
+- dev
+- stage
+platform:
+  dev:
+    clusterName: dev
+    argocdNamespace: cd-acme-shop
+    applicationPrefix: dev-{customer}-
+    appProject: '{cluster}-{customer}-shop'
+    vendor: acme
+    applicationLabels:
+      acme.example.com/customer: '{customer}'
+    chartRegistry: oci://registry.example.com/charts
+    postgres:
+      instances: 1
+      storage: 2Gi
+    events:
+      url: nats://broker.dev.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: '{product}'
+  stage:
+    clusterName: stage
+    argocdNamespace: cd-acme-shop
+    applicationPrefix: stage-{customer}-
+    appProject: '{cluster}-{customer}-shop'
+    vendor: acme
+    applicationLabels:
+      acme.example.com/customer: '{customer}'
+    chartRegistry: oci://registry.example.com/charts
+    postgres:
+      instances: 1
+      storage: 2Gi
+    events:
+      url: nats://broker.stage.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: '{product}'
+products: {}
+pipeline:
+  project:
+    name: cd-{vendor}-{project}
+    vendor: acme
+    customers:
+    - globex
+    - initech
+  argocd:
+    namespace: cd-acme-shop
+  git:
+    repoURL: https://git.example.com/acme/gitops.git
+  promotion:
+    pinFile: projects/{product}/{customer}/{stage}/pin.yaml
+    commitMessage: 'chore({product}): promote {version} to {stage} for {customer}'
+    prTitle: 'chore({product}): promote to {stage} for {customer}'
+  graph:
+    applicationName: '{stage}-{customer}-{app}'
+    upstreams:
+      stage:
+      - dev
+platformDigest: 2b640c2dcaf4a5ff4e4079af1bf8aa4e37e99e3bf8f86c2c88f13073b5dd7000

@@ -145,10 +145,11 @@ def generated_project_schema(root):
             "project": {
                 "type": "object", "additionalProperties": False,
                 "description": "Company-owned: the project, its charts, clusters and promotion order.",
-                "required": ["name", "source", "clusters", "pipeline"],
+                "required": ["name", "clusters", "pipeline"],
                 "properties": {
                     "name": dict(NAME, description="The project: the service name of its Applications and, unless the platform names the Kargo Project (pipeline.project.name), its Kargo Project, namespace and Warehouse."),
                     "source": {
+                        "description": "The project's chart. Optional for a project that releases companions alone (project.companions): its Warehouses subscribe to the companions, its Stages write and check their pins alone, and it installs no chart; adding a source later adds the chart beside them.",
                         "type": "object", "additionalProperties": False,
                         "required": ["chart", "semver"],
                         "properties": {
@@ -166,9 +167,8 @@ def generated_project_schema(root):
                         "description": "Further sources of the same product, by name: each one a Warehouse of its own, <project>-<name>, and the repository the clusters that take it (pipeline.stageSources) install every ring from. `kind` and the ring charts are project.source's; the chart name must be the same.",
                         "additionalProperties": {
                             "type": "object", "additionalProperties": False,
-                            "required": ["chart", "semver"],
                             "properties": {
-                                "chart": dict(chart["repoURL"], description="oci://<repository>/<chart>, with project.source.chart's <chart>: <chart>-infra and <chart>-e2e come from the same repository."),
+                                "chart": dict(chart["repoURL"], description="oci://<repository>/<chart>, with project.source.chart's <chart>: <chart>-infra and <chart>-e2e come from the same repository. Required with project.source; a project of companions alone names none, and its source is {}."),
                                 "semver": chart["semver"],
                                 "versionPrefix": chart["versionPrefix"],
                                 "subscribeAs": chart["subscribeAs"],

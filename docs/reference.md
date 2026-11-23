@@ -1180,6 +1180,15 @@ customer's own `semver` for the chart, a fix of an older line of either
 reaches that customer and no other, and it is written in the company's own
 repository (`tests/cases/cd-project/companions`).
 
+A project of companions alone: `project.source` may be absent when
+`project.companions` is set, for a release that is a static bundle whose api
+is not delivered here yet. Each install is then its companions alone, keyed
+`<key>-<companion>` as beside a chart; the Warehouses subscribe to the
+companions alone and each Stage writes and checks their pins alone. The
+customers name no chart, and a source is `{}`, naming only its companions.
+Adding `project.source` later adds the chart beside them and renames none of
+their keys, Applications or checks (`tests/cases/cd-project/companions-alone`).
+
 A companion from a further source of `project.sources`:
 `project.companions.<name>.sources.<source>.artifact` (and `semver`, default
 the companion's). Every Warehouse of that source subscribes to it, and an

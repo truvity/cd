@@ -791,10 +791,6 @@
                   "description": "The image subscription's `strictSemvers`, with `subscribeAs: image`. Unset keeps `false`; a Warehouse whose live object has Kargo's own default (`true`) sets it, so the spec does not differ from the stored object forever."
                 }
               },
-              "required": [
-                "repoURL",
-                "semver"
-              ],
               "description": "A further source of the project's chart: its own Warehouse, <warehouse>-<source>, and the repository the Stages that take it promote from. The same keys as `chart`; `warehouse.subscriptions` applies to `chart` alone."
             },
             "description": "Further sources of the project's chart, by name. Each one gets a Warehouse of its own, <warehouse>-<source>; a Stage takes one with `source` (or `stageSources` when the Stages are derived). A Stage with no source takes `chart`."
@@ -920,7 +916,7 @@
               ],
               "description": "An artifact promoted with the chart: the same keys as `chart`, and `pinKey`."
             },
-            "description": "Further artifacts that move with the chart in one Freight, by name, such as a static bundle released beside an api chart. Every Warehouse of the project (its own, each source's and each customer's) subscribes to the chart and to every companion, so a new version of either makes one Freight that holds both, and the pair that reaches a later Stage is the pair that ran on the one before. Each Stage writes the chart's pin and one pin per companion in one `yaml-update` of the pin file, so in one commit. A companion's repository must differ from the chart's and from every other companion's. Not with `warehouse.subscriptions` (verbatim) or spelled-out `promotionTemplate`s. With the promoted-version check on, each companion has a check of its own beside the chart's (`<slug>-<stage>-promoted-<companion>`, argument `<companion>-digest` or `<companion>-version`), so a part none of the Stage's Applications renders fails on its own; a companion pinned by digest is judged by its artifact in the Applications' Helm values."
+            "description": "Further artifacts that move with the chart in one Freight, by name, such as a static bundle released beside an api chart. Every Warehouse of the project (its own, each source's and each customer's) subscribes to the chart and to every companion, so a new version of either makes one Freight that holds both, and the pair that reaches a later Stage is the pair that ran on the one before. Each Stage writes the chart's pin and one pin per companion in one `yaml-update` of the pin file, so in one commit. A companion's repository must differ from the chart's and from every other companion's. Not with `warehouse.subscriptions` (verbatim) or spelled-out `promotionTemplate`s. With the promoted-version check on, each companion has a check of its own beside the chart's (`<slug>-<stage>-promoted-<companion>`, argument `<companion>-digest` or `<companion>-version`), so a part none of the Stage's Applications renders fails on its own; a companion pinned by digest is judged by its artifact in the Applications' Helm values. A project with companions may have no `chart`: its Warehouses subscribe to the companions alone, its Stages write and check their pins alone, and an end-to-end check or a metrics gate is refused; its customers then name no chart, and a source names only its companions (`companions.<name>.sources.<source>`)."
           },
           "customers": {
             "type": "array",
@@ -1072,10 +1068,6 @@
                             "description": "The image subscription's `strictSemvers`, with `subscribeAs: image`. Unset keeps `false`; a Warehouse whose live object has Kargo's own default (`true`) sets it, so the spec does not differ from the stored object forever."
                           }
                         },
-                        "required": [
-                          "repoURL",
-                          "semver"
-                        ],
                         "description": "A further source of the project's chart: its own Warehouse, <warehouse>-<source>, and the repository the Stages that take it promote from. The same keys as `chart`; `warehouse.subscriptions` applies to `chart` alone."
                       },
                       "description": "This customer's chart from a further source, by the source's name (a key of `sources`): its Warehouse `<warehouse>-<customer>-<source>` subscribes to it. A source not named here gives the customer the project's `sources.<source>`."

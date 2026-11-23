@@ -26,11 +26,22 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- include "cd-pipeline.checkTokens" (dict "p" $p "where" (printf "promotion.%s" $k) "s" (index $pr $k)) -}}
 {{- end -}}
 {{- $chm := include "cd-pipeline.chartMode" (dict "name" $p.name "chart" $chart) | fromYaml -}}
+{{- $chartless := include "cd-pipeline.chartless" (dict "chart" $chart "companions" $p.companions) | eq "true" -}}
 {{- $from := include "cd-pipeline.chartFrom" (dict "name" $chartName "vars" true "image" $chm.image) -}}
+{{- $digestPin := $chm.digest -}}
+{{- /* With companions alone, the first one (by name) stands for the version
+       in the wording of the commit and the pull request. */ -}}
+{{- if $chartless -}}
+{{- $first := index $p.companions (first (keys $p.companions | sortAlpha)) -}}
+{{- $fm := include "cd-pipeline.chartMode" (dict "name" $p.name "chart" $first) | fromYaml -}}
+{{- $from = include "cd-pipeline.chartFrom" (dict "repoURL" $fm.repo "name" ($first.name | default "") "vars" false "image" $fm.image) -}}
+{{- $chm = $fm -}}
+{{- $digestPin = $fm.digest -}}
+{{- end -}}
 {{- $version := printf "${{ %s.%s }}" $from (ternary (ternary "Digest" "Tag" $chm.digest) "Version" $chm.image) -}}
 {{- /* A digest pin also offers the discovered tag, for the wording of the commit and the pull request. */ -}}
 {{- $wording := deepCopy $tokens -}}
-{{- if $chm.digest -}}{{- $_ := set $wording "tag" (printf "${{ %s.Tag }}" $from) -}}{{- end -}}
+{{- if $digestPin -}}{{- $_ := set $wording "tag" (printf "${{ %s.Tag }}" $from) -}}{{- end -}}
 {{- $steps := list -}}
 
 {{- /* The gate: before a hop moves a pin, the Applications that the version it
@@ -48,7 +59,7 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 
 {{- $steps = append $steps (dict "uses" "git-clone" "retry" $retry "config" (dict "repoURL" "${{ vars.gitRepo }}" "checkout" (list (dict "branch" $pr.branch "path" "./repo")))) -}}
 {{- $pinKey := include "cd-pipeline.fill" (dict "s" $pr.pinKey "tokens" $tokens) -}}
-{{- $updates := list (dict "key" $pinKey "value" (printf "%s%s" $prefix $version)) -}}
+{{- $updates := ternary list (list (dict "key" $pinKey "value" (printf "%s%s" $prefix $version))) $chartless -}}
 {{- /* One pin per companion, in the same file and commit: the artifact of the
        same Freight, read by its repository. */ -}}
 {{- range $cn := keys ($p.companions | default dict) | sortAlpha -}}
@@ -83,6 +94,7 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- if $s.e2eApplication -}}
 {{- $steps = append $steps (dict "uses" "argocd-update" "as" "e2e" "retry" (dict "timeout" "25m0s") "config" (dict "apps" (list (dict "name" $s.e2eApplication "namespace" $v.argocd.namespace)))) -}}
 {{- end -}}
-{{- $vars := list (dict "name" "gitRepo" "value" $repo) (dict "name" "chartRepo" "value" $chm.repo) (dict "name" "chartName" "value" $chartName) -}}
+{{- $vars := list (dict "name" "gitRepo" "value" $repo) -}}
+{{- if not $chartless -}}{{- $vars = concat $vars (list (dict "name" "chartRepo" "value" $chm.repo) (dict "name" "chartName" "value" $chartName)) -}}{{- end -}}
 {{- toYaml (dict "vars" $vars "steps" $steps) -}}
 {{- end -}}
