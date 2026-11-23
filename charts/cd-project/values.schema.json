@@ -1525,6 +1525,11 @@
               "minLength": 1,
               "description": "The Kargo Project, and so the namespace of the Warehouse, Stages and ProjectConfig (and, by default, the Warehouse's name); tokens {project} and {product} (project.name), {vendor}, {customer}. Unset, it is project.name. With it project.name is the slug: Application names, the pin key and check names stay. A Kargo Project cannot be renamed: a new name is a new Project with a new Freight history."
             },
+            "installName": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The middle of the Application names of a customer's install, with project.customers: tokens {project} (project.name), {customer} and {vendor} (where pipeline.project sets it); a companion's is <installName>-<companion>. Default {project}, the customer then in the platform's applicationPrefix. With {project}-{customer} and the prefix <cluster>-, the Applications are <cluster>-<project>-<customer>-<ring suffix>. The Stages watch the same names."
+            },
             "warehouse": {
               "type": "string",
               "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$",
