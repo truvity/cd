@@ -1128,7 +1128,14 @@ key that is a bare cluster is refused. The install is cd-company's service
 `<project>-<customer>`, so its Helm release and, unless the platform's
 products name another, its namespace; its Applications take the customer as
 `{customer}` and the project's name as their middle
-(`applicationPrefix: "dev-{customer}-"` gives `dev-globex-shop`). The pin key
+(`applicationPrefix: "dev-{customer}-"` gives `dev-globex-shop`). The
+platform may name that middle itself, `pipeline.project.installName` (sealed;
+tokens `{project}`, `{customer}`, and `{vendor}` where `pipeline.project`
+sets it), to put the customer after the project: `{project}-{customer}` with
+`applicationPrefix: "dev-"` gives `dev-shop-globex`, and a companion's
+`dev-shop-globex-web`; the Stages watch the same names. It is refused without
+`project.customers`, and when it does not give a name
+(`tests/cases/cd-project/install-name`). The pin key
 defaults to `pins.<graph.stageName>`, so a Stage writes the key its install
 reads, and `promotion.pinFile` may name `{customer}` to give each customer a
 file of its own (`tests/cases/cd-project/customers`).

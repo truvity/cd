@@ -23,6 +23,15 @@ Call with the chart's root context.
   {{- end -}}
   {{- end -}}
 {{- end -}}
+{{- with dig "project" "installName" "" $v.pipeline -}}
+  {{- if not $p.customers -}}
+    {{- fail "cd-project: pipeline.project.installName names the Applications of a customer's install: it needs project.customers" -}}
+  {{- end -}}
+  {{- $probe := include "cd-project.installName" (dict "values" $v "customer" "x") -}}
+  {{- if not (regexMatch "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$" $probe) -}}
+    {{- fail (printf "cd-project: pipeline.project.installName %q gives %q, which is not a name (lower-case letters, digits and -; tokens {project}, {customer}, and {vendor} where pipeline.project sets it)" . $probe) -}}
+  {{- end -}}
+{{- end -}}
 {{- $installs := (include "cd-project.installs" . | fromYaml).installs -}}
 {{- $keys := list -}}
 {{- range $i := $installs -}}{{- $keys = append $keys $i.key -}}{{- end -}}
@@ -136,11 +145,13 @@ Call with the chart's root context.
           {{- $facts = include "cd-project.facts" (dict "cluster" $i.key "product" (index $v.products $i.key) "source" $i.source) | fromYaml -}}
         {{- end -}}
         {{- /* A customer's install: its own {customer}, and the project's
-               name (with the companion's) in the middle of its Application
+               name, or the platform's pipeline.project.installName (with the
+               companion's after it), in the middle of its Application
                names. */ -}}
         {{- with $i.customer -}}
           {{- $_ := set $facts "customer" . -}}
-          {{- $_ := set $facts "applicationName" (ternary (printf "%s-%s" $name $i.companion) $name (not (empty $i.companion))) -}}
+          {{- $middle := include "cd-project.installName" (dict "values" $v "customer" .) -}}
+          {{- $_ := set $facts "applicationName" (ternary (printf "%s-%s" $middle $i.companion) $middle (not (empty $i.companion))) -}}
         {{- end -}}
         {{- $_ := set $products $i.service $facts -}}
       {{- end -}}
@@ -329,12 +340,19 @@ Call with the chart's root context.
   {{- $_ := set $project "sources" $sources -}}
 {{- end -}}
 {{- with $p.pipeline.stageSources -}}{{- $_ := set $project "stageSources" . -}}{{- end -}}
+{{- /* The Applications a Stage watches are named from the project's name, or,
+       for a customer's install, from pipeline.project.installName with
+       {customer} left for cd-pipeline to fill on each customer's chain (it
+       fills {app} first, then {customer}). */ -}}
+{{- $base := $p.name -}}
+{{- if $p.customers -}}{{- $base = include "cd-project.installName" (dict "values" $v "customer" "") -}}{{- end -}}
+{{- if ne $base $p.name -}}{{- $_ := set $project "applications" (list $base) -}}{{- end -}}
 {{- /* The companions move with the chart in one Freight: each one an image
        subscription pinned by digest, its pin `<chart's pin key>-<name>`, and
        its Application (`<project>-<name>`) watched beside the project's. */ -}}
 {{- with $p.companions -}}
   {{- $companions := dict -}}
-  {{- $apps := list $p.name -}}
+  {{- $apps := list $base -}}
   {{- range $cn := keys . | sortAlpha -}}
     {{- $co := index $p.companions $cn -}}
     {{- $entry := dict "repoURL" (trimPrefix "oci://" $co.artifact) "semver" $co.semver "subscribeAs" "image" "pin" "digest" -}}
@@ -350,7 +368,7 @@ Call with the chart's root context.
       {{- $_ := set $entry "sources" $from -}}
     {{- end -}}
     {{- $_ := set $companions $cn $entry -}}
-    {{- $apps = append $apps (printf "%s-%s" $p.name $cn) -}}
+    {{- $apps = append $apps (printf "%s-%s" $base $cn) -}}
   {{- end -}}
   {{- $_ := set $project "companions" $companions -}}
   {{- $_ := set $project "applications" $apps -}}
@@ -737,4 +755,20 @@ Call with the rendered documents.
     {{- end -}}
   {{- end -}}
 {{- end -}}
+{{- end -}}
+
+{{/*
+The middle of a customer install's Application names: the platform's sealed
+pipeline.project.installName (default {project}) with {project}, {vendor}
+(where pipeline.project sets it) and {customer} filled. With customer "",
+{customer} stays a token, for cd-pipeline to fill on each customer's chain.
+Call with (dict "values" .Values "customer" <name or "">).
+*/}}
+{{- define "cd-project.installName" -}}
+{{- $v := .values -}}
+{{- $k := ($v.pipeline | default dict).project | default dict -}}
+{{- $tokens := dict "project" $v.project.name -}}
+{{- with $k.vendor -}}{{- $_ := set $tokens "vendor" . -}}{{- end -}}
+{{- with .customer -}}{{- $_ := set $tokens "customer" . -}}{{- end -}}
+{{- include "cd-pipeline.fill" (dict "s" ($k.installName | default "{project}") "tokens" $tokens) -}}
 {{- end -}}

@@ -112,6 +112,25 @@ func companionArtifact(companion map[string]any, source string) string {
 	return companion["artifact"].(string)
 }
 
+// installName is the middle of a customer install's Application names: the
+// platform's pipeline.project.installName (default {project}) with the
+// project's name, its vendor and the customer filled ("" leaves {customer}).
+func installName(values map[string]any, customer string) string {
+	kargo := parity.Map(parity.Map(values["pipeline"])["project"])
+	name, ok := kargo["installName"].(string)
+	if !ok {
+		name = "{project}"
+	}
+	fill := []string{"{project}", values["project"].(map[string]any)["name"].(string)}
+	if vendor, ok := kargo["vendor"].(string); ok {
+		fill = append(fill, "{vendor}", vendor)
+	}
+	if customer != "" {
+		fill = append(fill, "{customer}", customer)
+	}
+	return strings.NewReplacer(fill...).Replace(name)
+}
+
 // stageNameTemplate is the platform's pipeline.graph.stageName, default
 // {stage}-{customer}.
 func stageNameTemplate(values map[string]any) string {
@@ -180,7 +199,7 @@ func addCompanions(values map[string]any, cluster string, out map[string]any) {
 				}
 				if in.customer != "" {
 					facts["customer"] = in.customer
-					facts["applicationName"] = name + "-" + cn
+					facts["applicationName"] = installName(values, in.customer) + "-" + cn
 				}
 				out["products"].(map[string]any)[service] = facts
 			}
@@ -227,7 +246,7 @@ func installsSlice(values map[string]any, cluster string) map[string]any {
 					facts["kind"] = kind
 				}
 				facts["customer"] = c[0]
-				facts["applicationName"] = name
+				facts["applicationName"] = installName(values, c[0])
 				out["products"].(map[string]any)[service] = facts
 			}
 		}
@@ -501,6 +520,9 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 			if companions := parity.Map(project["companions"]); len(companions) > 0 {
 				subs := map[string]any{}
 				apps := []any{project["name"]}
+				if len(projectCustomers(project)) > 0 {
+					apps = []any{installName(values, "")}
+				}
 				for _, cn := range slices.Sorted(maps.Keys(companions)) {
 					co := parity.Map(companions[cn])
 					sub := map[string]any{"repoURL": strings.TrimPrefix(co["artifact"].(string), "oci://"), "semver": co["semver"], "subscribeAs": "image", "pin": "digest"}
@@ -517,10 +539,13 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 						sub["sources"] = from
 					}
 					subs[cn] = sub
-					apps = append(apps, project["name"].(string)+"-"+cn)
+					apps = append(apps, apps[0].(string)+"-"+cn)
 				}
 				p["companions"] = subs
 				p["applications"] = apps
+			} else if base := installName(values, ""); len(projectCustomers(project)) > 0 && base != project["name"] {
+				// The Stages watch the installs by the platform's name.
+				p["applications"] = []any{base}
 			}
 			if named, ok := project["sources"]; ok {
 				sources := map[string]any{}
