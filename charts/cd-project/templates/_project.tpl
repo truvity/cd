@@ -9,14 +9,18 @@ Call with the chart's root context.
 {{- define "cd-project.render" -}}
 {{- $v := .Values -}}
 {{- include "cd-project.checkDigest" $v -}}
+{{- include "cd-project.narrow" . -}}
 {{- $p := $v.project -}}
 {{- $name := $p.name -}}
+{{- $handedOver := dig "project" "handedOver" list $v.pipeline -}}
 {{- range $c := $p.clusters -}}
+  {{- if not (has $c $handedOver) -}}
   {{- if not (has $c $v.clusters) -}}
     {{- fail (printf "cd-project: project.clusters: %q is not a cluster the platform registered for this project (clusters: %s)" $c (join ", " $v.clusters)) -}}
   {{- end -}}
   {{- if not (hasKey $v.platform $c) -}}
     {{- fail (printf "cd-project: platform.%s is missing: the platform supplies the facts of every cluster it registered" $c) -}}
+  {{- end -}}
   {{- end -}}
 {{- end -}}
 {{- $installs := (include "cd-project.installs" . | fromYaml).installs -}}
@@ -105,6 +109,9 @@ Call with the chart's root context.
 {{- end -}}
 {{- $out := "" -}}
 {{- range $c := $p.clusters -}}
+  {{- /* Another release renders this cluster's Applications
+         (pipeline.project.handedOver); its Stage stays, held. */ -}}
+  {{- if not (has $c $handedOver) -}}
   {{- $products := dict -}}
   {{- $pins := dict -}}
   {{- $values := dict -}}
@@ -138,10 +145,111 @@ Call with the chart's root context.
     {{- end -}}
   {{- end -}}
   {{- $out = print $out (include "cd-company.render" (dict "chart" "cd-project" "at" $at "platform" (index $v.platform $c) "products" $products "services" $services "pins" $pins "values" $values)) "\n" -}}
+  {{- end -}}
 {{- end -}}
 {{- $out = print $out (include "cd-project.pipeline" .) "\n" -}}
 {{- include "cd-project.assertKinds" $out -}}
 {{- $out -}}
+{{- end -}}
+
+{{/*
+A project split across two releases, one Kargo Project each, while it moves
+cluster by cluster: the platform says which part this release is
+(`pipeline.project`, sealed by platformDigest), and the company's one file
+serves both.
+
+- stages: the leading Stages of project.pipeline.stageOrder that this release
+  renders, its Applications and Stages, and no other. The company's clusters,
+  stageOrder, autoPromote, noAutoPromote, upstreams and stageSources are
+  narrowed to them, and a further source that none of them takes is left out.
+  A kept Stage whose upstream would be a Stage left out is refused: it would
+  take Freight straight from the Warehouse instead, without saying so.
+- handedOver: clusters of project.clusters whose Applications another release
+  renders. This release renders none for them and the platform registers no
+  facts for them; their Stages stay, as before, and are held
+  (noAutoPromote), so one Kargo Project writes each pin.
+
+Not with project.customers or project.companions. Mutates .Values.project.
+Call with the chart's root context.
+*/}}
+{{- define "cd-project.narrow" -}}
+{{- $v := .Values -}}
+{{- $p := $v.project -}}
+{{- $stages := dig "project" "stages" list $v.pipeline -}}
+{{- $handed := dig "project" "handedOver" list $v.pipeline -}}
+{{- if or $stages $handed -}}
+  {{- if or $p.customers $p.companions -}}
+    {{- fail "cd-project: pipeline.project.stages and handedOver are not rendered with project.customers or project.companions" -}}
+  {{- end -}}
+{{- end -}}
+{{- if and $stages $handed -}}
+  {{- fail "cd-project: pipeline.project sets stages and handedOver: a release is either the leading part of a split project or the rest of it" -}}
+{{- end -}}
+{{- range $c := $handed -}}
+  {{- if not (has $c $p.clusters) -}}
+    {{- fail (printf "cd-project: pipeline.project.handedOver: %q is not a cluster of project.clusters" $c) -}}
+  {{- end -}}
+{{- end -}}
+{{- $rest := list -}}
+{{- range $c := $p.clusters -}}{{- if not (has $c $handed) -}}{{- $rest = append $rest $c -}}{{- end -}}{{- end -}}
+{{- if and $handed (not $rest) -}}
+  {{- fail "cd-project: pipeline.project.handedOver names every cluster of project.clusters: this release would render no Applications" -}}
+{{- end -}}
+{{- if $stages -}}
+  {{- $order := $p.pipeline.stageOrder -}}
+  {{- if gt (len $stages) (len $order) -}}
+    {{- fail (printf "cd-project: pipeline.project.stages %s is longer than project.pipeline.stageOrder %s" (toJson $stages) (toJson $order)) -}}
+  {{- end -}}
+  {{- range $i, $s := $stages -}}
+    {{- if ne $s (index $order $i) -}}
+      {{- fail (printf "cd-project: pipeline.project.stages %s is not the leading part of project.pipeline.stageOrder %s" (toJson $stages) (toJson $order)) -}}
+    {{- end -}}
+  {{- end -}}
+  {{- $graph := merge (deepCopy (dig "graph" "upstreams" dict ($v.pipeline | default dict))) (dig "graph" "upstreams" dict (index $v "cd-pipeline" | default dict)) -}}
+  {{- $own := $p.pipeline.upstreams | default dict -}}
+  {{- range $s := $stages -}}
+    {{- $cands := ternary (index $own $s) (index $graph $s | default list) (hasKey $own $s) -}}
+    {{- /* cd-pipeline takes the first candidate that is a Stage; the
+           narrowing must not change which one that is. */ -}}
+    {{- $found := false -}}
+    {{- range $u := ($cands | default list) -}}
+      {{- if and (not $found) (has $u $order) -}}
+        {{- $found = true -}}
+        {{- if not (has $u $stages) -}}
+          {{- fail (printf "cd-project: pipeline.project.stages: Stage %q takes Freight from %q, which this release leaves out (give it no upstream in project.pipeline.upstreams to take it straight from its Warehouse)" $s $u) -}}
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+  {{- $n := deepCopy $p -}}
+  {{- $clusters := list -}}
+  {{- range $c := $p.clusters -}}{{- if has $c $stages -}}{{- $clusters = append $clusters $c -}}{{- end -}}{{- end -}}
+  {{- $_ := set $n "clusters" $clusters -}}
+  {{- $pl := $n.pipeline -}}
+  {{- $_ := set $pl "stageOrder" $stages -}}
+  {{- range $k := list "autoPromote" "noAutoPromote" -}}
+    {{- if hasKey $pl $k -}}
+      {{- $kept := list -}}
+      {{- range $s := (index $pl $k | default list) -}}{{- if has $s $stages -}}{{- $kept = append $kept $s -}}{{- end -}}{{- end -}}
+      {{- $_ := set $pl $k $kept -}}
+    {{- end -}}
+  {{- end -}}
+  {{- range $k := list "upstreams" "stageSources" -}}
+    {{- if hasKey $pl $k -}}
+      {{- $kept := dict -}}
+      {{- range $s, $x := (index $pl $k | default dict) -}}{{- if has $s $stages -}}{{- $_ := set $kept $s $x -}}{{- end -}}{{- end -}}
+      {{- $_ := set $pl $k $kept -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if $n.sources -}}
+    {{- $used := values ($pl.stageSources | default dict) -}}
+    {{- $kept := dict -}}
+    {{- range $sn, $sv := $n.sources -}}{{- if has $sn $used -}}{{- $_ := set $kept $sn $sv -}}{{- end -}}{{- end -}}
+    {{- $_ := set $n "sources" $kept -}}
+    {{- if not $n.sources -}}{{- $_ := unset $n "sources" -}}{{- end -}}
+  {{- end -}}
+  {{- $_ := set $v "project" $n -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
@@ -200,7 +308,7 @@ Call with the chart's root context.
 {{- with $p.pipeline.autoPromote -}}{{- $_ := set $project "autoPromote" . -}}{{- end -}}
 {{- /* Either side may hold a Stage back: the company in its own file, the
        platform in what it seals (to quiesce a pipeline it is moving). */ -}}
-{{- with concat ($p.pipeline.noAutoPromote | default list) (dig "project" "noAutoPromote" list $v.pipeline) | uniq -}}{{- $_ := set $project "noAutoPromote" . -}}{{- end -}}
+{{- with concat ($p.pipeline.noAutoPromote | default list) (dig "project" "noAutoPromote" list $v.pipeline) (dig "project" "handedOver" list $v.pipeline) | uniq -}}{{- $_ := set $project "noAutoPromote" . -}}{{- end -}}
 {{- with $p.pipeline.upstreams -}}{{- $_ := set $project "upstreams" . -}}{{- end -}}
 {{- with dig "project" "metricsGateStages" list $v.pipeline -}}{{- $_ := set $project "metricsGateStages" . -}}{{- end -}}
 {{- with $p.sources -}}

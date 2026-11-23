@@ -918,6 +918,8 @@ pipeline:                          # the allowlisted cd-pipeline settings
     vendor: acme
     customer: globex
     noAutoPromote: [dev]           # Stages the platform holds back
+    # stages: [dev]                # optional: this release is the leading part of a split project
+    # handedOver: [dev]            # optional: or the rest of it (see below)
 platformDigest: <sha256 of the four keys above, see below>
 ```
 
@@ -979,6 +981,36 @@ upstream takes another source; a non-dormant cluster (a cluster with no pin, or 
 payloads are held to cd-company's ownership rules by cd-company's own code: the
 fixed reserved paths, and whatever the platform sets for the cluster through
 `products.<cluster>.platformValues` and its open layers, dormant or not.
+
+### A project split across two releases
+
+A project that moves to a new Kargo Project cluster by cluster runs in two
+releases of `cd-project` for a while, one per Kargo Project, both from the
+company's one `project.yaml`. The platform says which part each release is, in
+`pipeline.project`, sealed with the rest of `pipeline`:
+
+- `stages`: the leading Stages of `project.pipeline.stageOrder` that this
+  release renders, Applications and Stages, and no other. The company's
+  `clusters`, `stageOrder`, `autoPromote`, `noAutoPromote`, `upstreams` and
+  `stageSources` are narrowed to them, and a further source that none of them
+  takes is left out (`project.source`'s Warehouse is rendered as always). Only
+  a leading part, so a kept Stage stays first, keeps its access and its way of
+  promoting.
+- `handedOver`: clusters of `project.clusters` whose Applications the other
+  release renders. This release renders none for them and needs neither
+  `clusters` nor `platform` facts for them; their Stages stay as they were and
+  are held (`noAutoPromote`), so only one Kargo Project writes a cluster's pin.
+  The rest of the render is byte-identical to the unsplit one.
+
+The two halves meet only where Freight does not cross: a Stage that the split
+cuts from its upstream is refused, so a company whose next Stage takes from the
+previous one first gives it no upstream (`upstreams: {stage: []}`, Freight
+straight from its Warehouse), as `tests/cases/cd-project/sources` does. Refused:
+`stages` that are not the head of `stageOrder`, a kept Stage whose upstream is
+left out, `stages` with `handedOver`, a `handedOver` cluster that is not in
+`project.clusters` or one that leaves no cluster, and either key with
+`project.customers` or `project.companions`
+(`tests/cases/cd-project/split-leading`, `split-rest`).
 
 ### The Kargo Project and its namespaces
 

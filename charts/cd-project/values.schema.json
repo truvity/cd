@@ -1534,6 +1534,28 @@
                 "maxLength": 63
               },
               "description": "Stages the platform holds back from promoting on their own, beside project.pipeline.noAutoPromote: to quiesce a pipeline while it is moved, so that one Kargo Project writes a pin."
+            },
+            "stages": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                "maxLength": 63
+              },
+              "minItems": 1,
+              "description": "A project split across two releases while it moves cluster by cluster: the leading Stages of project.pipeline.stageOrder this release renders, Applications and Stages, and no other. The company's lists are narrowed to them, a further source none of them takes is left out, and a kept Stage whose upstream is left out is refused. Not with handedOver, customers or companions."
+            },
+            "handedOver": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                "maxLength": 63
+              },
+              "minItems": 1,
+              "description": "The other part of a split project: clusters of project.clusters whose Applications another release renders. This release renders none for them and needs no platform facts for them; their Stages stay and are held, so one Kargo Project writes each pin. Not with stages, customers or companions."
             }
           }
         }
