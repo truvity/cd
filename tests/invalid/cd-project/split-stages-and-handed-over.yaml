@@ -1,0 +1,107 @@
+# expect: pipeline.project sets stages and handedOver
+# One release is either the leading part of a split project or the rest.
+project:
+  name: shop
+  source:
+    chart: oci://charts.example.com/acme/shop
+    infraChart: oci://charts.example.com/acme/shop-infra
+    semver: '>=1.0.0 <2.0.0'
+  sources:
+    preview:
+      chart: oci://preview.example.com/acme/shop
+      semver: '>=1.0.0-0 <2.0.0'
+  clusters:
+  - dev
+  - stage
+  - prod
+  pipeline:
+    stageOrder:
+    - dev
+    - stage
+    - prod
+    stageSources:
+      dev: preview
+    upstreams:
+      stage: []
+    autoPromote:
+    - stage
+pins:
+  dev: 1.5.0-main.7
+values:
+  dev:
+    infra:
+      postgres:
+        parameters:
+          max_connections: '100'
+    app:
+      config:
+        greeting: hello
+        logLevel: debug
+    e2e:
+      config:
+        timeout: 30s
+clusters:
+- dev
+platform:
+  dev:
+    clusterName: dev
+    argocdNamespace: delivery
+    applicationPrefix: dev-
+    appProject: '{product}-{cluster}'
+    applicationLabels:
+      acme.example.com/project: '{product}'
+    chartRegistry: oci://registry.example.com/charts
+    postgres:
+      instances: 1
+      storage: 2Gi
+    events:
+      url: nats://broker.dev.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: '{product}'
+    cloud:
+      accountID: EXAMPLE_ACCOUNT
+      region: example-region
+      iamNameTemplate: '{cluster}-{product}'
+      bucketNameTemplate: '{cluster}-{slug}'
+    e2e:
+      mode: full
+products:
+  dev:
+    interface: 15
+    hostname: shop.dev.example.com
+    bucketSlug: shop
+    e2e:
+      enabled: true
+      events:
+        url: nats://broker.dev.example.com:4222
+pipeline:
+  labels:
+    acme.example.com/managed-by: platform
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false
+  argocd:
+    namespace: delivery
+  git:
+    repoURL: https://git.example.com/acme/shop-delivery.git
+  promotion:
+    branch: main
+    pinFile: pins/{stage}.yaml
+    commitMessage: 'chore({project}): promote {version} to {stage}'
+    prTitle: 'chore({project}): promote to {stage}'
+    prLabels:
+    - promotion
+  graph:
+    upstreams:
+      stage:
+      - dev
+      prod:
+      - stage
+  project:
+    name: shop-next
+    stages:
+    - dev
+    handedOver:
+    - stage
+platformDigest: 8ba8a9082d0a708b59b0c131ed4345663799f477f35694d0311666ddcac73a5e

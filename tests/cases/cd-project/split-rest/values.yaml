@@ -1,0 +1,110 @@
+# The rest of the same split project: the platform hands dev's Applications
+# to the other release (pipeline.project.handedOver) and registers no facts
+# for dev. dev's Stage stays in the old Kargo Project, held (noAutoPromote), so
+# only the new one writes dev's pin; stage and prod render as before.
+project:
+  name: shop
+  source:
+    chart: oci://charts.example.com/acme/shop
+    infraChart: oci://charts.example.com/acme/shop-infra
+    semver: '>=1.0.0 <2.0.0'
+  sources:
+    preview:
+      chart: oci://preview.example.com/acme/shop
+      semver: '>=1.0.0-0 <2.0.0'
+  clusters:
+  - dev
+  - stage
+  - prod
+  pipeline:
+    stageOrder:
+    - dev
+    - stage
+    - prod
+    stageSources:
+      dev: preview
+    upstreams:
+      stage: []
+    autoPromote:
+    - stage
+pins:
+  stage: 1.3.2
+  prod: ''
+values:
+  stage:
+    app:
+      config:
+        greeting: hello
+  prod:
+    app:
+      config:
+        greeting: hello
+clusters:
+- stage
+- prod
+platform:
+  stage:
+    clusterName: stage
+    argocdNamespace: delivery
+    applicationPrefix: stage-
+    appProject: '{product}-{cluster}'
+    chartRegistry: oci://registry.example.com/charts
+    availability: high
+    postgres:
+      instances: 2
+      storage: 4Gi
+    events:
+      url: nats://broker.stage.example.com:4222
+      storage: file
+      replicas: 2
+      maxAge: 24h
+      account: '{product}'
+  prod:
+    clusterName: prod
+    argocdNamespace: delivery
+    applicationPrefix: prod-
+    appProject: '{product}-{cluster}'
+    chartRegistry: oci://registry.example.com/charts
+    availability: high
+    postgres:
+      instances: 3
+      storage: 8Gi
+    events:
+      url: nats://broker.prod.example.com:4222
+      storage: file
+      replicas: 3
+      maxAge: 72h
+      account: '{product}'
+products:
+  stage:
+    interface: 15
+    hostname: shop.stage.example.com
+  prod:
+    interface: 15
+    hostname: shop.example.com
+pipeline:
+  labels:
+    acme.example.com/managed-by: platform
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false
+  argocd:
+    namespace: delivery
+  git:
+    repoURL: https://git.example.com/acme/shop-delivery.git
+  promotion:
+    branch: main
+    pinFile: pins/{stage}.yaml
+    commitMessage: 'chore({project}): promote {version} to {stage}'
+    prTitle: 'chore({project}): promote to {stage}'
+    prLabels:
+    - promotion
+  graph:
+    upstreams:
+      stage:
+      - dev
+      prod:
+      - stage
+  project:
+    handedOver:
+    - dev
+platformDigest: 59e48dc0c62b84d4a6c6e99b6e78639e0166d1a4c8b3395cf9829399d5df6772

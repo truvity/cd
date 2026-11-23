@@ -247,7 +247,11 @@ func TestProjectChildrenAreCompanyRenders(t *testing.T) {
 		t.Run(filepath.Base(filepath.Dir(path)), func(t *testing.T) {
 			values := companyValues(t, path)
 			want := map[string]string{}
-			for _, cluster := range values["project"].(map[string]any)["clusters"].([]any) {
+			project, handed := splitView(t, values)
+			for _, cluster := range project["clusters"].([]any) {
+				if slices.Contains(handed, cluster) {
+					continue // the other release renders its Applications
+				}
 				rendered := parity.Template(t, helm, "company", "../../charts/cd-company", companySlice(values, cluster.(string)))
 				for key, doc := range documents(t, rendered) {
 					if _, dup := want[key]; dup {
@@ -279,6 +283,75 @@ func TestProjectChildrenAreCompanyRenders(t *testing.T) {
 	}
 }
 
+// splitView is the company's project as one release of a split project sees
+// it, derived here apart from the chart: with pipeline.project.stages, the
+// project narrowed to those leading Stages (its clusters, stageOrder,
+// autoPromote, noAutoPromote, upstreams and stageSources, and the further
+// sources they still take); with pipeline.project.handedOver, the project as
+// it is and the clusters whose Applications the other release renders.
+func splitView(t *testing.T, values map[string]any) (map[string]any, []any) {
+	t.Helper()
+	raw, err := json.Marshal(values["project"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	var project map[string]any
+	if err := json.Unmarshal(raw, &project); err != nil {
+		t.Fatal(err)
+	}
+	kargo := parity.Map(parity.Map(values["pipeline"])["project"])
+	stages := parity.List(kargo["stages"])
+	if len(stages) == 0 {
+		return project, parity.List(kargo["handedOver"])
+	}
+	keep := func(list []any) []any {
+		out := []any{}
+		for _, v := range list {
+			if slices.Contains(stages, v) {
+				out = append(out, v)
+			}
+		}
+		return out
+	}
+	project["clusters"] = keep(parity.List(project["clusters"]))
+	pipeline := parity.Map(project["pipeline"])
+	pipeline["stageOrder"] = stages
+	for _, key := range []string{"autoPromote", "noAutoPromote"} {
+		if v, ok := pipeline[key]; ok {
+			pipeline[key] = keep(parity.List(v))
+		}
+	}
+	taken := []any{}
+	for _, key := range []string{"upstreams", "stageSources"} {
+		if v, ok := pipeline[key]; ok {
+			kept := map[string]any{}
+			for stage, x := range parity.Map(v) {
+				if slices.Contains(stages, any(stage)) {
+					kept[stage] = x
+					if key == "stageSources" {
+						taken = append(taken, x)
+					}
+				}
+			}
+			pipeline[key] = kept
+		}
+	}
+	if named, ok := project["sources"]; ok {
+		kept := map[string]any{}
+		for sn, sv := range parity.Map(named) {
+			if slices.Contains(taken, any(sn)) {
+				kept[sn] = sv
+			}
+		}
+		if len(kept) > 0 {
+			project["sources"] = kept
+		} else {
+			delete(project, "sources")
+		}
+	}
+	return project, nil
+}
+
 // withPlatformRange is a company's range within the platform's: both ANDed
 // (a space), an OR on either side distributed; the company's alone where the
 // platform gives none.
@@ -306,7 +379,7 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 	for _, path := range projectCases(t) {
 		t.Run(filepath.Base(filepath.Dir(path)), func(t *testing.T) {
 			values := companyValues(t, path)
-			project := values["project"].(map[string]any)
+			project, handed := splitView(t, values)
 			source := project["source"].(map[string]any)
 			pipeline := project["pipeline"].(map[string]any)
 			chart := map[string]any{"repoURL": source["chart"], "semver": source["semver"]}
@@ -331,7 +404,7 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 			// either side holds back.
 			kargo := parity.Map(parity.Map(values["pipeline"])["project"])
 			held := parity.List(pipeline["noAutoPromote"])
-			for _, stage := range parity.List(kargo["noAutoPromote"]) {
+			for _, stage := range slices.Concat(parity.List(kargo["noAutoPromote"]), handed) {
 				if !slices.Contains(held, stage) {
 					held = append(held, stage)
 				}
