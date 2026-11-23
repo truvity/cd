@@ -98,6 +98,13 @@ Call with the chart's root context.
     {{- fail (printf "cd-project: project.sources.%s.chart must be the same chart as project.source.chart (%s) from another repository, got %q" $sn $chartName $sc) -}}
   {{- end -}}
 {{- end -}}
+{{- range $cn := keys ($p.companions | default dict) | sortAlpha -}}
+  {{- range $sn := keys ((index $p.companions $cn).sources | default dict) | sortAlpha -}}
+    {{- if not (hasKey $sources $sn) -}}
+      {{- fail (printf "cd-project: project.companions.%s.sources: %q is not a key of project.sources" $cn $sn) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
 {{- $stageSources := $p.pipeline.stageSources | default dict -}}
 {{- range $s := keys $stageSources | sortAlpha -}}
   {{- if not (has $s $order) -}}
@@ -124,7 +131,7 @@ Call with the chart's root context.
       {{- if hasKey $v.products $i.key -}}
         {{- $facts := dict -}}
         {{- if $i.companion -}}
-          {{- $facts = include "cd-project.companionFacts" (dict "key" $i.key "product" (index $v.products $i.key) "companion" (index $p.companions $i.companion) "namespace" $i.namespace) | fromYaml -}}
+          {{- $facts = include "cd-project.companionFacts" (dict "key" $i.key "product" (index $v.products $i.key) "companion" (index $p.companions $i.companion) "namespace" $i.namespace "stageSource" ($i.stageSource | default "")) | fromYaml -}}
         {{- else -}}
           {{- $facts = include "cd-project.facts" (dict "cluster" $i.key "product" (index $v.products $i.key) "source" $i.source) | fromYaml -}}
         {{- end -}}
@@ -330,7 +337,19 @@ Call with the chart's root context.
   {{- $apps := list $p.name -}}
   {{- range $cn := keys . | sortAlpha -}}
     {{- $co := index $p.companions $cn -}}
-    {{- $_ := set $companions $cn (dict "repoURL" (trimPrefix "oci://" $co.artifact) "semver" $co.semver "subscribeAs" "image" "pin" "digest") -}}
+    {{- $entry := dict "repoURL" (trimPrefix "oci://" $co.artifact) "semver" $co.semver "subscribeAs" "image" "pin" "digest" -}}
+    {{- /* The companion from a further source: its own artifact (and range),
+           in that source's Warehouses. */ -}}
+    {{- with $co.sources -}}
+      {{- $from := dict -}}
+      {{- range $sn, $cs := . -}}
+        {{- $one := dict "repoURL" (trimPrefix "oci://" $cs.artifact) -}}
+        {{- with $cs.semver -}}{{- $_ := set $one "semver" . -}}{{- end -}}
+        {{- $_ := set $from $sn $one -}}
+      {{- end -}}
+      {{- $_ := set $entry "sources" $from -}}
+    {{- end -}}
+    {{- $_ := set $companions $cn $entry -}}
     {{- $apps = append $apps (printf "%s-%s" $p.name $cn) -}}
   {{- end -}}
   {{- $_ := set $project "companions" $companions -}}
@@ -344,6 +363,17 @@ Call with the chart's root context.
     {{- with $c.source.subscribeAs -}}{{- $_ := set $cc "subscribeAs" . -}}{{- end -}}
     {{- $entry := dict "name" $c.name "chart" $cc -}}
     {{- with $c.companions -}}{{- $_ := set $entry "companions" . -}}{{- end -}}
+    {{- /* The customer's chart from each further source it names. */ -}}
+    {{- with $c.sources -}}
+      {{- $own := dict -}}
+      {{- range $sn, $ss := . -}}
+        {{- $sc := dict "repoURL" $ss.chart "semver" (include "cd-project.withPlatformRange" (dict "own" $ss.semver "platform" $plat)) -}}
+        {{- if hasKey $ss "versionPrefix" -}}{{- $_ := set $sc "versionPrefix" $ss.versionPrefix -}}{{- end -}}
+        {{- with $ss.subscribeAs -}}{{- $_ := set $sc "subscribeAs" . -}}{{- end -}}
+        {{- $_ := set $own $sn $sc -}}
+      {{- end -}}
+      {{- $_ := set $entry "sources" $own -}}
+    {{- end -}}
     {{- $customers = append $customers $entry -}}
   {{- end -}}
   {{- $_ := set $project "customers" $customers -}}
@@ -370,9 +400,11 @@ customer on each cluster; and `customers`, each with its chart source.
 The customers are the platform's (pipeline.project.customers, sealed by
 platformDigest): the company names the ones it installs and may give each
 one a chart of its own; a product with several customers has one Kargo
-Project, so `pipeline.project.customer` is not set beside them, and the
-sources of project.sources are not used beside them (each customer is a
-source of its own). Call with the chart's root context.
+Project, so `pipeline.project.customer` is not set beside them. With
+project.sources each customer has the chart of each source too (its own,
+project.customers[].sources.<source>, else project.sources'), and an install
+on a cluster whose Stage takes a source installs from it (`stageSource`).
+Call with the chart's root context.
 */}}
 {{- define "cd-project.installs" -}}
 {{- $v := .Values -}}
@@ -388,9 +420,6 @@ source of its own). Call with the chart's root context.
 {{- end -}}
 {{- if and $p.customers (not $registered) -}}
   {{- fail "cd-project: project.customers needs pipeline.project.customers: the platform registers a product's customers" -}}
-{{- end -}}
-{{- if and $p.customers (or $p.sources $p.pipeline.stageSources) -}}
-  {{- fail "cd-project: project.customers is set with project.sources or project.pipeline.stageSources: each customer is a source of its own" -}}
 {{- end -}}
 {{- $stageName := dig "graph" "stageName" "{stage}-{customer}" ($v.pipeline | default dict) -}}
 {{- $seen := dict -}}
@@ -417,8 +446,37 @@ source of its own). Call with the chart's root context.
       {{- fail (printf "cd-project: project.customers.%s.companions: %q is not a companion of project.companions" $c.name $cn) -}}
     {{- end -}}
   {{- end -}}
+  {{- /* The customer's chart from each further source: its own
+         (project.customers[].sources.<source>), else project.sources'. A
+         customer with a chart of its own names its own, since a source
+         gives the same chart from another repository. */ -}}
+  {{- $custSources := dict -}}
+  {{- range $sn := keys ($c.sources | default dict) | sortAlpha -}}
+    {{- if not (hasKey ($p.sources | default dict) $sn) -}}
+      {{- fail (printf "cd-project: project.customers.%s.sources: %q is not a key of project.sources" $c.name $sn) -}}
+    {{- end -}}
+  {{- end -}}
+  {{- range $sn := keys ($p.sources | default dict) | sortAlpha -}}
+    {{- $sv := index $p.sources $sn -}}
+    {{- $chart := index ($c.sources | default dict) $sn | default $sv.chart -}}
+    {{- if not (hasPrefix "oci://" $chart) -}}
+      {{- fail (printf "cd-project: project.customers.%s.sources.%s must be an oci:// reference (<repository>/<chart>), got %q" $c.name $sn $chart) -}}
+    {{- end -}}
+    {{- if ne (last (splitList "/" $chart)) (last (splitList "/" $src.chart)) -}}
+      {{- fail (printf "cd-project: project.customers.%s: source %s gives the chart %q, and the customer installs %s; name the customer's own in project.customers[].sources.%s (the same chart from another repository)" $c.name $sn $chart (last (splitList "/" $src.chart)) $sn) -}}
+    {{- end -}}
+    {{- $one := dict "chart" $chart "semver" $sv.semver -}}
+    {{- if hasKey $sv "versionPrefix" -}}{{- $_ := set $one "versionPrefix" $sv.versionPrefix -}}{{- end -}}
+    {{- with $sv.subscribeAs -}}{{- $_ := set $one "subscribeAs" . -}}{{- end -}}
+    {{- $_ := set $custSources $sn $one -}}
+  {{- end -}}
   {{- $cust := dict "name" $c.name "source" $src -}}
   {{- with $c.companions -}}{{- $_ := set $cust "companions" . -}}{{- end -}}
+  {{- if $c.sources -}}
+    {{- $named := dict -}}
+    {{- range $sn := keys $c.sources -}}{{- $_ := set $named $sn (index $custSources $sn) -}}{{- end -}}
+    {{- $_ := set $cust "sources" $named -}}
+  {{- end -}}
   {{- $customers = append $customers $cust -}}
   {{- range $cl := $p.clusters -}}
     {{- $key := include "cd-pipeline.fill" (dict "s" $stageName "tokens" (dict "stage" $cl "customer" $c.name)) -}}
@@ -430,11 +488,18 @@ source of its own). Call with the chart's root context.
         {{- fail (printf "cd-project: pipeline.graph.stageName %q gives %q twice: it names each customer's Stage on each cluster apart" $stageName $key) -}}
       {{- end -}}
     {{- end -}}
-    {{- $installs = append $installs (dict "key" $key "cluster" $cl "customer" $c.name "service" (printf "%s-%s" $p.name $c.name) "source" $src) -}}
+    {{- /* On a cluster whose Stage takes a further source, every ring
+           comes from the customer's chart of that source. */ -}}
+    {{- $isrc := $src -}}
+    {{- $ss := index ($p.pipeline.stageSources | default dict) $cl | default "" -}}
+    {{- with $ss -}}
+      {{- $isrc = include "cd-project.overSource" (dict "source" $src "over" (index $custSources .)) | fromYaml -}}
+    {{- end -}}
+    {{- $installs = append $installs (dict "key" $key "cluster" $cl "customer" $c.name "service" (printf "%s-%s" $p.name $c.name) "source" $isrc "stageSource" $ss) -}}
   {{- end -}}
 {{- else -}}
   {{- range $cl := $p.clusters -}}
-    {{- $installs = append $installs (dict "key" $cl "cluster" $cl "service" $p.name "source" (include "cd-project.clusterSource" (dict "project" $p "cluster" $cl) | fromYaml)) -}}
+    {{- $installs = append $installs (dict "key" $cl "cluster" $cl "service" $p.name "source" (include "cd-project.clusterSource" (dict "project" $p "cluster" $cl) | fromYaml) "stageSource" (index ($p.pipeline.stageSources | default dict) $cl | default "")) -}}
   {{- end -}}
 {{- end -}}
 {{- /* Each companion beside each install: `<key>-<companion>`, the service
@@ -442,7 +507,7 @@ source of its own). Call with the chart's root context.
 {{- $parts := list -}}
 {{- range $i := $installs -}}
   {{- range $cn := keys ($p.companions | default dict) | sortAlpha -}}
-    {{- $part := dict "key" (printf "%s-%s" $i.key $cn) "cluster" $i.cluster "service" (printf "%s-%s" $i.service $cn) "companion" $cn "namespace" $i.service -}}
+    {{- $part := dict "key" (printf "%s-%s" $i.key $cn) "cluster" $i.cluster "service" (printf "%s-%s" $i.service $cn) "companion" $cn "namespace" $i.service "stageSource" $i.stageSource -}}
     {{- with $i.customer -}}{{- $_ := set $part "customer" . -}}{{- end -}}
     {{- $parts = append $parts $part -}}
   {{- end -}}
@@ -465,7 +530,7 @@ its own) with the company's artifact in them and the kind static-site. The
 artifact is the company's (project.companions.<name>.artifact), like the
 chart source, so a product that names one, or a kind, is refused. The
 namespace is the install's unless the platform names another.
-As YAML for `fromYaml`. Call with (dict "key" .. "product" .. "companion" .. "namespace" ..).
+As YAML for `fromYaml`. Call with (dict "key" .. "product" .. "companion" .. "namespace" .. "stageSource" ..).
 */}}
 {{- define "cd-project.companionFacts" -}}
 {{- range $k := list "artifact" "kind" -}}
@@ -475,7 +540,12 @@ As YAML for `fromYaml`. Call with (dict "key" .. "product" .. "companion" .. "na
 {{- end -}}
 {{- $facts := deepCopy .product -}}
 {{- $_ := set $facts "kind" "static-site" -}}
-{{- $_ := set $facts "artifact" (dict "ref" (trimPrefix "oci://" .companion.artifact)) -}}
+{{- /* The artifact of the source the install's Stage takes, where the
+       companion names one (project.companions.<name>.sources): the digest
+       the Stage promotes is that repository's. */ -}}
+{{- $artifact := .companion.artifact -}}
+{{- with .stageSource -}}{{- with index ($.companion.sources | default dict) . -}}{{- $artifact = .artifact -}}{{- end -}}{{- end -}}
+{{- $_ := set $facts "artifact" (dict "ref" (trimPrefix "oci://" $artifact)) -}}
 {{- if not (hasKey $facts "namespace") -}}{{- $_ := set $facts "namespace" .namespace -}}{{- end -}}
 {{- toYaml $facts -}}
 {{- end -}}
@@ -613,15 +683,27 @@ repository). As YAML for `fromYaml`. Call with (dict "project" .. "cluster" ..).
 {{- $p := .project -}}
 {{- $src := deepCopy $p.source -}}
 {{- with index ($p.pipeline.stageSources | default dict) .cluster -}}
-  {{- $sv := index $p.sources . -}}
-  {{- $_ := set $src "chart" $sv.chart -}}
-  {{- $_ := set $src "semver" $sv.semver -}}
-  {{- $_ := unset $src "versionPrefix" -}}
-  {{- $_ := unset $src "subscribeAs" -}}
-  {{- if hasKey $sv "versionPrefix" -}}{{- $_ := set $src "versionPrefix" $sv.versionPrefix -}}{{- end -}}
-  {{- with $sv.subscribeAs -}}{{- $_ := set $src "subscribeAs" . -}}{{- end -}}
-  {{- if hasKey $src "infraChart" -}}{{- $_ := set $src "infraChart" (printf "%s-infra" $sv.chart) -}}{{- end -}}
+  {{- $src = include "cd-project.overSource" (dict "source" $src "over" (index $p.sources .)) | fromYaml -}}
 {{- end -}}
+{{- toYaml $src -}}
+{{- end -}}
+
+{{/*
+A chart source with a further source laid over it: the further source's
+chart, semver, versionPrefix and subscribeAs; `kind` stays; `infraChart`,
+where given, moves to the further source's repository. As YAML for
+`fromYaml`. Call with (dict "source" .. "over" ..).
+*/}}
+{{- define "cd-project.overSource" -}}
+{{- $src := deepCopy .source -}}
+{{- $sv := .over -}}
+{{- $_ := set $src "chart" $sv.chart -}}
+{{- $_ := set $src "semver" $sv.semver -}}
+{{- $_ := unset $src "versionPrefix" -}}
+{{- $_ := unset $src "subscribeAs" -}}
+{{- if hasKey $sv "versionPrefix" -}}{{- $_ := set $src "versionPrefix" $sv.versionPrefix -}}{{- end -}}
+{{- with $sv.subscribeAs -}}{{- $_ := set $src "subscribeAs" . -}}{{- end -}}
+{{- if hasKey $src "infraChart" -}}{{- $_ := set $src "infraChart" (printf "%s-infra" $sv.chart) -}}{{- end -}}
 {{- toYaml $src -}}
 {{- end -}}
 

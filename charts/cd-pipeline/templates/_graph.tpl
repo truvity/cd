@@ -21,7 +21,9 @@ The rules, for each Stage of `stageOrder`, in that order:
 - verification: the promoted-version check when `graph.promotedVersion`, the
   metrics gate on the Stages `metricsGateStages` lists.
 - source: `stageSources` for the Stage (a key of `sources`), else none (the
-  project's `chart`). A Stage and its upstream take the same source. When the
+  project's `chart`); with customers, the customer's own source, or its
+  source of that name (`<customer>-<source>`). A Stage and its upstream take
+  the same source. When the
   project names any source, a Stage with no upstream that is not the first of
   `stageOrder` promotes by pull request, like a hop: it is a later cluster fed
   by a Warehouse of its own, not the project's first.
@@ -54,17 +56,21 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- range $c := ($p.customers | default list) -}}
 {{- $customers = append $customers (ternary (dict "name" $c) $c (kindIs "string" $c)) -}}
 {{- end -}}
+{{- /* The sources the project names: with customers, `sources` is replaced
+       below by one source per customer, and one per customer and named
+       source. */ -}}
+{{- $named := $p.sources | default dict -}}
 {{- if $customers -}}
-{{- if or $p.sources $p.stageSources -}}
-{{- fail (printf "cd-pipeline: projects.%s sets customers and sources or stageSources; each customer is a source of its own" $name) -}}
-{{- end -}}
 {{- $srcs := dict -}}
+{{- $seen := dict -}}
 {{- range $c := $customers -}}
-{{- if hasKey $srcs $c.name -}}{{- fail (printf "cd-pipeline: projects.%s.customers: %q is listed twice" $name $c.name) -}}{{- end -}}
+{{- if hasKey $seen $c.name -}}{{- fail (printf "cd-pipeline: projects.%s.customers: %q is listed twice" $name $c.name) -}}{{- end -}}
+{{- $_ := set $seen $c.name true -}}
+{{- if hasKey $srcs $c.name -}}{{- fail (printf "cd-pipeline: projects.%s.customers: %q is also another customer's Warehouse of a source (<customer>-<source>); name the customer or the source apart" $name $c.name) -}}{{- end -}}
 {{- $_ := set $srcs $c.name ($c.chart | default $p.chart | default dict) -}}
 {{- /* A customer's own semver for a companion, in its Warehouse alone. */ -}}
 {{- with $c.companions -}}
-{{- $own := deepCopy ($p.companions | default dict) -}}
+{{- $own := include "cd-pipeline.companionsFrom" (dict "companions" ($p.companions | default dict) "source" "") | fromYaml -}}
 {{- range $cn, $co := . -}}
 {{- if not (hasKey $own $cn) -}}{{- fail (printf "cd-pipeline: projects.%s.customers.%s.companions: %q is not a companion of the project" $name $c.name $cn) -}}{{- end -}}
 {{- $_ := set (index $own $cn) "semver" $co.semver -}}
@@ -73,8 +79,27 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- $_ := set $sc $c.name $own -}}
 {{- $_ := set $p "sourceCompanions" $sc -}}
 {{- end -}}
+{{- /* Each named source, for this customer: a Warehouse
+       `<warehouse>-<customer>-<source>` on the customer's chart from that
+       source (customers[].sources.<source>, else the project's
+       sources.<source>), with every companion from that source
+       (companions.<name>.sources.<source>, else the companion as it is). */ -}}
+{{- range $sn := keys ($c.sources | default dict) | sortAlpha -}}
+{{- if not (hasKey $named $sn) -}}{{- fail (printf "cd-pipeline: projects.%s.customers.%s.sources: %q is not a key of sources" $name $c.name $sn) -}}{{- end -}}
+{{- end -}}
+{{- range $sn := keys $named | sortAlpha -}}
+{{- $key := printf "%s-%s" $c.name $sn -}}
+{{- if or (hasKey $srcs $key) (hasKey $seen $key) -}}{{- fail (printf "cd-pipeline: projects.%s: customer %q's Warehouse of source %q is named %q, as another customer's is; name the customer or the source apart" $name $c.name $sn $key) -}}{{- end -}}
+{{- $_ := set $srcs $key (index ($c.sources | default dict) $sn | default (index $named $sn)) -}}
+{{- with $p.companions -}}
+{{- $sc := $p.sourceCompanions | default dict -}}
+{{- $_ := set $sc $key (include "cd-pipeline.companionsFrom" (dict "companions" . "source" $sn) | fromYaml) -}}
+{{- $_ := set $p "sourceCompanions" $sc -}}
+{{- end -}}
+{{- end -}}
 {{- end -}}
 {{- $_ := set $p "sources" $srcs -}}
+{{- $_ := set $p "namedSources" (keys $named | sortAlpha) -}}
 {{- end -}}
 {{- $chains := deepCopy ($g.upstreams | default dict) -}}
 {{- range $st, $cands := ($p.upstreams | default dict) -}}{{- $_ := set $chains $st $cands -}}{{- end -}}
@@ -100,7 +125,7 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- if not (has $st $order) -}}
 {{- fail (printf "cd-pipeline: projects.%s.stageSources: %q is not a Stage of stageOrder" $name $st) -}}
 {{- end -}}
-{{- if not (hasKey $sources (index $srcOf $st)) -}}
+{{- if not (hasKey $named (index $srcOf $st)) -}}
 {{- fail (printf "cd-pipeline: projects.%s.stageSources.%s: %q is not a key of sources" $name $st (index $srcOf $st)) -}}
 {{- end -}}
 {{- end -}}
@@ -143,16 +168,15 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- if has $st $noAuto -}}{{- $_ := set $s "noAutoPromote" true -}}
 {{- else if or (not (hasKey $upstream $st)) (has $st $auto) -}}{{- $_ := set $s "autoPromote" true -}}{{- end -}}
 {{- $stChart := $p.chart | default dict -}}
-{{- if $c.name -}}
-{{- $_ := set $s "source" $c.name -}}
-{{- $stChart = index $p.sources $c.name -}}
-{{- else -}}
-{{- with index $srcOf $st -}}
+{{- /* A customer's Stage takes its customer's Warehouse, or, where
+       stageSources names a source, its customer's Warehouse of that source. */ -}}
+{{- $src := index $srcOf $st | default "" -}}
+{{- if $c.name -}}{{- $src = ternary (printf "%s-%s" $c.name $src) $c.name (ne $src "") -}}{{- end -}}
+{{- with $src -}}
 {{- $_ := set $s "source" . -}}
 {{- $stChart = index $sources . -}}
 {{- end -}}
-{{- if and $sources (not (hasKey $upstream $st)) (ne $st (first $order)) -}}{{- $_ := set $s "mode" "pr" -}}{{- end -}}
-{{- end -}}
+{{- if and $named (not (hasKey $upstream $st)) (ne $st (first $order)) -}}{{- $_ := set $s "mode" "pr" -}}{{- end -}}
 {{- if has $st ($p.e2eStages | default list) -}}
 {{- $_ := set $s "e2eApplication" (include "cd-pipeline.fill" (dict "s" $appName "tokens" (merge (dict "stage" $st "app" $e2eApp) $ctok))) -}}
 {{- end -}}

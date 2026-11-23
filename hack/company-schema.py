@@ -177,7 +177,7 @@ def generated_project_schema(root):
                     },
                     "customers": {
                         "type": "array", "minItems": 1,
-                        "description": "The customers the project is installed for, one Kargo Project for all of them: each one a customer the platform registered (pipeline.project.customers), with a Warehouse of its own, <project>-<customer>, and a chain of Stages along pipeline.stageOrder, named by pipeline.graph.stageName (default <cluster>-<customer>). Each install is keyed by its Stage's name in pins, values and products, is the service <project>-<customer> and runs in that namespace unless the platform's products name another. Refused with sources and stageSources.",
+                        "description": "The customers the project is installed for, one Kargo Project for all of them: each one a customer the platform registered (pipeline.project.customers), with a Warehouse of its own, <project>-<customer>, and a chain of Stages along pipeline.stageOrder, named by pipeline.graph.stageName (default <cluster>-<customer>). Each install is keyed by its Stage's name in pins, values and products, is the service <project>-<customer> and runs in that namespace unless the platform's products name another. With project.sources each customer has a Warehouse of each source too, <project>-<customer>-<source>, on its chart from that source, and its install on a cluster whose Stage takes the source (pipeline.stageSources) takes every ring from there.",
                         "items": {"oneOf": [
                             NAME,
                             {
@@ -190,6 +190,11 @@ def generated_project_schema(root):
                                         "type": "object", "propertyNames": dict(NAME, maxLength=30),
                                         "additionalProperties": {"type": "object", "additionalProperties": False, "required": ["semver"], "properties": {"semver": chart["semver"]}},
                                         "description": "This customer's own semver for a companion of project.companions, in its Warehouse alone: to hold one customer to a line of the shared artifact, or to let a fix of an older line reach that customer only.",
+                                    },
+                                    "sources": {
+                                        "type": "object", "propertyNames": dict(NAME, maxLength=30),
+                                        "additionalProperties": dict(chart["repoURL"], description="oci://<repository>/<chart>, the customer's chart from another repository."),
+                                        "description": "The customer's chart from each further source of project.sources, by its name, in place of the source's own chart: required for a customer with a chart of its own, since a source gives the same chart from another repository. The source's semver, versionPrefix and subscribeAs hold.",
                                     },
                                 },
                             },
@@ -204,6 +209,17 @@ def generated_project_schema(root):
                                 "artifact": {"type": "string", "minLength": 1, "pattern": "^(oci://)?[^:@]+$", "description": "The artifact's repository, <registry>/<path>, without a tag or digest: what the Warehouse subscribes to and the static-site chart serves at the pinned digest."},
                                 "semver": chart["semver"],
                                 "kind": {"type": "string", "enum": ["static-site"], "description": "The kind of the companion's install: static-site (default and only)."},
+                                "sources": {
+                                    "type": "object", "propertyNames": dict(NAME, maxLength=30),
+                                    "additionalProperties": {
+                                        "type": "object", "additionalProperties": False, "required": ["artifact"],
+                                        "properties": {
+                                            "artifact": {"type": "string", "minLength": 1, "pattern": "^(oci://)?[^:@]+$", "description": "The artifact's repository in that source, <registry>/<path>, without a tag or digest."},
+                                            "semver": dict(chart["semver"], description="The range of the artifact from that source; default the companion's semver."),
+                                        },
+                                    },
+                                    "description": "The companion from a further source of project.sources, by its name: the Warehouses of that source subscribe to this artifact in place of the companion's, and an install on a cluster whose Stage takes the source (pipeline.stageSources) serves it. A source not named here gives the companion's own artifact.",
+                                },
                             },
                         },
                     },
