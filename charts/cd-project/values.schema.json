@@ -1453,6 +1453,10 @@
                   "pattern": "^([0-9]+h[0-5]?[0-9]m[0-5]?[0-9]s|[0-5]?[0-9]m[0-5]?[0-9]s|[0-5]?[0-9]s)$"
                 }
               }
+            },
+            "seedPinFile": {
+              "type": "boolean",
+              "description": "Seed a missing pin file: before yaml-update, a file-write step (alias seed-pin, overwrite false, continueOnError true) writes the pin file with every key this Stage writes, each \"\" (dormant), so a Stage's first promotion into a folder with no pin file succeeds. An existing file is never changed: on every later promotion the step fails with \"already exists\", which continueOnError ignores, and the Promotion succeeds. It adds no key to an existing file. Default false."
             }
           }
         },
@@ -1708,6 +1712,7 @@
             "prTitle": "chore: promote {slug} to {stage}",
             "prLabels": [],
             "provider": "github",
+            "seedPinFile": false,
             "retry": {
               "errorThreshold": 3,
               "timeout": "5m0s"

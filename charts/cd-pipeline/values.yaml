@@ -37,6 +37,8 @@ promotion:
   prTitle: "chore: promote {slug} to {stage}"
   prLabels: []
   provider: github
+  # Seed a missing pin file on a Stage's first promotion (see the schema).
+  seedPinFile: false
   retry:
     errorThreshold: 3
     timeout: 5m0s

@@ -146,6 +146,13 @@ the rest.
 unchanged; that is what the parity gate proves on every pull request. No
 chart in this repository sets a default of its own yet.
 
+## Expected failures
+
+- With `cd-pipeline`'s `promotion.seedPinFile` on, every promotion after a
+  Stage's first shows its `seed-pin` step as failed ("already exists"). The
+  Promotion succeeds; do not alert on that step. See
+  [A missing pin file](docs/reference.md#a-missing-pin-file).
+
 ## Development
 
 ```sh
