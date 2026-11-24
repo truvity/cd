@@ -541,7 +541,7 @@ and per project `name`, `stages` (or `stageOrder`, see [Derived Stages](#derived
 | --- | --- |
 | `git.repoURL` | The repository a promotion writes the new pin to. |
 | `git.credentials` | `secretStoreRef`, `remoteKey` and `properties` (`appID`, `installationID`, `privateKey`) of a GitHub App; renders an `ExternalSecret` per project namespace, `secretName` (default `kargo-git-writeback`), `refreshInterval` (default `1h`). |
-| `promotion.*` | What a promotion writes: `branch`, `pinFile` and `pinKey` (tokens `{stage}`, `{project}`, `{slug}`, `{product}`, `{vendor}`, `{customer}`, `{pinKey}`; see [Project tokens](#project-tokens)), `commitMessage` (also `{version}`), `prTitle`, `prLabels`, `provider`, and the `retry` and `gate` budgets. All have neutral defaults. |
+| `promotion.*` | What a promotion writes: `branch`, `pinFile` and `pinKey` (tokens `{stage}`, `{project}`, `{slug}`, `{product}`, `{vendor}`, `{customer}`, `{pinKey}`; see [Project tokens](#project-tokens)), `commitMessage` (also `{version}`), `prTitle`, `prLabels`, `provider`, `seedPinFile` (write a missing pin file on a Stage's first promotion; see [A missing pin file](#a-missing-pin-file)), and the `retry` and `gate` budgets. All have neutral defaults. |
 | `projects[].git` | A per-project override of `git`: `repoURL` replaces the release's, and `credentials` replaces the release's `git.credentials` for this project's namespace (`false` renders no `ExternalSecret` for it). A project without it renders exactly as before. See [Per-project git and promotion](#per-project-git-and-promotion). |
 | `projects[].promotion` | A per-project override of `promotion`, with the same keys: what the project sets replaces the release's value, except that `retry` and `gate` merge key by key. |
 | `waves` | The Argo CD sync-wave of each kind of object: `project`, `warehouse`, `credentials`, `config`, `stage` (0 to 4). |
@@ -669,9 +669,29 @@ Unless a Stage sets `promotionTemplate`, its promotion is: for a Stage with
 upstream Applications, `argocd-wait` on the upstream Stage's `applications`
 (the version being promoted must already be Healthy and Synced there; a Stage
 never waits on the Applications it is about to update); then `git-clone`,
+with `promotion.seedPinFile` a `file-write` of a missing pin file (below),
 `yaml-update` of `pinFile` at `pinKey`, `git-commit`; then either `git-push`
 to the branch, or `git-push` to a generated branch, `git-open-pr` and
 `git-wait-for-pr`, the last three only when the commit changed something.
+
+#### A missing pin file
+
+Kargo's `yaml-update` neither creates a file nor adds a key: it refuses a key
+the file does not hold. A Stage whose pin file is absent therefore cannot be
+promoted into until someone writes the file. With `promotion.seedPinFile: true`
+(default `false`; a project may set its own) each Stage's promotion first runs
+a `file-write` step, alias `seed-pin`, with `overwrite: false` and
+`continueOnError: true`. It writes the pin file with every key the Stage is
+about to write (the chart's and each companion's), each `""`, which is
+dormant, and `yaml-update` then writes the pins into it. The step changes no
+file that exists: on every promotion after a Stage's first it fails with
+"already exists", `continueOnError` keeps that from failing the Promotion,
+and the Promotion succeeds. **That failed `seed-pin` step is expected; do not
+alert on it.** The step never adds a key to an existing file, so a pin file
+shared by several Stages or projects still needs each key written by hand.
+A pin key with an escaped dot (`\.`) is refused, because the seed is built by
+splitting the key on dots. Cases `cd-pipeline/seed-pin-file` and
+`cd-project/seed-pin-file`.
 
 ### Per-project git and promotion
 
@@ -915,7 +935,9 @@ A cluster of `project.clusters` with no key in `pins` (its pin file is absent)
 is dormant, exactly as `""` is: it renders no Applications, and its Stage
 exists. A new project needs no hand-written `pins: {<cluster>: ""}`. Kargo's
 `yaml-update` does not create a file, so the pin file must exist by the time
-the cluster's Stage is first promoted into.
+the cluster's Stage is first promoted into, unless the platform's
+`pipeline.promotion.seedPinFile` is on: then the first promotion writes it
+(see [A missing pin file](#a-missing-pin-file)).
 
 ```yaml
 # The platform's valuesObject.

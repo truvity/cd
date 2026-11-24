@@ -1,0 +1,17 @@
+# expect: promotion.seedPinFile cannot seed the escaped key
+# A pin key with an escaped dot (Kargo's `\.`) is one key that holds a dot,
+# and the seed is built by splitting the key on dots: it would write another
+# key than yaml-update then looks for, so the render refuses it.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+promotion:
+  seedPinFile: true
+projects:
+  - name: shop
+    pinKey: 'shop\.api'
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    stages:
+      - name: dev
+        autoPromote: true

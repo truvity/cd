@@ -73,7 +73,36 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- $cfrom := include "cd-pipeline.chartFrom" (dict "repoURL" $cm.repo "name" ($co.name | default "") "vars" false "image" $cm.image) -}}
 {{- $updates = append $updates (dict "key" $key "value" (printf "%s${{ %s.%s }}" ($co.versionPrefix | default "") $cfrom (ternary (ternary "Digest" "Tag" $cm.digest) "Version" $cm.image))) -}}
 {{- end -}}
-{{- $steps = append $steps (dict "uses" "yaml-update" "config" (dict "path" (printf "./repo/%s" (include "cd-pipeline.fill" (dict "s" $pr.pinFile "tokens" $tokens))) "updates" $updates)) -}}
+{{- $pinPath := printf "./repo/%s" (include "cd-pipeline.fill" (dict "s" $pr.pinFile "tokens" $tokens)) -}}
+{{- /* A missing pin file, seeded: `yaml-update` neither creates a file nor
+       adds a key, so a Stage's first promotion into a folder with no pin
+       file wrote nothing. With seedPinFile the promotion first writes the
+       file with every key it is about to write, each "" (dormant). The
+       step refuses an existing file (overwrite false), and continueOnError
+       lets the promotion go on: every promotion after a Stage's first shows
+       this one step failed ("already exists") and still succeeds. It never
+       adds a key to a file that exists. */ -}}
+{{- if $pr.seedPinFile -}}
+{{- $seed := dict -}}
+{{- range $u := $updates -}}
+{{- if contains "\\" $u.key -}}
+{{- fail (printf "cd-pipeline: projects.%s: promotion.seedPinFile cannot seed the escaped key %q" $p.name $u.key) -}}
+{{- end -}}
+{{- $parts := splitList "." $u.key -}}
+{{- $m := $seed -}}
+{{- range $i, $part := $parts -}}
+{{- if eq (add1 $i) (len $parts) -}}
+{{- $_ := set $m $part "" -}}
+{{- else -}}
+{{- if not (kindIs "map" (get $m $part)) -}}{{- $_ := set $m $part (dict) -}}{{- end -}}
+{{- $m = get $m $part -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- $contents := printf "# Written by Kargo. Seeded by the first promotion: \"\" is dormant.\n%s\n" (toYaml $seed) -}}
+{{- $steps = append $steps (dict "uses" "file-write" "as" "seed-pin" "continueOnError" true "config" (dict "path" $pinPath "contents" $contents "overwrite" false)) -}}
+{{- end -}}
+{{- $steps = append $steps (dict "uses" "yaml-update" "config" (dict "path" $pinPath "updates" $updates)) -}}
 {{- $steps = append $steps (dict "uses" "git-commit" "as" "commit" "retry" $retry "config" (dict "path" "./repo" "message" (include "cd-pipeline.fill" (dict "s" $pr.commitMessage "tokens" (merge (dict "version" $version) $wording))))) -}}
 {{- if eq $mode "pr" -}}
 {{- $committed := "${{ status('commit') == 'Succeeded' }}" -}}
