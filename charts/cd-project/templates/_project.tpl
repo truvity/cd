@@ -94,14 +94,26 @@ Call with the chart's root context.
     {{- fail (printf "cd-project: project.pipeline.autoPromote: %q is not a Stage of project.pipeline.stageOrder" $s) -}}
   {{- end -}}
 {{- end -}}
+{{- /* noAutoPromote names a Stage of stageOrder, which holds that Stage of
+       every customer's chain, or, with customers, one customer's Stage
+       (pipeline.graph.stageName, default {stage}-{customer}): a preview lane
+       promoted by hand beside one that follows its branch (arch SHP-12). */ -}}
+{{- $holdable := $order -}}
+{{- $holdStageName := dig "graph" "stageName" "{stage}-{customer}" ($v.pipeline | default dict) -}}
+{{- range $c := ($p.customers | default list) -}}
+  {{- $cn := ternary $c (index (ternary (dict "name" "") $c (kindIs "string" $c)) "name") (kindIs "string" $c) -}}
+  {{- range $s := $order -}}
+    {{- $holdable = append $holdable (include "cd-pipeline.fill" (dict "s" $holdStageName "tokens" (dict "stage" $s "customer" $cn))) -}}
+  {{- end -}}
+{{- end -}}
 {{- range $s := ($p.pipeline.noAutoPromote | default list) -}}
-  {{- if not (has $s $order) -}}
-    {{- fail (printf "cd-project: project.pipeline.noAutoPromote: %q is not a Stage of project.pipeline.stageOrder" $s) -}}
+  {{- if not (has $s $holdable) -}}
+    {{- fail (printf "cd-project: project.pipeline.noAutoPromote: %q is not a Stage of project.pipeline.stageOrder, nor a customer's Stage" $s) -}}
   {{- end -}}
 {{- end -}}
 {{- range $s := (dig "project" "noAutoPromote" list $v.pipeline) -}}
-  {{- if not (has $s $order) -}}
-    {{- fail (printf "cd-project: pipeline.project.noAutoPromote: %q is not a Stage of project.pipeline.stageOrder" $s) -}}
+  {{- if not (has $s $holdable) -}}
+    {{- fail (printf "cd-project: pipeline.project.noAutoPromote: %q is not a Stage of project.pipeline.stageOrder, nor a customer's Stage" $s) -}}
   {{- end -}}
 {{- end -}}
 {{- range $s := (dig "project" "metricsGateStages" list $v.pipeline) -}}
