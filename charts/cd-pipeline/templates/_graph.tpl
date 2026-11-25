@@ -105,9 +105,17 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- range $st, $cands := ($p.upstreams | default dict) -}}{{- $_ := set $chains $st $cands -}}{{- end -}}
 {{- $auto := $p.autoPromote | default list -}}
 {{- $noAuto := $p.noAutoPromote | default list -}}
+{{- /* A held Stage of stageOrder holds it on every chain; with customers an
+       entry may name one customer's Stage (graph.stageName) instead. */ -}}
+{{- $holdable := $order -}}
+{{- range $c := $customers -}}
+{{- range $st := $order -}}
+{{- $holdable = append $holdable (include "cd-pipeline.fill" (dict "s" ($g.stageName | default "{stage}-{customer}") "tokens" (dict "stage" $st "customer" $c.name))) -}}
+{{- end -}}
+{{- end -}}
 {{- range $st := $noAuto -}}
-{{- if not (has $st $order) -}}
-{{- fail (printf "cd-pipeline: projects.%s.noAutoPromote: %q is not a Stage of stageOrder" $name $st) -}}
+{{- if not (has $st $holdable) -}}
+{{- fail (printf "cd-pipeline: projects.%s.noAutoPromote: %q is not a Stage of stageOrder, nor a customer's Stage" $name $st) -}}
 {{- end -}}
 {{- end -}}
 {{- $upstream := dict -}}
@@ -165,7 +173,7 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- $firsts = append $firsts $sname -}}
 {{- end -}}
 {{- /* The opt-out wins over both rules. */ -}}
-{{- if has $st $noAuto -}}{{- $_ := set $s "noAutoPromote" true -}}
+{{- if or (has $st $noAuto) (has $sname $noAuto) -}}{{- $_ := set $s "noAutoPromote" true -}}
 {{- else if or (not (hasKey $upstream $st)) (has $st $auto) -}}{{- $_ := set $s "autoPromote" true -}}{{- end -}}
 {{- $stChart := $p.chart | default dict -}}
 {{- /* A customer's Stage takes its customer's Warehouse, or, where

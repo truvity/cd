@@ -5,6 +5,10 @@ must be done first, and whether a default moved. Newest first, one
 `## vX.Y.Z` heading per tag. A chart's version is the tag; the upstream
 release it wraps is named in each entry.
 
+## v0.47.0
+
+- **Added:** with `project.customers`, `noAutoPromote` (the company's `project.pipeline.noAutoPromote` and the platform's sealed `pipeline.project.noAutoPromote`) may name one customer's Stage (`pipeline.graph.stageName`, default `{stage}-{customer}`), not only a Stage of `stageOrder`, which still holds that Stage on every customer's chain. It is for preview lanes (arch SHP-12): one Kargo Project whose customers are lanes, the `master` lane following its branch and the others promoted by hand. A name that is neither is refused as before. New case `cd-project/customer-no-auto-promote` (golden). Every existing render is byte-identical (no existing golden moves).
+
 ## v0.46.0
 
 - **Added:** `cd-pipeline` `promotion.seedPinFile` (default `false`; a project may set its own, and `cd-project` takes it in the platform's sealed `pipeline.promotion`): a Stage's first promotion writes its missing pin file. Before `yaml-update`, a `file-write` step (alias `seed-pin`, `overwrite: false`, `continueOnError: true`) writes the pin file with every key the Stage writes, each `""` (dormant), because `yaml-update` neither creates a file nor adds a key. A file that exists is never changed: on every later promotion the step fails with "already exists" and the Promotion still succeeds. That failed step is expected; do not alert on it. Needs a Kargo with `file-write` and `continueOnError` (1.11 has both). A pin key with an escaped dot is refused. New cases `cd-pipeline/seed-pin-file` and `cd-project/seed-pin-file` (goldens). Unset, every existing render is byte-identical (no existing golden moves).
