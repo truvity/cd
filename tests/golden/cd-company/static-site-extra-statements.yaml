@@ -28,9 +28,9 @@ spec:
               - appconfig:GetLatestConfiguration
               Effect: Allow
               Resource:
-              - arn:aws:appconfig:eu-central-1:000000000000:application/abc1234/environment/def5678/configuration/ghi9012
+              - flags-of-docs
             repositoryArns:
-            - arn:aws:ecr:eu-central-1:000000000000:repository/sites/docs
+            - registry-sites-docs
             rolePrefix: east-docs.site
             tags:
               project: docs
