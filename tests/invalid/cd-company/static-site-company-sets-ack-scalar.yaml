@@ -1,0 +1,19 @@
+# expect: values.docs.infra.registry.ack is platform-owned
+# A scalar cannot replace the block that holds the reserved keys.
+platform:
+  clusterName: devel
+  argocdNamespace: argocd
+  applicationPrefix: devel-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+products:
+  docs:
+    kind: static-site
+    chartVersion: 4.17.0
+    artifact: {ref: registry.example.com/sites/docs}
+services: [docs]
+pins: {docs: ""}
+values:
+  docs:
+    infra:
+      registry: {ack: off}

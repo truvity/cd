@@ -1,0 +1,107 @@
+---
+# Source: cd-company/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-docs-infra
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: docs
+  project: docs-east
+  sources:
+  - helm:
+      releaseName: docs
+      valuesObject:
+        fullnameOverride: docs
+        installName: docs
+        registry:
+          ack:
+            clusterName: east
+            enabled: true
+            extraStatements:
+            - Action:
+              - appconfig:StartConfigurationSession
+              - appconfig:GetLatestConfiguration
+              Effect: Allow
+              Resource:
+              - arn:aws:appconfig:eu-central-1:000000000000:application/abc1234/environment/def5678/configuration/ghi9012
+            repositoryArns:
+            - arn:aws:ecr:eu-central-1:000000000000:repository/sites/docs
+            rolePrefix: east-docs.site
+            tags:
+              project: docs
+          auth: ecr
+        serviceAccount:
+          name: docs
+    path: .
+    repoURL: oci://registry.example.com/charts/static-site-infra
+    targetRevision: 4.17.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-company/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-docs
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: docs
+  project: docs-east
+  sources:
+  - helm:
+      releaseName: docs
+      valuesObject:
+        fullnameOverride: docs
+        live:
+          enabled: true
+          files:
+          - flags.json
+        registry:
+          ack:
+            enabled: true
+          auth: ecr
+        serviceAccount:
+          name: docs
+        site:
+          artifact:
+            digest: sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+            ref: registry.example.com/sites/docs
+    path: .
+    repoURL: oci://registry.example.com/charts/static-site
+    targetRevision: 4.17.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false

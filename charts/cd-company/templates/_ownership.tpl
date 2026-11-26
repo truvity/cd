@@ -88,11 +88,20 @@ prober:
      site is served and with which certificate). A company keeps the rest of
      the site (its pages, replicas, placeholders). A key is reserved whole
      where it is a leaf here, so a scalar cannot replace the map above it.
+     ONE KEY OF THE REGISTRY BLOCK IS THE COMPANY'S, on the infrastructure
+     ring: `registry.ack.extraStatements`, the statements the role's policy
+     carries beyond the pull of the artifact, for what a second container of
+     the site's pod calls (the writer of its live files). The company names
+     the resources its own container reads, as a product's chart does for
+     its own role; which role it is, its trust, its tags, its boundary and
+     the repositories it pulls from stay the platform's, and so does every
+     other key of `registry`. The block is therefore reserved key by key
+     there: A NEW KEY OF THE static-site-infra CHART'S `registry` MUST BE
+     ADDED BELOW, or it is the company's.
      Call with (dict "kind" <kind> "ring" <ring>). */}}
 {{- define "cd-company.ownedStaticSite" -}}
 fullnameOverride: true
 serviceAccount: true
-registry: true
 identity: true
 access: true
 tier: true
@@ -100,7 +109,19 @@ route: true
 tls: true
 {{ if eq .ring "infra" }}
 installName: true
+registry:
+  auth: true
+  ack:
+    enabled: true
+    clusterName: true
+    repositoryArns: true
+    rolePrefix: true
+    accountId: true
+    region: true
+    tags: true
+    permissionsBoundary: true
 {{ else }}
+registry: true
 site:
   artifact: true
 {{ end }}
