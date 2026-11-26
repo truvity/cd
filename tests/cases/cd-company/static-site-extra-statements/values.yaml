@@ -1,7 +1,9 @@
 # A static site whose pod has a second container that calls a cloud API: the
 # company names what that container reads, in registry.ack.extraStatements of
 # the infrastructure ring. The rest of the registry and identity block is the
-# platform's (platformValues), and the two merge into one policy.
+# platform's (platformValues), and the two merge into one policy. The
+# resources are placeholders: this chart passes them through, and a real ARN
+# is a particular this repository does not publish.
 platform:
   clusterName: east
   argocdNamespace: argocd
@@ -29,7 +31,7 @@ products:
           ack:
             enabled: true
             clusterName: east
-            repositoryArns: ["arn:aws:ecr:eu-central-1:000000000000:repository/sites/docs"]
+            repositoryArns: [registry-sites-docs]
             rolePrefix: east-docs.site
             tags: {project: docs}
       app:
@@ -45,6 +47,6 @@ values:
           extraStatements:
             - Effect: Allow
               Action: ["appconfig:StartConfigurationSession", "appconfig:GetLatestConfiguration"]
-              Resource: ["arn:aws:appconfig:eu-central-1:000000000000:application/abc1234/environment/def5678/configuration/ghi9012"]
+              Resource: [flags-of-docs]
     app:
       live: {enabled: true, files: [flags.json]}
