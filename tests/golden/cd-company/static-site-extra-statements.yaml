@@ -20,6 +20,9 @@ spec:
         installName: docs
         registry:
           ack:
+            allowedExtraActions:
+            - appconfig:StartConfigurationSession
+            - appconfig:GetLatestConfiguration
             clusterName: east
             enabled: true
             extraStatements:

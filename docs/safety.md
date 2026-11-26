@@ -198,8 +198,13 @@ on the infrastructure ring: the statements the role carries for what a second
 container of the site's pod calls. The company names what its own container
 reads, as a product's chart does for its own role; the role's name, trust,
 tags, boundary and repositories stay reserved
-(`static-site-company-sets-ack-*.yaml`), and the permissions boundary of the
-role bounds what a statement can grant.
+(`static-site-company-sets-ack-*.yaml`). The permissions boundary of the role
+is the outer limit of what a statement can grant, and it may be far wider
+than what a site needs: the platform therefore sets
+`registry.ack.allowedExtraActions`, the actions a statement may name, which
+the `static-site-infra` chart enforces and a company cannot set. A platform
+that opens `extraStatements` to a company without that list relies on the
+boundary alone.
 
 ## A kind whose ownership is not written down
 

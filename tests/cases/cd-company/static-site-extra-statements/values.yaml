@@ -34,6 +34,8 @@ products:
             repositoryArns: [registry-sites-docs]
             rolePrefix: east-docs.site
             tags: {project: docs}
+            # What a company's statement may name.
+            allowedExtraActions: ["appconfig:StartConfigurationSession", "appconfig:GetLatestConfiguration"]
       app:
         registry: {auth: ecr, ack: {enabled: true}}
 services: [docs]
