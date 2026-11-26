@@ -95,7 +95,10 @@ prober:
      the resources its own container reads, as a product's chart does for
      its own role; which role it is, its trust, its tags, its boundary and
      the repositories it pulls from stay the platform's, and so does every
-     other key of `registry`. The block is therefore reserved key by key
+     other key of `registry`. Which ACTIONS those statements may name is the
+     platform's too (`registry.ack.allowedExtraActions`, static-site-infra
+     4.17.0): the boundary of a site's role may be far wider than what a
+     site needs, so the platform sets that list and the company cannot. The block is therefore reserved key by key
      there: A NEW KEY OF THE static-site-infra CHART'S `registry` MUST BE
      ADDED BELOW, or it is the company's.
      Call with (dict "kind" <kind> "ring" <ring>). */}}
@@ -120,6 +123,7 @@ registry:
     region: true
     tags: true
     permissionsBoundary: true
+    allowedExtraActions: true
 {{ else }}
 registry: true
 site:

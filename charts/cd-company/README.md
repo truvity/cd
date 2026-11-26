@@ -122,7 +122,8 @@ result against their own schemas.
   `site.artifact` on `app`) and the registry and identity block (`registry`, which carries
   the scope of the site's IAM role) are platform-owned. One key of that block is the
   company's, on `infra`: `registry.ack.extraStatements`, the statements the site's role
-  carries for what a second container of its pod calls.
+  carries for what a second container of its pod calls. Which actions they may name is the
+  platform's (`registry.ack.allowedExtraActions`).
 - The platform's postgres fields are reserved: `platformOwned`, `instances`,
   `storage`, `runtimeRole`, `runtimePasswordSecret`, `runtimePassword`, `labels`,
   `scheduling`, `backup`, `serverTLS`. Other postgres tuning can be passed through.
