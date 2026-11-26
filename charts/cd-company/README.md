@@ -120,7 +120,9 @@ result against their own schemas.
   is refused by name, with or without a pin. In `infra` and `app`, the keys the chart
   writes (`fullnameOverride`, `serviceAccount`; `installName` on `infra`;
   `site.artifact` on `app`) and the registry and identity block (`registry`, which carries
-  the scope of the site's IAM role) are platform-owned.
+  the scope of the site's IAM role) are platform-owned. One key of that block is the
+  company's, on `infra`: `registry.ack.extraStatements`, the statements the site's role
+  carries for what a second container of its pod calls.
 - The platform's postgres fields are reserved: `platformOwned`, `instances`,
   `storage`, `runtimeRole`, `runtimePasswordSecret`, `runtimePassword`, `labels`,
   `scheduling`, `backup`, `serverTLS`. Other postgres tuning can be passed through.

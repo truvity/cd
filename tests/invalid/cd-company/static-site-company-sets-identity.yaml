@@ -1,4 +1,4 @@
-# expect: values.docs.infra.registry is platform-owned
+# expect: values.docs.infra.registry.ack.repositoryArns is platform-owned
 # A static site's infrastructure ring carries the scope of an IAM role: the
 # registry and identity block is the platform's, so a company value on it is
 # refused, dormant or not, even when no platformValues set it.

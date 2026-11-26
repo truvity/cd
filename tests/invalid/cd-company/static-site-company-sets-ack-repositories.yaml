@@ -1,0 +1,19 @@
+# expect: values.docs.infra.registry.ack.repositoryArns is platform-owned
+# The statements of a site's role are the company's; the repositories it pulls from are not.
+platform:
+  clusterName: devel
+  argocdNamespace: argocd
+  applicationPrefix: devel-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+products:
+  docs:
+    kind: static-site
+    chartVersion: 4.17.0
+    artifact: {ref: registry.example.com/sites/docs}
+services: [docs]
+pins: {docs: ""}
+values:
+  docs:
+    infra:
+      registry: {ack: {repositoryArns: [registry-sites-other], extraStatements: []}}

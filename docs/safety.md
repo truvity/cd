@@ -193,7 +193,13 @@ In a company flow the same shape is enforced before a pin exists:
 end-to-end payload, and `static-site-company-sets-identity.yaml` and
 `static-site-company-sets-artifact.yaml` refuse a company value on the registry
 and identity block (the scope of the site's IAM role) and on the pinned
-artifact.
+artifact. One key of the block is the company's, `registry.ack.extraStatements`
+on the infrastructure ring: the statements the role carries for what a second
+container of the site's pod calls. The company names what its own container
+reads, as a product's chart does for its own role; the role's name, trust,
+tags, boundary and repositories stay reserved
+(`static-site-company-sets-ack-*.yaml`), and the permissions boundary of the
+role bounds what a statement can grant.
 
 ## A kind whose ownership is not written down
 
