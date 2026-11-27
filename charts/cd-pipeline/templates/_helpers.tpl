@@ -25,11 +25,14 @@ them. As YAML for `fromYaml`. Call with the project map.
 {{- end -}}
 
 {{/*
-A template may name {vendor} or {customer} only when the project gives it: a
-token left as written would become part of a name or of a pin key.
+A template may name {vendor}, {customer} or {component} only when the project
+gives it: a token left as written would become part of a name or of a pin key.
 Call with (dict "p" <project map> "where" <key path for the message> "s" <template>).
 */}}
 {{- define "cd-pipeline.checkTokens" -}}
+{{- if and (contains "{component}" (toString $.s)) (not (or $.p.components $.p.componentChains)) -}}
+{{- fail (printf "cd-pipeline: projects.%s: %s names {component} but the project has no components" $.p.name $.where) -}}
+{{- end -}}
 {{- range $k := list "vendor" "customer" -}}
 {{- if and (contains (printf "{%s}" $k) (toString $.s)) (not (index $.p $k)) (not (and (eq $k "customer") (or $.p.customers $.p.customerWarehousesOnly))) -}}
 {{- fail (printf "cd-pipeline: projects.%s: %s names {%s} but the project has no %s" $.p.name $.where $k $k) -}}

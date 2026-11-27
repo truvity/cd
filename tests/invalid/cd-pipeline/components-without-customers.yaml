@@ -1,0 +1,44 @@
+# expect: components needs customers
+# Components with no customers to take them.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+promotion:
+  pinFile: "projects/{slug}/{customer}/{component}/{stage}/pin.yaml"
+  pinKey: "pins.{stage}-{customer}-{component}"
+  commitMessage: "chore({slug}): promote {component} {version} to {stage} for {customer}"
+  prTitle: "chore({slug}): promote {component} to {stage} for {customer}"
+graph:
+  upstreams:
+    stage: [devel]
+    prod: [stage]
+  applicationName: "{stage}-{app}"
+  approvers:
+    claims:
+      groups: ["{stage}:{slug}:{customer}:approver"]
+  admins:
+    claims:
+      groups: ['platform:admin']
+projects:
+  - name: shared-sso
+    vendor: shared
+    warehouse:
+      name: sso
+    applications: ["{slug}-{customer}-{component}"]
+    components:
+      keycloak:
+        chart:
+          repoURL: oci://registry.example.com/charts/keycloak
+          semver: ">=0.1.0 <2.0.0"
+        sources:
+          master:
+            repoURL: oci://preview.example.com/charts/keycloak
+            semver: ">=0.0.0-0"
+      portal:
+        chart:
+          repoURL: oci://registry.example.com/charts/portal
+          semver: ">=0.1.0 <1.0.0"
+      demo:
+        chart:
+          repoURL: oci://registry.example.com/charts/demo
+          semver: ">=0.1.0 <1.0.0"
+    stageOrder: [devel, stage, prod]

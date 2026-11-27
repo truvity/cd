@@ -51,15 +51,20 @@ def project_product(source):
 # product needs its interface and hostname. A companion's facts (a static
 # site, keyed <key>-<companion>) are told apart by their chartVersion, which
 # cd-delivery refuses for the other kinds.
+# A project of components (project.components) has a kind for each
+# component, so its facts are left to cd-delivery's own refusals at render.
 COMPANION_FACTS = {"required": ["chartVersion"]}
-KIND_RULES = [{
-    "if": {
-        "required": ["project"],
-        "properties": {"project": {"required": ["source"], "properties": {"source": {"required": ["kind"], "properties": {"kind": {"const": "chart"}}}}}},
+CHART_KIND = {"required": ["source"], "properties": {"source": {"required": ["kind"], "properties": {"kind": {"const": "chart"}}}}}
+KIND_RULES = [
+    {
+        "if": {"required": ["project"], "properties": {"project": CHART_KIND}},
+        "then": {"properties": {"products": {"additionalProperties": {"anyOf": [COMPANION_FACTS, {"propertyNames": {"enum": ["namespace"]}}]}}}},
     },
-    "then": {"properties": {"products": {"additionalProperties": {"anyOf": [COMPANION_FACTS, {"propertyNames": {"enum": ["namespace"]}}]}}}},
-    "else": {"properties": {"products": {"additionalProperties": {"anyOf": [COMPANION_FACTS, {"required": ["interface", "hostname"]}]}}}},
-}]
+    {
+        "if": {"required": ["project"], "properties": {"project": {"anyOf": [CHART_KIND, {"required": ["components"]}]}}},
+        "else": {"properties": {"products": {"additionalProperties": {"anyOf": [COMPANION_FACTS, {"required": ["interface", "hostname"]}]}}}},
+    },
+]
 
 
 def generated_schema(root):
@@ -196,9 +201,55 @@ def generated_project_schema(root):
                                         "additionalProperties": dict(chart["repoURL"], description="oci://<repository>/<chart>, the customer's chart from another repository."),
                                         "description": "The customer's chart from each further source of project.sources, by its name, in place of the source's own chart: required for a customer with a chart of its own, since a source gives the same chart from another repository. The source's semver, versionPrefix and subscribeAs hold.",
                                     },
+                                    "components": {
+                                        "type": "array", "minItems": 1, "uniqueItems": True, "items": dict(NAME, maxLength=30),
+                                        "description": "With project.components (required there): the components this customer takes, each a key of project.components. Each one is an install of its own on each cluster, keyed by its Stage's name (pipeline.graph.stageName, default <cluster>-<customer>-<component>), the service <project>-<customer>-<component>. Not every customer takes every component.",
+                                    },
+                                    "lane": {
+                                        "type": "object", "additionalProperties": False, "required": ["source"],
+                                        "properties": {
+                                            "source": dict(NAME, maxLength=30, description="A source of each component the customer takes (project.components.<component>.sources): the lane's Stages take the Warehouse <warehouse>-<component>-<source>, and its installs every ring from that source's chart."),
+                                            "stage": dict(NAME, description="The lane's one cluster: the first Stage of project.pipeline.stageOrder (the default), and no other."),
+                                        },
+                                        "description": "With project.components: this customer is a lane, a preview of its components from a further source, named <customer>-<lane> so its Stages, installs and pins are its own. It is installed on the first cluster of project.pipeline.stageOrder alone; its one Stage there takes the components' Warehouses of the source, promotes on its own and promotes nothing onward.",
+                                    },
                                 },
                             },
                         ]},
+                    },
+                    "components": {
+                        "type": "object", "minProperties": 1, "propertyNames": dict(NAME, maxLength=30),
+                        "description": "A product made of several parts, each one a chart of its own, by name: each one a component the platform registered (pipeline.project.components). One Kargo Project delivers them all: each component has one Warehouse, <warehouse>-<component>, shared by every customer that takes it (project.customers[].components), and one of each of its sources, <warehouse>-<component>-<source>, for the lane customers (project.customers[].lane). Not with project.source, project.sources, project.companions or pipeline.stageSources.",
+                        "additionalProperties": {
+                            "type": "object", "additionalProperties": False, "required": ["source"],
+                            "properties": {
+                                "source": {
+                                    "type": "object", "additionalProperties": False, "required": ["chart", "semver"],
+                                    "description": "The component's chart, as project.source is a project's: what its Warehouse subscribes to, and the repository and chart of every ring of its installs.",
+                                    "properties": {
+                                        "chart": dict(chart["repoURL"], description="The component's application chart, oci://<repository>/<chart>."),
+                                        "infraChart": dict(chart["repoURL"], description="The component's infra chart; must be <chart>-infra. Refused for a kind with no infra ring."),
+                                        "semver": chart["semver"],
+                                        "versionPrefix": chart["versionPrefix"],
+                                        "subscribeAs": chart["subscribeAs"],
+                                        "kind": {"type": "string", "enum": ["product", "chart"], "description": "The kind of product of the component's installs: product (default) or chart."},
+                                    },
+                                },
+                                "sources": {
+                                    "type": "object", "propertyNames": dict(NAME, maxLength=30),
+                                    "description": "The component's further sources, by name: each one a Warehouse <warehouse>-<component>-<source>, which a lane customer naming the source takes.",
+                                    "additionalProperties": {
+                                        "type": "object", "additionalProperties": False, "required": ["chart", "semver"],
+                                        "properties": {
+                                            "chart": dict(chart["repoURL"], description="oci://<repository>/<chart>, with the component's <chart>: <chart>-infra and <chart>-e2e come from the same repository."),
+                                            "semver": chart["semver"],
+                                            "versionPrefix": chart["versionPrefix"],
+                                            "subscribeAs": chart["subscribeAs"],
+                                        },
+                                    },
+                                },
+                            },
+                        },
                     },
                     "companions": {
                         "type": "object", "propertyNames": dict(NAME, maxLength=30),
@@ -272,12 +323,13 @@ def generated_project_schema(root):
                         "description": "What the platform says about this project's Kargo Project. Read by cd-project itself, not a cd-pipeline setting; sealed with the rest of pipeline, so a company file cannot set it.",
                         "properties": {
                             "name": {"type": "string", "minLength": 1, "description": "The Kargo Project, and so the namespace of the Warehouse, Stages and ProjectConfig (and, by default, the Warehouse's name); tokens {project} and {product} (project.name), {vendor}, {customer}. Unset, it is project.name. With it project.name is the slug: Application names, the pin key and check names stay. A Kargo Project cannot be renamed: a new name is a new Project with a new Freight history."},
-                            "installName": {"type": "string", "minLength": 1, "description": "The middle of the Application names of a customer's install, with project.customers: tokens {project} (project.name), {customer} and {vendor} (where pipeline.project sets it); a companion's is <installName>-<companion>. Default {project}, the customer then in the platform's applicationPrefix. With {project}-{customer} and the prefix <cluster>-, the Applications are <cluster>-<project>-<customer>-<ring suffix>. The Stages watch the same names."},
+                            "installName": {"type": "string", "minLength": 1, "description": "The middle of the Application names of a customer's install, with project.customers: tokens {project} (project.name), {customer}, {component} (with project.components, where it is required) and {vendor} (where pipeline.project sets it); a companion's is <installName>-<companion>. Default {project}, the customer then in the platform's applicationPrefix. With {project}-{customer} and the prefix <cluster>-, the Applications are <cluster>-<project>-<customer>-<ring suffix>. The Stages watch the same names."},
                             "warehouse": {"type": "string", "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$", "description": "The name of the project's Warehouse, as given: the product, or <product>-<customer> for a product built for each customer. A further source's Warehouse is <warehouse>-<source>, a customer's <warehouse>-<customer>. Unset, project.name. A Warehouse cannot be renamed in place: a new name is a new Warehouse, and its Freight starts again."},
                             "vendor": dict(project["vendor"], description="Who makes the product: the {vendor} token of name, promotion.pinFile, pinKey, commitMessage, prTitle and graph.applicationName."),
                             "customer": dict(project["customer"], description="Whom this installation is for: the {customer} token, as vendor."),
                             "semver": dict(chart["semver"], description="The platform's range of the project's chart: every Warehouse of the project (project.source, each source, each customer) subscribes within it, the company's range AND this one, and a pin outside it is refused. For a floor below which the platform cannot install the chart, or a ceiling it has not prepared for. Unset, the company's range alone."),
                             "customers": dict(names, minItems=1, description="The customers the platform registered for this product, each one an installation of its own: project.customers may name only these. Not with customer: a product with several customers has one Kargo Project, cd-<vendor>-<project>, and {customer} is each Stage's own."),
+                            "components": dict(names, minItems=1, description="The components the platform registered for this product, each a chart of its own: project.components may name only these, and needs them. With them the default pipeline.graph.stageName is {stage}-{customer}-{component} and installName {project}-{customer}-{component}; an installName must name {component}."),
                             "metricsGateStages": dict(names, description="Stages of project.pipeline.stageOrder that run the platform's metrics gate after a promotion: each names `<slug>-<stage>-metrics-gate` in its verification, and the gate's ServiceAccount, ConfigMap and AnalysisTemplate are the platform's (rendered where the gate runs, never here)."),
                             "noAutoPromote": dict(names, description="Stages the platform holds back from promoting on their own, beside project.pipeline.noAutoPromote: to quiesce a pipeline while it is moved, so that one Kargo Project writes a pin."),
                             "noPrereleases": dict(names, description="Stages the platform keeps prereleases out of, beside project.pipeline.noPrereleases: their promotion refuses a version with a prerelease part."),

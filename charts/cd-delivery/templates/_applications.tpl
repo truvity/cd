@@ -18,7 +18,7 @@ that passes its own dict gets the same refusal of an unknown key from
 {{- $products := .products | default dict -}}
 {{- $docs := list -}}
 {{- if $products -}}
-{{- include "cd-delivery.assertKeys" (dict "what" "platform" "got" $plat "allowed" (list "tier" "finalizer" "revisionHistoryLimit" "sync" "syncRetry" "clusterName" "argocdNamespace" "applicationPrefix" "applicationSuffixes" "appProject" "vendor" "customer" "applicationLabels" "waves" "chartRegistry" "cloud" "postgres" "events" "database" "identity" "telemetry" "e2e" "availability" "alerts" "dashboards" "staticSite")) -}}
+{{- include "cd-delivery.assertKeys" (dict "what" "platform" "got" $plat "allowed" (list "tier" "finalizer" "revisionHistoryLimit" "sync" "syncRetry" "clusterName" "argocdNamespace" "applicationPrefix" "applicationSuffixes" "appProject" "vendor" "customer" "component" "applicationLabels" "waves" "chartRegistry" "cloud" "postgres" "events" "database" "identity" "telemetry" "e2e" "availability" "alerts" "dashboards" "staticSite")) -}}
 {{- range $name := (keys $products | sortAlpha) -}}
 {{- $p := get $products $name -}}
 {{- $kind := $p.kind | default "product" -}}
@@ -27,14 +27,14 @@ that passes its own dict gets the same refusal of an unknown key from
 {{- end -}}
 {{- if eq $kind "static-site" -}}
 {{- /* A site is two Applications of one chart release, pinned by a digest. */ -}}
-{{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s (kind static-site)" $name) "got" $p "allowed" (list "kind" "pin" "chartVersion" "repository" "artifact" "namespace" "values" "platformValues" "applicationName" "vendor" "customer")) -}}
+{{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s (kind static-site)" $name) "got" $p "allowed" (list "kind" "pin" "chartVersion" "repository" "artifact" "namespace" "values" "platformValues" "applicationName" "vendor" "customer" "component")) -}}
 {{- $docs = append $docs (include "cd-delivery.staticSiteProduct" (dict "plat" $plat "name" $name "p" $p)) -}}
 {{- else if eq $kind "chart" -}}
 {{- /* One chart, one Application: no rings, no platform facts handed down. */ -}}
 {{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s (kind chart)" $name) "got" $p "allowed" (list "kind" "pin" "repository" "chart" "namespace" "values")) -}}
 {{- $docs = append $docs (include "cd-delivery.chartProduct" (dict "plat" $plat "name" $name "p" $p)) -}}
 {{- else -}}
-{{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s" $name) "got" $p "allowed" (list "kind" "pin" "interface" "repository" "chart" "hostname" "parentRef" "surfaces" "bucketSlug" "workloadIdentity" "natsIdentity" "mtls" "postgres" "e2e" "faro" "alerts" "dashboards" "identityProviders" "access" "product" "values" "ignoreDifferences" "platformValues" "layers" "namespace" "applicationName" "vendor" "customer")) -}}
+{{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s" $name) "got" $p "allowed" (list "kind" "pin" "interface" "repository" "chart" "hostname" "parentRef" "surfaces" "bucketSlug" "workloadIdentity" "natsIdentity" "mtls" "postgres" "e2e" "faro" "alerts" "dashboards" "identityProviders" "access" "product" "values" "ignoreDifferences" "platformValues" "layers" "namespace" "applicationName" "vendor" "customer" "component")) -}}
 {{- $docs = append $docs (include "cd-delivery.product" (dict "plat" $plat "name" $name "p" $p)) -}}
 {{- end -}}
 {{- end -}}
@@ -53,10 +53,11 @@ Call with (dict "plat" <platform> "name" <product> "p" <product map>).
        product for one customer, beside the installs for other customers in
        the same call. They lay over the platform's for this product's
        {vendor} and {customer} tokens. */ -}}
-{{- if or .p.vendor .p.customer -}}
+{{- if or .p.vendor .p.customer .p.component -}}
 {{- $plat = deepCopy $plat -}}
 {{- with .p.vendor -}}{{- $_ := set $plat "vendor" . -}}{{- end -}}
 {{- with .p.customer -}}{{- $_ := set $plat "customer" . -}}{{- end -}}
+{{- with .p.component -}}{{- $_ := set $plat "component" . -}}{{- end -}}
 {{- end -}}
 {{- $name := .name -}}
 {{- $p := .p -}}
@@ -135,10 +136,11 @@ None of them may set what the chart writes. Call with
 {{- /* As a product's: one site of a product for one customer, beside the
        sites of other customers in the same call. */ -}}
 {{- $plat := .plat -}}
-{{- if or $p.vendor $p.customer -}}
+{{- if or $p.vendor $p.customer $p.component -}}
 {{- $plat = deepCopy $plat -}}
 {{- with $p.vendor -}}{{- $_ := set $plat "vendor" . -}}{{- end -}}
 {{- with $p.customer -}}{{- $_ := set $plat "customer" . -}}{{- end -}}
+{{- with $p.component -}}{{- $_ := set $plat "component" . -}}{{- end -}}
 {{- end -}}
 {{- $docs := list -}}
 {{- range $ring := list "infra" "app" -}}
