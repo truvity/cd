@@ -1,0 +1,150 @@
+# expect: a lane customer is named <customer>-<lane>, and lane.name is "preview"
+# A lane customer whose name does not end in its lane.
+project:
+  name: shared-sso
+  components:
+    keycloak:
+      source:
+        chart: oci://registry.example.com/charts/keycloak
+        infraChart: oci://registry.example.com/charts/keycloak-infra
+        semver: ">=0.1.0 <2.0.0"
+      sources:
+        master:
+          chart: oci://preview.example.com/charts/keycloak
+          semver: ">=0.0.0-0"
+    portal:
+      source:
+        chart: oci://registry.example.com/charts/portal
+        semver: ">=0.1.0 <1.0.0"
+    demo:
+      source:
+        chart: oci://registry.example.com/charts/demo
+        semver: ">=0.1.0 <1.0.0"
+  customers:
+    - {name: generic, components: [keycloak, portal]}
+    - {name: globex, components: [keycloak, portal]}
+    - {name: initech, components: [keycloak, portal]}
+    - {name: umbrella, components: [keycloak, portal]}
+    - {name: hooli, components: [keycloak, portal]}
+    - {name: internal, components: [demo]}
+    - {name: globex-master, components: [keycloak], lane: {source: master, name: preview}}
+  clusters: [devel, stage, prod]
+  pipeline:
+    stageOrder: [devel, stage, prod]
+pins:
+  devel-globex-keycloak: "1.4.0"
+  devel-globex-portal: "0.3.0"
+  stage-globex-keycloak: "1.3.2"
+  devel-internal-demo: "0.2.0"
+  devel-globex-master-keycloak: "1.5.0-master.7"
+values:
+  devel-globex-keycloak:
+    app:
+      config:
+        realm: central
+clusters: [devel, stage, prod]
+platform:
+  devel:
+    clusterName: devel
+    events:
+      url: nats://broker.devel.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: '{product}'
+    argocdNamespace: cd-shared-sso
+    applicationPrefix: devel-
+    applicationSuffixes: {app: -app}
+    appProject: 'devel-{vendor}-sso-{customer}-{component}'
+    vendor: shared
+    applicationLabels:
+      example.com/customer: '{customer}'
+      example.com/component: '{component}'
+    chartRegistry: oci://registry.example.com/charts
+    postgres:
+      instances: 1
+      storage: 2Gi
+  stage:
+    clusterName: stage
+    events:
+      url: nats://broker.stage.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: '{product}'
+    argocdNamespace: cd-shared-sso
+    applicationPrefix: stage-
+    applicationSuffixes: {app: -app}
+    appProject: 'stage-{vendor}-sso-{customer}-{component}'
+    vendor: shared
+    applicationLabels:
+      example.com/customer: '{customer}'
+      example.com/component: '{component}'
+    chartRegistry: oci://registry.example.com/charts
+    postgres:
+      instances: 1
+      storage: 2Gi
+  prod:
+    clusterName: prod
+    events:
+      url: nats://broker.prod.example.com:4222
+      storage: file
+      replicas: 1
+      maxAge: 24h
+      account: '{product}'
+    argocdNamespace: cd-shared-sso
+    applicationPrefix: prod-
+    applicationSuffixes: {app: -app}
+    appProject: 'prod-{vendor}-sso-{customer}-{component}'
+    vendor: shared
+    applicationLabels:
+      example.com/customer: '{customer}'
+      example.com/component: '{component}'
+    chartRegistry: oci://registry.example.com/charts
+    postgres:
+      instances: 1
+      storage: 2Gi
+products:
+  devel-globex-keycloak:
+    interface: 15
+    hostname: sso-globex.devel.example.com
+    namespace: shared-sso-globex
+  devel-globex-portal:
+    interface: 15
+    hostname: portal-globex.devel.example.com
+    namespace: shared-sso-globex
+  stage-globex-keycloak:
+    interface: 15
+    hostname: sso-globex.stage.example.com
+    namespace: shared-sso-globex
+  devel-internal-demo:
+    interface: 15
+    hostname: sso-demo.devel.example.com
+    namespace: shared-sso-internal
+  devel-globex-master-keycloak:
+    interface: 15
+    hostname: sso-globex-master.devel.example.com
+    namespace: shared-sso-globex-master
+pipeline:
+  project:
+    name: '{vendor}-sso'
+    vendor: shared
+    warehouse: sso
+    customers: [generic, globex, initech, umbrella, hooli, internal, globex-master]
+    components: [keycloak, portal, demo]
+    installName: '{project}-{customer}-{component}'
+  argocd:
+    namespace: cd-shared-sso
+  git:
+    repoURL: https://git.example.com/acme/gitops.git
+  promotion:
+    pinFile: projects/sso/{customerBase}/{lanePath}{component}/{stage}/pin.yaml
+    commitMessage: 'chore(sso): promote {component} {version} to {stage} for {customer}'
+    prTitle: 'chore(sso): promote {component} to {stage} for {customer}'
+  graph:
+    applicationName: '{stage}-{app}-app'
+    stageName: '{stage}-{customer}-{component}'
+    upstreams:
+      stage: [devel]
+      prod: [stage]
+platformDigest: c9c490df5ddd6b23fc30ec66c5fcb3f9c2ac766a6d755063e7e477736d937979

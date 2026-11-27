@@ -100,14 +100,23 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- if ne (len $cc) (len (uniq $cc)) -}}{{- fail (printf "cd-pipeline: projects.%s.customers.%s.components lists a component twice" $name $c.name) -}}{{- end -}}
 {{- $laneSource := "" -}}
 {{- $laneStage := "" -}}
+{{- /* The customer a lane previews, and the lane's folder: {customerBase}
+       and {lanePath} of the pin file. A lane named <customer>-<lane> gives
+       <customer> and "<lane>/"; any other customer itself and "". */ -}}
+{{- $customerBase := $c.name -}}
+{{- $lanePath := "" -}}
 {{- with $c.lane -}}
 {{- $laneSource = required (printf "cd-pipeline: projects.%s.customers.%s.lane.source is required: the source whose Warehouses the lane takes" $name $c.name) .source -}}
+{{- $laneName := .name | default $laneSource -}}
+{{- if not (hasSuffix (printf "-%s" $laneName) $c.name) -}}{{- fail (printf "cd-pipeline: projects.%s.customers.%s: a lane customer is named <customer>-<lane>, and lane.name is %q (default lane.source)" $name $c.name $laneName) -}}{{- end -}}
+{{- $customerBase = trimSuffix (printf "-%s" $laneName) $c.name -}}
+{{- $lanePath = printf "%s/" $laneName -}}
 {{- $laneStage = .stage | default (first $order) -}}
 {{- if ne $laneStage (first $order) -}}{{- fail (printf "cd-pipeline: projects.%s.customers.%s.lane.stage: %q is not the first Stage of stageOrder (%s); a lane is a preview on the first Stage alone and never promotes onward" $name $c.name $laneStage (first $order)) -}}{{- end -}}
 {{- end -}}
 {{- range $cn := $cc | sortAlpha -}}
 {{- if not (hasKey $components $cn) -}}{{- fail (printf "cd-pipeline: projects.%s.customers.%s.components: %q is not a component of the project (components: %s)" $name $c.name $cn (keys $components | sortAlpha | join ", ")) -}}{{- end -}}
-{{- $chain := dict "name" $c.name "component" $cn -}}
+{{- $chain := dict "name" $c.name "component" $cn "customerBase" $customerBase "lanePath" $lanePath -}}
 {{- with $laneSource -}}
 {{- if not (hasKey ((index $components $cn).sources | default dict) .) -}}{{- fail (printf "cd-pipeline: projects.%s.customers.%s.lane.source: %q is not a source of component %s (components.%s.sources)" $name $c.name . $cn $cn) -}}{{- end -}}
 {{- $_ := set $chain "source" (printf "%s-%s" $cn .) -}}
@@ -242,7 +251,7 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- end -}}
 {{- $s := dict "name" $sname "applications" $apps -}}
 {{- if $c.name -}}{{- $_ := set $s "env" $st -}}{{- $_ := set $s "customer" $c.name -}}{{- end -}}
-{{- with $c.component -}}{{- $_ := set $s "component" . -}}{{- end -}}
+{{- with $c.component -}}{{- $_ := set $s "component" . -}}{{- $_ := set $s "customerBase" $c.customerBase -}}{{- $_ := set $s "lanePath" $c.lanePath -}}{{- end -}}
 {{- if and (hasKey $upstream $st) (not $c.stages) -}}
 {{- $u := index $upstream $st -}}
 {{- if $c.name -}}{{- $u = include "cd-pipeline.fill" (dict "s" $stageName "tokens" (merge (dict "stage" $u) $ntok)) -}}{{- end -}}

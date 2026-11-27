@@ -1104,13 +1104,19 @@
                           "maxLength": 30,
                           "description": "A source of each component the customer takes (`components.<component>.sources`): the lane's Stages take `<warehouse>-<component>-<source>`."
                         },
+                        "name": {
+                          "type": "string",
+                          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                          "maxLength": 30,
+                          "description": "The lane's name, default `source`: the customer is named `<customer>-<name>`, and the promotion's `{customerBase}` is `<customer>` and `{lanePath}` `<name>/` (for a pin file `<customer>/<lane>/<component>/`)."
+                        },
                         "stage": {
                           "type": "string",
                           "minLength": 1,
                           "description": "The lane's one Stage: the first Stage of `stageOrder` (the default), and no other."
                         }
                       },
-                      "description": "With `components`: this customer is a lane, a preview of its components from a further source. Its chain is one Stage, the first of `stageOrder`, which takes the components' Warehouses of `source`, promotes on its own and promotes nothing onward. Name the lane in the customer, `<customer>-<lane>`, so its Stages, Applications and pins are its own."
+                      "description": "With `components`: this customer is a lane, a preview of its components from a further source. Its chain is one Stage, the first of `stageOrder`, which takes the components' Warehouses of `source`, promotes on its own and promotes nothing onward. The customer must be named `<customer>-<lane>` (`lane.name`, default `source`), so its Stages, Applications and pin keys are its own; in the pin file, commit message and pull request title `{customerBase}` is `<customer>` and `{lanePath}` is `<lane>/` (`\"\"` and the customer itself for a customer that is not a lane), and the default pin file is `versions/{customerBase}/{lanePath}{component}/{stage}.yaml`."
                     }
                   }
                 }

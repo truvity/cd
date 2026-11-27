@@ -173,3 +173,68 @@ func setsComponents(values map[string]any) bool {
 	}
 	return false
 }
+
+// pinTargets is, for each Stage of a render, the pin file its promotion
+// writes and the keys it writes there.
+func pinTargets(t *testing.T, render string) map[string][2]string {
+	t.Helper()
+	out := map[string][2]string{}
+	for _, doc := range strings.Split(render, "\n---") {
+		var obj map[string]any
+		if err := yaml.Unmarshal([]byte(doc), &obj); err != nil || obj == nil || obj["kind"] != "Stage" {
+			continue
+		}
+		name, _ := parity.Map(obj["metadata"])["name"].(string)
+		for _, step := range parity.List(parity.Map(parity.Map(parity.Map(obj["spec"])["promotionTemplate"])["spec"])["steps"]) {
+			st := parity.Map(step)
+			if st["uses"] != "yaml-update" {
+				continue
+			}
+			cfg := parity.Map(st["config"])
+			key, _ := parity.Map(parity.List(cfg["updates"])[0])["key"].(string)
+			path, _ := cfg["path"].(string)
+			out[name] = [2]string{path, key}
+		}
+	}
+	return out
+}
+
+// TestLanePinsLiveBelowTheirCustomer proves the lane's folder: a lane
+// customer <customer>-<lane> writes its pin below its customer's folder,
+// <customer>/<lane>/<component>/, while its Stage and pin key keep the lane
+// customer's name. cd-pipeline's default pin file for components is
+// versions/{customerBase}/{lanePath}{component}/{stage}.yaml; cd-project's
+// case spells the platform's rule out with the same tokens.
+func TestLanePinsLiveBelowTheirCustomer(t *testing.T) {
+	helm := parity.RequireHelm(t)
+	for _, tc := range []struct {
+		chart string
+		want  map[string][2]string
+	}{
+		{"cd-pipeline", map[string][2]string{
+			"devel-globex-master-keycloak": {"./repo/versions/globex/master/keycloak/devel.yaml", "pins.devel-globex-master-keycloak"},
+			"devel-globex-keycloak":        {"./repo/versions/globex/keycloak/devel.yaml", "pins.devel-globex-keycloak"},
+			"prod-internal-demo":           {"./repo/versions/internal/demo/prod.yaml", "pins.prod-internal-demo"},
+		}},
+		{"cd-project", map[string][2]string{
+			"devel-globex-master-keycloak": {"./repo/projects/sso/globex/master/keycloak/devel/pin.yaml", "pins.devel-globex-master-keycloak"},
+			"devel-globex-keycloak":        {"./repo/projects/sso/globex/keycloak/devel/pin.yaml", "pins.devel-globex-keycloak"},
+			"prod-internal-demo":           {"./repo/projects/sso/internal/demo/prod/pin.yaml", "pins.prod-internal-demo"},
+		}},
+	} {
+		t.Run(tc.chart, func(t *testing.T) {
+			values := companyValues(t, filepath.Join("..", "cases", tc.chart, "components", "values.yaml"))
+			got := pinTargets(t, string(parity.Template(t, helm, tc.chart, filepath.Join("..", "..", "charts", tc.chart), values)))
+			for stage, want := range tc.want {
+				if got[stage] != want {
+					t.Errorf("Stage %s writes %v, want %v", stage, got[stage], want)
+				}
+			}
+			for stage, target := range got {
+				if strings.Contains(target[0], "globex-master") {
+					t.Errorf("Stage %s writes %s: a lane's folder is below its customer's", stage, target[0])
+				}
+			}
+		})
+	}
+}

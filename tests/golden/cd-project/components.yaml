@@ -3289,7 +3289,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/sso/globex-master/keycloak/devel/pin.yaml
+          path: ./repo/projects/sso/globex/master/keycloak/devel/pin.yaml
           updates:
           - key: pins.devel-globex-master-keycloak
             value: ${{ chartFrom(vars.chartRepo).Version }}
