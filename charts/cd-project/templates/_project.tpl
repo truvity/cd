@@ -634,7 +634,9 @@ Call with the chart's root context.
       {{- if ne $laneStage (first $p.pipeline.stageOrder) -}}
         {{- fail (printf "cd-project: project.customers.%s.lane.stage: %q is not the first Stage of project.pipeline.stageOrder (%s); a lane is a preview on the first cluster alone and never promotes onward" $c.name $laneStage (first $p.pipeline.stageOrder)) -}}
       {{- end -}}
-      {{- $_ := set $cust "lane" (dict "source" .source "stage" $laneStage) -}}
+      {{- $lane := dict "source" .source "stage" $laneStage -}}
+      {{- with .name -}}{{- $_ := set $lane "name" . -}}{{- end -}}
+      {{- $_ := set $cust "lane" $lane -}}
     {{- end -}}
     {{- $customers = append $customers $cust -}}
     {{- range $cn := $cc | sortAlpha -}}

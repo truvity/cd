@@ -3,7 +3,6 @@
 git:
   repoURL: https://git.example.com/acme/environments.git
 promotion:
-  pinFile: "projects/{slug}/{customer}/{component}/{stage}/pin.yaml"
   pinKey: "pins.{stage}-{customer}-{component}"
   commitMessage: "chore({slug}): promote {component} {version} to {stage} for {customer}"
   prTitle: "chore({slug}): promote {component} to {stage} for {customer}"
@@ -48,7 +47,7 @@ projects:
       - {name: umbrella, components: [keycloak, portal]}
       - {name: hooli, components: [keycloak, portal]}
       - {name: internal, components: [demo]}
-      - {name: globex-master, components: [keycloak], lane: {source: alpha}}
+      - {name: globex-master, components: [keycloak], lane: {source: alpha, name: master}}
     access:
       approvers: true
       admins: true

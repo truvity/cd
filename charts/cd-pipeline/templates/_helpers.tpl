@@ -30,8 +30,10 @@ gives it: a token left as written would become part of a name or of a pin key.
 Call with (dict "p" <project map> "where" <key path for the message> "s" <template>).
 */}}
 {{- define "cd-pipeline.checkTokens" -}}
-{{- if and (contains "{component}" (toString $.s)) (not (or $.p.components $.p.componentChains)) -}}
-{{- fail (printf "cd-pipeline: projects.%s: %s names {component} but the project has no components" $.p.name $.where) -}}
+{{- range $k := list "component" "customerBase" "lanePath" -}}
+{{- if and (contains (printf "{%s}" $k) (toString $.s)) (not (or $.p.components $.p.componentChains)) -}}
+{{- fail (printf "cd-pipeline: projects.%s: %s names {%s} but the project has no components" $.p.name $.where $k) -}}
+{{- end -}}
 {{- end -}}
 {{- range $k := list "vendor" "customer" -}}
 {{- if and (contains (printf "{%s}" $k) (toString $.s)) (not (index $.p $k)) (not (and (eq $k "customer") (or $.p.customers $.p.customerWarehousesOnly))) -}}

@@ -10,7 +10,11 @@
 # under the AppProject of the same name. globex-master is a lane: keycloak on
 # devel alone, from the master chart, its one Stage
 # devel-globex-master-keycloak on sso-keycloak-master, promoting on its own
-# and nothing onward. Installs with no pin are dormant.
+# and nothing onward. Installs with no pin are dormant. The pin file is
+# projects/sso/{customerBase}/{lanePath}{component}/{stage}/pin.yaml, so the
+# lane's pins live below its customer,
+# projects/sso/globex/master/keycloak/devel/pin.yaml, while its Stage, install
+# and Applications keep globex-master.
 
 # Company files.
 project:
@@ -153,7 +157,7 @@ pipeline:
   git:
     repoURL: https://git.example.com/acme/gitops.git
   promotion:
-    pinFile: projects/sso/{customer}/{component}/{stage}/pin.yaml
+    pinFile: projects/sso/{customerBase}/{lanePath}{component}/{stage}/pin.yaml
     commitMessage: 'chore(sso): promote {component} {version} to {stage} for {customer}'
     prTitle: 'chore(sso): promote {component} to {stage} for {customer}'
   graph:
@@ -162,4 +166,4 @@ pipeline:
     upstreams:
       stage: [devel]
       prod: [stage]
-platformDigest: 68371d86f93a704d73c38e38c7ae1f4cc225ebbd28cb3e196f0f4e8f9a8e9f00
+platformDigest: c9c490df5ddd6b23fc30ec66c5fcb3f9c2ac766a6d755063e7e477736d937979

@@ -1711,7 +1711,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/generic/keycloak/devel/pin.yaml
+          path: ./repo/versions/generic/keycloak/devel.yaml
           updates:
           - key: pins.devel-generic-keycloak
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -1781,7 +1781,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/generic/keycloak/stage/pin.yaml
+          path: ./repo/versions/generic/keycloak/stage.yaml
           updates:
           - key: pins.stage-generic-keycloak
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -1874,7 +1874,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/generic/keycloak/prod/pin.yaml
+          path: ./repo/versions/generic/keycloak/prod.yaml
           updates:
           - key: pins.prod-generic-keycloak
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -1955,7 +1955,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/generic/portal/devel/pin.yaml
+          path: ./repo/versions/generic/portal/devel.yaml
           updates:
           - key: pins.devel-generic-portal
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -2025,7 +2025,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/generic/portal/stage/pin.yaml
+          path: ./repo/versions/generic/portal/stage.yaml
           updates:
           - key: pins.stage-generic-portal
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -2118,7 +2118,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/generic/portal/prod/pin.yaml
+          path: ./repo/versions/generic/portal/prod.yaml
           updates:
           - key: pins.prod-generic-portal
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -2199,7 +2199,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/globex/keycloak/devel/pin.yaml
+          path: ./repo/versions/globex/keycloak/devel.yaml
           updates:
           - key: pins.devel-globex-keycloak
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -2269,7 +2269,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/globex/keycloak/stage/pin.yaml
+          path: ./repo/versions/globex/keycloak/stage.yaml
           updates:
           - key: pins.stage-globex-keycloak
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -2362,7 +2362,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/globex/keycloak/prod/pin.yaml
+          path: ./repo/versions/globex/keycloak/prod.yaml
           updates:
           - key: pins.prod-globex-keycloak
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -2443,7 +2443,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/globex/portal/devel/pin.yaml
+          path: ./repo/versions/globex/portal/devel.yaml
           updates:
           - key: pins.devel-globex-portal
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -2513,7 +2513,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/globex/portal/stage/pin.yaml
+          path: ./repo/versions/globex/portal/stage.yaml
           updates:
           - key: pins.stage-globex-portal
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -2606,7 +2606,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/globex/portal/prod/pin.yaml
+          path: ./repo/versions/globex/portal/prod.yaml
           updates:
           - key: pins.prod-globex-portal
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -2687,7 +2687,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/initech/keycloak/devel/pin.yaml
+          path: ./repo/versions/initech/keycloak/devel.yaml
           updates:
           - key: pins.devel-initech-keycloak
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -2757,7 +2757,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/initech/keycloak/stage/pin.yaml
+          path: ./repo/versions/initech/keycloak/stage.yaml
           updates:
           - key: pins.stage-initech-keycloak
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -2850,7 +2850,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/initech/keycloak/prod/pin.yaml
+          path: ./repo/versions/initech/keycloak/prod.yaml
           updates:
           - key: pins.prod-initech-keycloak
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -2931,7 +2931,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/initech/portal/devel/pin.yaml
+          path: ./repo/versions/initech/portal/devel.yaml
           updates:
           - key: pins.devel-initech-portal
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -3001,7 +3001,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/initech/portal/stage/pin.yaml
+          path: ./repo/versions/initech/portal/stage.yaml
           updates:
           - key: pins.stage-initech-portal
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -3094,7 +3094,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/initech/portal/prod/pin.yaml
+          path: ./repo/versions/initech/portal/prod.yaml
           updates:
           - key: pins.prod-initech-portal
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -3175,7 +3175,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/umbrella/keycloak/devel/pin.yaml
+          path: ./repo/versions/umbrella/keycloak/devel.yaml
           updates:
           - key: pins.devel-umbrella-keycloak
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -3245,7 +3245,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/umbrella/keycloak/stage/pin.yaml
+          path: ./repo/versions/umbrella/keycloak/stage.yaml
           updates:
           - key: pins.stage-umbrella-keycloak
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -3338,7 +3338,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/umbrella/keycloak/prod/pin.yaml
+          path: ./repo/versions/umbrella/keycloak/prod.yaml
           updates:
           - key: pins.prod-umbrella-keycloak
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -3419,7 +3419,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/umbrella/portal/devel/pin.yaml
+          path: ./repo/versions/umbrella/portal/devel.yaml
           updates:
           - key: pins.devel-umbrella-portal
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -3489,7 +3489,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/umbrella/portal/stage/pin.yaml
+          path: ./repo/versions/umbrella/portal/stage.yaml
           updates:
           - key: pins.stage-umbrella-portal
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -3582,7 +3582,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/umbrella/portal/prod/pin.yaml
+          path: ./repo/versions/umbrella/portal/prod.yaml
           updates:
           - key: pins.prod-umbrella-portal
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -3663,7 +3663,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/hooli/keycloak/devel/pin.yaml
+          path: ./repo/versions/hooli/keycloak/devel.yaml
           updates:
           - key: pins.devel-hooli-keycloak
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -3733,7 +3733,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/hooli/keycloak/stage/pin.yaml
+          path: ./repo/versions/hooli/keycloak/stage.yaml
           updates:
           - key: pins.stage-hooli-keycloak
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -3826,7 +3826,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/hooli/keycloak/prod/pin.yaml
+          path: ./repo/versions/hooli/keycloak/prod.yaml
           updates:
           - key: pins.prod-hooli-keycloak
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -3907,7 +3907,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/hooli/portal/devel/pin.yaml
+          path: ./repo/versions/hooli/portal/devel.yaml
           updates:
           - key: pins.devel-hooli-portal
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -3977,7 +3977,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/hooli/portal/stage/pin.yaml
+          path: ./repo/versions/hooli/portal/stage.yaml
           updates:
           - key: pins.stage-hooli-portal
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -4070,7 +4070,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/hooli/portal/prod/pin.yaml
+          path: ./repo/versions/hooli/portal/prod.yaml
           updates:
           - key: pins.prod-hooli-portal
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -4151,7 +4151,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/internal/demo/devel/pin.yaml
+          path: ./repo/versions/internal/demo/devel.yaml
           updates:
           - key: pins.devel-internal-demo
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -4221,7 +4221,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/internal/demo/stage/pin.yaml
+          path: ./repo/versions/internal/demo/stage.yaml
           updates:
           - key: pins.stage-internal-demo
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -4314,7 +4314,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/internal/demo/prod/pin.yaml
+          path: ./repo/versions/internal/demo/prod.yaml
           updates:
           - key: pins.prod-internal-demo
             value: ${{ chartFrom(vars.chartRepo).Version }}
@@ -4395,7 +4395,7 @@ spec:
           timeout: 5m0s
         uses: git-clone
       - config:
-          path: ./repo/projects/shared-sso/globex-master/keycloak/devel/pin.yaml
+          path: ./repo/versions/globex/master/keycloak/devel.yaml
           updates:
           - key: pins.devel-globex-master-keycloak
             value: ${{ chartFrom(vars.chartRepo).Version }}

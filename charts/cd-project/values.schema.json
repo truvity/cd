@@ -308,6 +308,12 @@
                         "maxLength": 30,
                         "description": "A source of each component the customer takes (project.components.<component>.sources): the lane's Stages take the Warehouse <warehouse>-<component>-<source>, and its installs every ring from that source's chart."
                       },
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                        "maxLength": 30,
+                        "description": "The lane's name, default source: the customer is named <customer>-<name>; in pipeline.promotion.pinFile, commitMessage and prTitle {customerBase} is <customer> and {lanePath} is <name>/ (for every other customer, the customer itself and \"\"), so a pin file projects/<product>/{customerBase}/{lanePath}{component}/{stage}/pin.yaml puts the lane in a folder below its customer."
+                      },
                       "stage": {
                         "type": "string",
                         "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",

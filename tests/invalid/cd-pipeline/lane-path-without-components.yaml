@@ -1,0 +1,32 @@
+# expect: promotion.pinFile names {lanePath} but the project has no components
+# A {lanePath} token in a project with no components.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+promotion:
+  pinKey: "pins.{stage}-{customer}"
+  commitMessage: "chore: {version}"
+  prTitle: "chore: promote"
+  pinFile: projects/{customer}/{lanePath}{stage}.yaml
+graph:
+  upstreams:
+    stage: [devel]
+    prod: [stage]
+  applicationName: "{stage}-{app}"
+  approvers:
+    claims:
+      groups: ["{stage}:{slug}:{customer}:approver"]
+  admins:
+    claims:
+      groups: ['platform:admin']
+projects:
+  - name: shared-sso
+    vendor: shared
+    warehouse:
+      name: sso
+    applications: ["{slug}-{customer}-{component}"]
+    customers:
+      - globex
+    stageOrder: [devel, stage, prod]
+    chart:
+      repoURL: oci://registry.example.com/charts/sso
+      semver: '>=1.0.0'

@@ -7,11 +7,12 @@
 # <stage>-<customer>-<component>. globex-master is a lane: one Stage,
 # devel-globex-master-keycloak, on sso-keycloak-master, promoting on its own
 # and nothing onward. Approvers are for each customer's and component's
-# Stages.
+# Stages. Pins are written to the chart's default pin file for components,
+# versions/<customer>/[<lane>/]<component>/<stage>.yaml: the lane's to
+# versions/globex/master/keycloak/devel.yaml.
 git:
   repoURL: https://git.example.com/acme/environments.git
 promotion:
-  pinFile: "projects/{slug}/{customer}/{component}/{stage}/pin.yaml"
   pinKey: "pins.{stage}-{customer}-{component}"
   commitMessage: "chore({slug}): promote {component} {version} to {stage} for {customer}"
   prTitle: "chore({slug}): promote {component} to {stage} for {customer}"

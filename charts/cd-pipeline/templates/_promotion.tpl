@@ -19,10 +19,19 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- $retry := dict "errorThreshold" $pr.retry.errorThreshold "timeout" $pr.retry.timeout -}}
 {{- /* A Stage of a customer's chain fills `{stage}` with its Stage of
        stageOrder (the cluster), `{customer}` with its customer and, with
-       components, `{component}` with its component. */ -}}
+       components, `{component}` with its component, `{customerBase}` with
+       the customer a lane previews (else the customer) and `{lanePath}` with
+       "<lane>/" for a lane (else ""). */ -}}
 {{- $own := dict "stage" ($s.env | default $s.name) "pinKey" ($p.pinKey | default "") -}}
 {{- with $s.customer -}}{{- $_ := set $own "customer" . -}}{{- end -}}
-{{- with $s.component -}}{{- $_ := set $own "component" . -}}{{- end -}}
+{{- with $s.component -}}
+{{- $_ := set $own "component" . -}}
+{{- $_ := set $own "customerBase" $s.customerBase -}}
+{{- $_ := set $own "lanePath" $s.lanePath -}}
+{{- /* The chart's default pin file, per customer, lane and component:
+       versions/<customer>/[<lane>/]<component>/<stage>.yaml. */ -}}
+{{- if eq $pr.pinFile "versions/{stage}.yaml" -}}{{- $pr = merge (dict "pinFile" "versions/{customerBase}/{lanePath}{component}/{stage}.yaml") $pr -}}{{- end -}}
+{{- end -}}
 {{- $tokens := merge $own (include "cd-pipeline.projectTokens" $p | fromYaml) -}}
 {{- range $k := list "pinFile" "pinKey" "commitMessage" "prTitle" -}}
 {{- include "cd-pipeline.checkTokens" (dict "p" $p "where" (printf "promotion.%s" $k) "s" (index $pr $k)) -}}
