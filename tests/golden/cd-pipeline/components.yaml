@@ -1,0 +1,4504 @@
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["stage:shared-sso:generic:approver"]}'
+  name: approver-stage-generic-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["prod:shared-sso:generic:approver"]}'
+  name: approver-prod-generic-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["stage:shared-sso:generic:approver"]}'
+  name: approver-stage-generic-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["prod:shared-sso:generic:approver"]}'
+  name: approver-prod-generic-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["stage:shared-sso:globex:approver"]}'
+  name: approver-stage-globex-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["prod:shared-sso:globex:approver"]}'
+  name: approver-prod-globex-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["stage:shared-sso:globex:approver"]}'
+  name: approver-stage-globex-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["prod:shared-sso:globex:approver"]}'
+  name: approver-prod-globex-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["stage:shared-sso:initech:approver"]}'
+  name: approver-stage-initech-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["prod:shared-sso:initech:approver"]}'
+  name: approver-prod-initech-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["stage:shared-sso:initech:approver"]}'
+  name: approver-stage-initech-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["prod:shared-sso:initech:approver"]}'
+  name: approver-prod-initech-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["stage:shared-sso:umbrella:approver"]}'
+  name: approver-stage-umbrella-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["prod:shared-sso:umbrella:approver"]}'
+  name: approver-prod-umbrella-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["stage:shared-sso:umbrella:approver"]}'
+  name: approver-stage-umbrella-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["prod:shared-sso:umbrella:approver"]}'
+  name: approver-prod-umbrella-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["stage:shared-sso:hooli:approver"]}'
+  name: approver-stage-hooli-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["prod:shared-sso:hooli:approver"]}'
+  name: approver-prod-hooli-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["stage:shared-sso:hooli:approver"]}'
+  name: approver-stage-hooli-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["prod:shared-sso:hooli:approver"]}'
+  name: approver-prod-hooli-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["stage:shared-sso:internal:approver"]}'
+  name: approver-stage-internal-demo
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["prod:shared-sso:internal:approver"]}'
+  name: approver-prod-internal-demo
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    rbac.kargo.akuity.io/claims: '{"groups":["platform:admin"]}'
+  name: admin
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-generic-keycloak
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-generic-keycloak
+  - stage-generic-keycloak
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-generic-keycloak
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-generic-keycloak
+  - prod-generic-keycloak
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights/status
+  verbs:
+  - patch
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-generic-portal
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-generic-portal
+  - stage-generic-portal
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-generic-portal
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-generic-portal
+  - prod-generic-portal
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights/status
+  verbs:
+  - patch
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-globex-keycloak
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-globex-keycloak
+  - stage-globex-keycloak
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-globex-keycloak
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-globex-keycloak
+  - prod-globex-keycloak
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights/status
+  verbs:
+  - patch
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-globex-portal
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-globex-portal
+  - stage-globex-portal
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-globex-portal
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-globex-portal
+  - prod-globex-portal
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights/status
+  verbs:
+  - patch
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-initech-keycloak
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-initech-keycloak
+  - stage-initech-keycloak
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-initech-keycloak
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-initech-keycloak
+  - prod-initech-keycloak
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights/status
+  verbs:
+  - patch
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-initech-portal
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-initech-portal
+  - stage-initech-portal
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-initech-portal
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-initech-portal
+  - prod-initech-portal
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights/status
+  verbs:
+  - patch
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-umbrella-keycloak
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-umbrella-keycloak
+  - stage-umbrella-keycloak
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-umbrella-keycloak
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-umbrella-keycloak
+  - prod-umbrella-keycloak
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights/status
+  verbs:
+  - patch
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-umbrella-portal
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-umbrella-portal
+  - stage-umbrella-portal
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-umbrella-portal
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-umbrella-portal
+  - prod-umbrella-portal
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights/status
+  verbs:
+  - patch
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-hooli-keycloak
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-hooli-keycloak
+  - stage-hooli-keycloak
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-hooli-keycloak
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-hooli-keycloak
+  - prod-hooli-keycloak
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights/status
+  verbs:
+  - patch
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-hooli-portal
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-hooli-portal
+  - stage-hooli-portal
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-hooli-portal
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-hooli-portal
+  - prod-hooli-portal
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights/status
+  verbs:
+  - patch
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-internal-demo
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-internal-demo
+  - stage-internal-demo
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-internal-demo
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-internal-demo
+  - prod-internal-demo
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights/status
+  verbs:
+  - patch
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: admin
+  namespace: shared-sso
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  - stages
+  - warehouses
+  - projectconfigs
+  - promotions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resourceNames:
+  - devel-generic-keycloak
+  - stage-generic-keycloak
+  - prod-generic-keycloak
+  - devel-generic-portal
+  - stage-generic-portal
+  - prod-generic-portal
+  - devel-globex-keycloak
+  - stage-globex-keycloak
+  - prod-globex-keycloak
+  - devel-globex-portal
+  - stage-globex-portal
+  - prod-globex-portal
+  - devel-initech-keycloak
+  - stage-initech-keycloak
+  - prod-initech-keycloak
+  - devel-initech-portal
+  - stage-initech-portal
+  - prod-initech-portal
+  - devel-umbrella-keycloak
+  - stage-umbrella-keycloak
+  - prod-umbrella-keycloak
+  - devel-umbrella-portal
+  - stage-umbrella-portal
+  - prod-umbrella-portal
+  - devel-hooli-keycloak
+  - stage-hooli-keycloak
+  - prod-hooli-keycloak
+  - devel-hooli-portal
+  - stage-hooli-portal
+  - prod-hooli-portal
+  - devel-internal-demo
+  - stage-internal-demo
+  - prod-internal-demo
+  - devel-globex-master-keycloak
+  resources:
+  - stages
+  verbs:
+  - promote
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights/status
+  verbs:
+  - patch
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-generic-keycloak
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-stage-generic-keycloak
+subjects:
+- kind: ServiceAccount
+  name: approver-stage-generic-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-generic-keycloak
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-prod-generic-keycloak
+subjects:
+- kind: ServiceAccount
+  name: approver-prod-generic-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-generic-portal
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-stage-generic-portal
+subjects:
+- kind: ServiceAccount
+  name: approver-stage-generic-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-generic-portal
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-prod-generic-portal
+subjects:
+- kind: ServiceAccount
+  name: approver-prod-generic-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-globex-keycloak
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-stage-globex-keycloak
+subjects:
+- kind: ServiceAccount
+  name: approver-stage-globex-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-globex-keycloak
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-prod-globex-keycloak
+subjects:
+- kind: ServiceAccount
+  name: approver-prod-globex-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-globex-portal
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-stage-globex-portal
+subjects:
+- kind: ServiceAccount
+  name: approver-stage-globex-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-globex-portal
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-prod-globex-portal
+subjects:
+- kind: ServiceAccount
+  name: approver-prod-globex-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-initech-keycloak
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-stage-initech-keycloak
+subjects:
+- kind: ServiceAccount
+  name: approver-stage-initech-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-initech-keycloak
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-prod-initech-keycloak
+subjects:
+- kind: ServiceAccount
+  name: approver-prod-initech-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-initech-portal
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-stage-initech-portal
+subjects:
+- kind: ServiceAccount
+  name: approver-stage-initech-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-initech-portal
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-prod-initech-portal
+subjects:
+- kind: ServiceAccount
+  name: approver-prod-initech-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-umbrella-keycloak
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-stage-umbrella-keycloak
+subjects:
+- kind: ServiceAccount
+  name: approver-stage-umbrella-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-umbrella-keycloak
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-prod-umbrella-keycloak
+subjects:
+- kind: ServiceAccount
+  name: approver-prod-umbrella-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-umbrella-portal
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-stage-umbrella-portal
+subjects:
+- kind: ServiceAccount
+  name: approver-stage-umbrella-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-umbrella-portal
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-prod-umbrella-portal
+subjects:
+- kind: ServiceAccount
+  name: approver-prod-umbrella-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-hooli-keycloak
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-stage-hooli-keycloak
+subjects:
+- kind: ServiceAccount
+  name: approver-stage-hooli-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-hooli-keycloak
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-prod-hooli-keycloak
+subjects:
+- kind: ServiceAccount
+  name: approver-prod-hooli-keycloak
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-hooli-portal
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-stage-hooli-portal
+subjects:
+- kind: ServiceAccount
+  name: approver-stage-hooli-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-hooli-portal
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-prod-hooli-portal
+subjects:
+- kind: ServiceAccount
+  name: approver-prod-hooli-portal
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-stage-internal-demo
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-stage-internal-demo
+subjects:
+- kind: ServiceAccount
+  name: approver-stage-internal-demo
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: approver-prod-internal-demo
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approver-prod-internal-demo
+subjects:
+- kind: ServiceAccount
+  name: approver-prod-internal-demo
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: admin
+  namespace: shared-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: admin
+subjects:
+- kind: ServiceAccount
+  name: admin
+  namespace: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  name: shared-sso
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  name: shared-sso
+  namespace: shared-sso
+spec:
+  promotionPolicies:
+  - autoPromotionEnabled: true
+    stage: devel-generic-keycloak
+  - autoPromotionEnabled: true
+    stage: devel-generic-portal
+  - autoPromotionEnabled: true
+    stage: devel-globex-keycloak
+  - autoPromotionEnabled: true
+    stage: devel-globex-portal
+  - autoPromotionEnabled: true
+    stage: devel-initech-keycloak
+  - autoPromotionEnabled: true
+    stage: devel-initech-portal
+  - autoPromotionEnabled: true
+    stage: devel-umbrella-keycloak
+  - autoPromotionEnabled: true
+    stage: devel-umbrella-portal
+  - autoPromotionEnabled: true
+    stage: devel-hooli-keycloak
+  - autoPromotionEnabled: true
+    stage: devel-hooli-portal
+  - autoPromotionEnabled: true
+    stage: devel-internal-demo
+  - autoPromotionEnabled: true
+    stage: devel-globex-master-keycloak
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: devel-generic-keycloak
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/generic/keycloak/devel/pin.yaml
+          updates:
+          - key: pins.devel-generic-keycloak
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote keycloak ${{ chartFrom(vars.chartRepo).Version
+            }} to devel for generic'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/keycloak
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-keycloak
+    sources:
+      direct: true
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: stage-generic-keycloak
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: devel-shared-sso-generic-keycloak
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/generic/keycloak/stage/pin.yaml
+          updates:
+          - key: pins.stage-generic-keycloak
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote keycloak ${{ chartFrom(vars.chartRepo).Version
+            }} to stage for generic'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote keycloak to stage for generic'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/keycloak
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-keycloak
+    sources:
+      stages:
+      - devel-generic-keycloak
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: prod-generic-keycloak
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: stage-shared-sso-generic-keycloak
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/generic/keycloak/prod/pin.yaml
+          updates:
+          - key: pins.prod-generic-keycloak
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote keycloak ${{ chartFrom(vars.chartRepo).Version
+            }} to prod for generic'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote keycloak to prod for generic'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/keycloak
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-keycloak
+    sources:
+      stages:
+      - stage-generic-keycloak
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: devel-generic-portal
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/generic/portal/devel/pin.yaml
+          updates:
+          - key: pins.devel-generic-portal
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote portal ${{ chartFrom(vars.chartRepo).Version
+            }} to devel for generic'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/portal
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-portal
+    sources:
+      direct: true
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: stage-generic-portal
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: devel-shared-sso-generic-portal
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/generic/portal/stage/pin.yaml
+          updates:
+          - key: pins.stage-generic-portal
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote portal ${{ chartFrom(vars.chartRepo).Version
+            }} to stage for generic'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote portal to stage for generic'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/portal
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-portal
+    sources:
+      stages:
+      - devel-generic-portal
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: prod-generic-portal
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: stage-shared-sso-generic-portal
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/generic/portal/prod/pin.yaml
+          updates:
+          - key: pins.prod-generic-portal
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote portal ${{ chartFrom(vars.chartRepo).Version
+            }} to prod for generic'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote portal to prod for generic'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/portal
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-portal
+    sources:
+      stages:
+      - stage-generic-portal
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: devel-globex-keycloak
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/globex/keycloak/devel/pin.yaml
+          updates:
+          - key: pins.devel-globex-keycloak
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote keycloak ${{ chartFrom(vars.chartRepo).Version
+            }} to devel for globex'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/keycloak
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-keycloak
+    sources:
+      direct: true
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: stage-globex-keycloak
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: devel-shared-sso-globex-keycloak
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/globex/keycloak/stage/pin.yaml
+          updates:
+          - key: pins.stage-globex-keycloak
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote keycloak ${{ chartFrom(vars.chartRepo).Version
+            }} to stage for globex'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote keycloak to stage for globex'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/keycloak
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-keycloak
+    sources:
+      stages:
+      - devel-globex-keycloak
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: prod-globex-keycloak
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: stage-shared-sso-globex-keycloak
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/globex/keycloak/prod/pin.yaml
+          updates:
+          - key: pins.prod-globex-keycloak
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote keycloak ${{ chartFrom(vars.chartRepo).Version
+            }} to prod for globex'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote keycloak to prod for globex'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/keycloak
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-keycloak
+    sources:
+      stages:
+      - stage-globex-keycloak
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: devel-globex-portal
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/globex/portal/devel/pin.yaml
+          updates:
+          - key: pins.devel-globex-portal
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote portal ${{ chartFrom(vars.chartRepo).Version
+            }} to devel for globex'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/portal
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-portal
+    sources:
+      direct: true
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: stage-globex-portal
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: devel-shared-sso-globex-portal
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/globex/portal/stage/pin.yaml
+          updates:
+          - key: pins.stage-globex-portal
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote portal ${{ chartFrom(vars.chartRepo).Version
+            }} to stage for globex'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote portal to stage for globex'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/portal
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-portal
+    sources:
+      stages:
+      - devel-globex-portal
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: prod-globex-portal
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: stage-shared-sso-globex-portal
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/globex/portal/prod/pin.yaml
+          updates:
+          - key: pins.prod-globex-portal
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote portal ${{ chartFrom(vars.chartRepo).Version
+            }} to prod for globex'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote portal to prod for globex'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/portal
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-portal
+    sources:
+      stages:
+      - stage-globex-portal
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: devel-initech-keycloak
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/initech/keycloak/devel/pin.yaml
+          updates:
+          - key: pins.devel-initech-keycloak
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote keycloak ${{ chartFrom(vars.chartRepo).Version
+            }} to devel for initech'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/keycloak
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-keycloak
+    sources:
+      direct: true
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: stage-initech-keycloak
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: devel-shared-sso-initech-keycloak
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/initech/keycloak/stage/pin.yaml
+          updates:
+          - key: pins.stage-initech-keycloak
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote keycloak ${{ chartFrom(vars.chartRepo).Version
+            }} to stage for initech'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote keycloak to stage for initech'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/keycloak
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-keycloak
+    sources:
+      stages:
+      - devel-initech-keycloak
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: prod-initech-keycloak
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: stage-shared-sso-initech-keycloak
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/initech/keycloak/prod/pin.yaml
+          updates:
+          - key: pins.prod-initech-keycloak
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote keycloak ${{ chartFrom(vars.chartRepo).Version
+            }} to prod for initech'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote keycloak to prod for initech'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/keycloak
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-keycloak
+    sources:
+      stages:
+      - stage-initech-keycloak
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: devel-initech-portal
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/initech/portal/devel/pin.yaml
+          updates:
+          - key: pins.devel-initech-portal
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote portal ${{ chartFrom(vars.chartRepo).Version
+            }} to devel for initech'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/portal
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-portal
+    sources:
+      direct: true
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: stage-initech-portal
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: devel-shared-sso-initech-portal
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/initech/portal/stage/pin.yaml
+          updates:
+          - key: pins.stage-initech-portal
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote portal ${{ chartFrom(vars.chartRepo).Version
+            }} to stage for initech'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote portal to stage for initech'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/portal
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-portal
+    sources:
+      stages:
+      - devel-initech-portal
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: prod-initech-portal
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: stage-shared-sso-initech-portal
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/initech/portal/prod/pin.yaml
+          updates:
+          - key: pins.prod-initech-portal
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote portal ${{ chartFrom(vars.chartRepo).Version
+            }} to prod for initech'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote portal to prod for initech'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/portal
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-portal
+    sources:
+      stages:
+      - stage-initech-portal
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: devel-umbrella-keycloak
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/umbrella/keycloak/devel/pin.yaml
+          updates:
+          - key: pins.devel-umbrella-keycloak
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote keycloak ${{ chartFrom(vars.chartRepo).Version
+            }} to devel for umbrella'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/keycloak
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-keycloak
+    sources:
+      direct: true
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: stage-umbrella-keycloak
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: devel-shared-sso-umbrella-keycloak
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/umbrella/keycloak/stage/pin.yaml
+          updates:
+          - key: pins.stage-umbrella-keycloak
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote keycloak ${{ chartFrom(vars.chartRepo).Version
+            }} to stage for umbrella'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote keycloak to stage for umbrella'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/keycloak
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-keycloak
+    sources:
+      stages:
+      - devel-umbrella-keycloak
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: prod-umbrella-keycloak
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: stage-shared-sso-umbrella-keycloak
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/umbrella/keycloak/prod/pin.yaml
+          updates:
+          - key: pins.prod-umbrella-keycloak
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote keycloak ${{ chartFrom(vars.chartRepo).Version
+            }} to prod for umbrella'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote keycloak to prod for umbrella'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/keycloak
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-keycloak
+    sources:
+      stages:
+      - stage-umbrella-keycloak
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: devel-umbrella-portal
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/umbrella/portal/devel/pin.yaml
+          updates:
+          - key: pins.devel-umbrella-portal
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote portal ${{ chartFrom(vars.chartRepo).Version
+            }} to devel for umbrella'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/portal
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-portal
+    sources:
+      direct: true
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: stage-umbrella-portal
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: devel-shared-sso-umbrella-portal
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/umbrella/portal/stage/pin.yaml
+          updates:
+          - key: pins.stage-umbrella-portal
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote portal ${{ chartFrom(vars.chartRepo).Version
+            }} to stage for umbrella'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote portal to stage for umbrella'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/portal
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-portal
+    sources:
+      stages:
+      - devel-umbrella-portal
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: prod-umbrella-portal
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: stage-shared-sso-umbrella-portal
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/umbrella/portal/prod/pin.yaml
+          updates:
+          - key: pins.prod-umbrella-portal
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote portal ${{ chartFrom(vars.chartRepo).Version
+            }} to prod for umbrella'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote portal to prod for umbrella'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/portal
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-portal
+    sources:
+      stages:
+      - stage-umbrella-portal
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: devel-hooli-keycloak
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/hooli/keycloak/devel/pin.yaml
+          updates:
+          - key: pins.devel-hooli-keycloak
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote keycloak ${{ chartFrom(vars.chartRepo).Version
+            }} to devel for hooli'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/keycloak
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-keycloak
+    sources:
+      direct: true
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: stage-hooli-keycloak
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: devel-shared-sso-hooli-keycloak
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/hooli/keycloak/stage/pin.yaml
+          updates:
+          - key: pins.stage-hooli-keycloak
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote keycloak ${{ chartFrom(vars.chartRepo).Version
+            }} to stage for hooli'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote keycloak to stage for hooli'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/keycloak
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-keycloak
+    sources:
+      stages:
+      - devel-hooli-keycloak
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: prod-hooli-keycloak
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: stage-shared-sso-hooli-keycloak
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/hooli/keycloak/prod/pin.yaml
+          updates:
+          - key: pins.prod-hooli-keycloak
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote keycloak ${{ chartFrom(vars.chartRepo).Version
+            }} to prod for hooli'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote keycloak to prod for hooli'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/keycloak
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-keycloak
+    sources:
+      stages:
+      - stage-hooli-keycloak
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: devel-hooli-portal
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/hooli/portal/devel/pin.yaml
+          updates:
+          - key: pins.devel-hooli-portal
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote portal ${{ chartFrom(vars.chartRepo).Version
+            }} to devel for hooli'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/portal
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-portal
+    sources:
+      direct: true
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: stage-hooli-portal
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: devel-shared-sso-hooli-portal
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/hooli/portal/stage/pin.yaml
+          updates:
+          - key: pins.stage-hooli-portal
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote portal ${{ chartFrom(vars.chartRepo).Version
+            }} to stage for hooli'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote portal to stage for hooli'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/portal
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-portal
+    sources:
+      stages:
+      - devel-hooli-portal
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: prod-hooli-portal
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: stage-shared-sso-hooli-portal
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/hooli/portal/prod/pin.yaml
+          updates:
+          - key: pins.prod-hooli-portal
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote portal ${{ chartFrom(vars.chartRepo).Version
+            }} to prod for hooli'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote portal to prod for hooli'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/portal
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-portal
+    sources:
+      stages:
+      - stage-hooli-portal
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: devel-internal-demo
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/internal/demo/devel/pin.yaml
+          updates:
+          - key: pins.devel-internal-demo
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote demo ${{ chartFrom(vars.chartRepo).Version
+            }} to devel for internal'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/demo
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-demo
+    sources:
+      direct: true
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: stage-internal-demo
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: devel-shared-sso-internal-demo
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/internal/demo/stage/pin.yaml
+          updates:
+          - key: pins.stage-internal-demo
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote demo ${{ chartFrom(vars.chartRepo).Version
+            }} to stage for internal'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote demo to stage for internal'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/demo
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-demo
+    sources:
+      stages:
+      - devel-internal-demo
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: prod-internal-demo
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - as: gate
+        config:
+          apps:
+          - name: stage-shared-sso-internal-demo
+            namespace: argocd
+            waitFor:
+            - health
+            - sync
+            - operation
+        retry:
+          timeout: 10m0s
+        uses: argocd-wait
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/internal/demo/prod/pin.yaml
+          updates:
+          - key: pins.prod-internal-demo
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote demo ${{ chartFrom(vars.chartRepo).Version
+            }} to prod for internal'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - as: push
+        config:
+          generateTargetBranch: true
+          path: ./repo
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      - as: open-pr
+        config:
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+          sourceBranch: ${{ outputs.push.branch }}
+          targetBranch: main
+          title: 'chore(shared-sso): promote demo to prod for internal'
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-open-pr
+      - config:
+          prNumber: ${{ outputs['open-pr'].pr.id }}
+          provider: github
+          repoURL: ${{ vars.gitRepo }}
+        if: ${{ status('commit') == 'Succeeded' }}
+        retry:
+          errorThreshold: 3
+        uses: git-wait-for-pr
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://registry.example.com/charts/demo
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-demo
+    sources:
+      stages:
+      - stage-internal-demo
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: devel-globex-master-keycloak
+  namespace: shared-sso
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      - config:
+          checkout:
+          - branch: main
+            path: ./repo
+          repoURL: ${{ vars.gitRepo }}
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-clone
+      - config:
+          path: ./repo/projects/shared-sso/globex-master/keycloak/devel/pin.yaml
+          updates:
+          - key: pins.devel-globex-master-keycloak
+            value: ${{ chartFrom(vars.chartRepo).Version }}
+        uses: yaml-update
+      - as: commit
+        config:
+          message: 'chore(shared-sso): promote keycloak ${{ chartFrom(vars.chartRepo).Version
+            }} to devel for globex-master'
+          path: ./repo
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-commit
+      - config:
+          path: ./repo
+          targetBranch: main
+        retry:
+          errorThreshold: 3
+          timeout: 5m0s
+        uses: git-push
+      vars:
+      - name: gitRepo
+        value: https://git.example.com/acme/environments.git
+      - name: chartRepo
+        value: oci://preview.example.com/charts/keycloak
+      - name: chartName
+        value: ""
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: sso-keycloak-master
+    sources:
+      direct: true
+
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  name: sso-demo
+  namespace: shared-sso
+spec:
+  freightCreationPolicy: Automatic
+  interval: 5m0s
+  subscriptions:
+  - chart:
+      discoveryLimit: 20
+      repoURL: oci://registry.example.com/charts/demo
+      semverConstraint: '>=0.1.0 <1.0.0'
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  name: sso-keycloak
+  namespace: shared-sso
+spec:
+  freightCreationPolicy: Automatic
+  interval: 5m0s
+  subscriptions:
+  - chart:
+      discoveryLimit: 20
+      repoURL: oci://registry.example.com/charts/keycloak
+      semverConstraint: '>=0.1.0 <2.0.0'
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  name: sso-keycloak-master
+  namespace: shared-sso
+spec:
+  freightCreationPolicy: Automatic
+  interval: 5m0s
+  subscriptions:
+  - chart:
+      discoveryLimit: 20
+      repoURL: oci://preview.example.com/charts/keycloak
+      semverConstraint: '>=0.0.0-0'
+
+---
+# Source: cd-pipeline/templates/objects.yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  name: sso-portal
+  namespace: shared-sso
+spec:
+  freightCreationPolicy: Automatic
+  interval: 5m0s
+  subscriptions:
+  - chart:
+      discoveryLimit: 20
+      repoURL: oci://registry.example.com/charts/portal
+      semverConstraint: '>=0.1.0 <1.0.0'

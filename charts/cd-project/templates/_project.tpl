@@ -27,15 +27,34 @@ Call with the chart's root context.
   {{- if not $p.customers -}}
     {{- fail "cd-project: pipeline.project.installName names the Applications of a customer's install: it needs project.customers" -}}
   {{- end -}}
-  {{- $probe := include "cd-project.installName" (dict "values" $v "customer" "x") -}}
+  {{- $probe := include "cd-project.installName" (dict "values" $v "customer" "x" "component" (ternary "x" "" (not (empty $p.components)))) -}}
   {{- if not (regexMatch "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$" $probe) -}}
-    {{- fail (printf "cd-project: pipeline.project.installName %q gives %q, which is not a name (lower-case letters, digits and -; tokens {project}, {customer}, and {vendor} where pipeline.project sets it)" . $probe) -}}
+    {{- fail (printf "cd-project: pipeline.project.installName %q gives %q, which is not a name (lower-case letters, digits and -; tokens {project}, {customer}, {component} with project.components, and {vendor} where pipeline.project sets it)" . $probe) -}}
+  {{- end -}}
+  {{- if and $p.components (not (contains "{component}" .)) -}}
+    {{- fail (printf "cd-project: pipeline.project.installName %q has no {component}: with project.components the installs of a customer's components would share their Application names" .) -}}
+  {{- end -}}
+{{- end -}}
+{{- /* A project of several components: each one names its chart
+       (project.components.<component>.source); the project names none, and
+       nothing that would lay over a component's chart. */ -}}
+{{- if $p.components -}}
+  {{- range $k := list "source" "sources" "companions" -}}
+    {{- if index $p $k -}}
+      {{- fail (printf "cd-project: project.%s: with project.components each component names its chart (project.components.<component>.source) and its sources (project.components.<component>.sources)" $k) -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if $p.pipeline.stageSources -}}
+    {{- fail "cd-project: project.pipeline.stageSources: with project.components a preview from a further source is a lane customer (project.customers[].lane)" -}}
+  {{- end -}}
+  {{- if not $p.customers -}}
+    {{- fail "cd-project: project.components needs project.customers: each customer names the components it takes" -}}
   {{- end -}}
 {{- end -}}
 {{- /* A project of companions alone: no chart (project.source), the
        companions installed beside a Stage's key, and nothing that names a
        chart. */ -}}
-{{- if not $p.source -}}
+{{- if and (not $p.source) (not $p.components) -}}
   {{- if not $p.companions -}}
     {{- fail "cd-project: project.source is required: a project installs a chart, unless it releases companions alone (project.companions)" -}}
   {{- end -}}
@@ -176,9 +195,12 @@ Call with the chart's root context.
                name, or the platform's pipeline.project.installName (with the
                companion's after it), in the middle of its Application
                names. */ -}}
+        {{- /* With components, the install's {component} too: in its
+               Application names and in the platform's name patterns. */ -}}
+        {{- with $i.component -}}{{- $_ := set $facts "component" . -}}{{- end -}}
         {{- with $i.customer -}}
           {{- $_ := set $facts "customer" . -}}
-          {{- $middle := include "cd-project.installName" (dict "values" $v "customer" .) -}}
+          {{- $middle := include "cd-project.installName" (dict "values" $v "customer" . "component" ($i.component | default "")) -}}
           {{- $_ := set $facts "applicationName" (ternary (printf "%s-%s" $middle $i.companion) $middle (not (empty $i.companion))) -}}
         {{- end -}}
         {{- $_ := set $products $i.service $facts -}}
@@ -329,7 +351,7 @@ Call with the chart's root context.
 {{- if not (dig "promotion" "pinKey" "" $v.pipeline) -}}
   {{- /* With customers a pin is keyed by its Stage's name, as the install
          reads it: pins.<cluster>-<customer> by default. */ -}}
-  {{- $_ := set $values.promotion "pinKey" (ternary (printf "pins.%s" (dig "graph" "stageName" "{stage}-{customer}" $v.pipeline)) "pins.{stage}" (not (empty $p.customers))) -}}
+  {{- $_ := set $values.promotion "pinKey" (ternary (printf "pins.%s" (include "cd-project.stageName" $v)) "pins.{stage}" (not (empty $p.customers))) -}}
 {{- end -}}
 {{- /* The promoted-version check, when the platform's graph turns it on, is
        only named by the Stages: its objects are the platform's (it renders
@@ -381,6 +403,26 @@ Call with the chart's root context.
   {{- $_ := set $project "sources" $sources -}}
 {{- end -}}
 {{- with $p.pipeline.stageSources -}}{{- $_ := set $project "stageSources" . -}}{{- end -}}
+{{- /* Each component's chart, and its charts from further sources, within
+       the platform's range as the project's chart would be. */ -}}
+{{- with $p.components -}}
+  {{- $components := dict -}}
+  {{- range $cn, $co := . -}}
+    {{- $one := dict -}}
+    {{- range $sn, $sv := (merge (dict "" $co.source) ($co.sources | default dict)) -}}
+      {{- $sc := dict "repoURL" $sv.chart "semver" (include "cd-project.withPlatformRange" (dict "own" $sv.semver "platform" $plat)) -}}
+      {{- if hasKey $sv "versionPrefix" -}}{{- $_ := set $sc "versionPrefix" $sv.versionPrefix -}}{{- end -}}
+      {{- with $sv.subscribeAs -}}{{- $_ := set $sc "subscribeAs" . -}}{{- end -}}
+      {{- if eq $sn "" -}}
+        {{- $_ := set $one "chart" $sc -}}
+      {{- else -}}
+        {{- $_ := set $one "sources" (merge (dict $sn $sc) ($one.sources | default dict)) -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $_ := set $components $cn $one -}}
+  {{- end -}}
+  {{- $_ := set $project "components" $components -}}
+{{- end -}}
 {{- /* The Applications a Stage watches are named from the project's name, or,
        for a customer's install, from pipeline.project.installName with
        {customer} left for cd-pipeline to fill on each customer's chain (it
@@ -427,6 +469,8 @@ Call with the chart's root context.
     {{- $_ := set $entry "chart" $cc -}}
     {{- end -}}
     {{- with $c.companions -}}{{- $_ := set $entry "companions" . -}}{{- end -}}
+    {{- with $c.components -}}{{- $_ := set $entry "components" . -}}{{- end -}}
+    {{- with $c.lane -}}{{- $_ := set $entry "lane" . -}}{{- end -}}
     {{- /* The customer's chart from each further source it names. */ -}}
     {{- with $c.sources -}}
       {{- $own := dict -}}
@@ -485,7 +529,39 @@ Call with the chart's root context.
 {{- if and $p.customers (not $registered) -}}
   {{- fail "cd-project: project.customers needs pipeline.project.customers: the platform registers a product's customers" -}}
 {{- end -}}
-{{- $stageName := dig "graph" "stageName" "{stage}-{customer}" ($v.pipeline | default dict) -}}
+{{- $stageName := include "cd-project.stageName" $v -}}
+{{- /* The components are the platform's too (pipeline.project.components,
+       sealed): the company gives each one it names a chart, and each customer
+       the ones it takes. */ -}}
+{{- $regComponents := dig "project" "components" list ($v.pipeline | default dict) -}}
+{{- if and $regComponents (not $p.components) -}}
+  {{- fail (printf "cd-project: pipeline.project.components registers %s: project.components gives each one the company delivers its chart" (join ", " $regComponents)) -}}
+{{- end -}}
+{{- if and $p.components (not $regComponents) -}}
+  {{- fail "cd-project: project.components needs pipeline.project.components: the platform registers a product's components" -}}
+{{- end -}}
+{{- range $cn := keys ($p.components | default dict) | sortAlpha -}}
+  {{- if not (has $cn $regComponents) -}}
+    {{- fail (printf "cd-project: project.components: %q is not a component the platform registered for this product (pipeline.project.components: %s)" $cn (join ", " $regComponents)) -}}
+  {{- end -}}
+  {{- $co := index $p.components $cn -}}
+  {{- if and $co.source.infraChart (eq ($co.source.kind | default "product") "chart") -}}
+    {{- fail (printf "cd-project: project.components.%s.source.infraChart: kind chart has one ring (app) and no infra chart" $cn) -}}
+  {{- end -}}
+  {{- $cc := $co.source.chart -}}
+  {{- if not (hasPrefix "oci://" $cc) -}}
+    {{- fail (printf "cd-project: project.components.%s.source.chart must be an oci:// reference (<repository>/<chart>), got %q" $cn $cc) -}}
+  {{- end -}}
+  {{- range $sn := keys ($co.sources | default dict) | sortAlpha -}}
+    {{- $sc := (index $co.sources $sn).chart -}}
+    {{- if not (hasPrefix "oci://" $sc) -}}
+      {{- fail (printf "cd-project: project.components.%s.sources.%s.chart must be an oci:// reference (<repository>/<chart>), got %q" $cn $sn $sc) -}}
+    {{- end -}}
+    {{- if ne (last (splitList "/" $sc)) (last (splitList "/" $cc)) -}}
+      {{- fail (printf "cd-project: project.components.%s.sources.%s.chart must be the same chart as project.components.%s.source.chart (%s) from another repository, got %q" $cn $sn $cn (last (splitList "/" $cc)) $sc) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
 {{- $seen := dict -}}
 {{- range $entry := ($p.customers | default list) -}}
   {{- $c := ternary (dict "name" $entry) $entry (kindIs "string" $entry) -}}
@@ -541,6 +617,61 @@ Call with the chart's root context.
     {{- range $sn := keys $c.sources -}}{{- $_ := set $named $sn (index $custSources $sn) -}}{{- end -}}
     {{- $_ := set $cust "sources" $named -}}
   {{- end -}}
+  {{- if $p.components -}}
+    {{- range $k := list "chart" "semver" "sources" "companions" -}}
+      {{- if index $c $k -}}
+        {{- fail (printf "cd-project: project.customers.%s.%s: with project.components a customer takes each component's chart (project.components.<component>)" $c.name $k) -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $cc := $c.components | default list -}}
+    {{- if not $cc -}}
+      {{- fail (printf "cd-project: project.customers.%s.components is required: with project.components each customer names the ones it takes" $c.name) -}}
+    {{- end -}}
+    {{- $_ := set $cust "components" $cc -}}
+    {{- $laneStage := "" -}}
+    {{- with $c.lane -}}
+      {{- $laneStage = .stage | default (first $p.pipeline.stageOrder) -}}
+      {{- if ne $laneStage (first $p.pipeline.stageOrder) -}}
+        {{- fail (printf "cd-project: project.customers.%s.lane.stage: %q is not the first Stage of project.pipeline.stageOrder (%s); a lane is a preview on the first cluster alone and never promotes onward" $c.name $laneStage (first $p.pipeline.stageOrder)) -}}
+      {{- end -}}
+      {{- $_ := set $cust "lane" (dict "source" .source "stage" $laneStage) -}}
+    {{- end -}}
+    {{- $customers = append $customers $cust -}}
+    {{- range $cn := $cc | sortAlpha -}}
+      {{- if not (hasKey $p.components $cn) -}}
+        {{- fail (printf "cd-project: project.customers.%s.components: %q is not a component of project.components (%s)" $c.name $cn (keys $p.components | sortAlpha | join ", ")) -}}
+      {{- end -}}
+      {{- $co := index $p.components $cn -}}
+      {{- $csrc := deepCopy $co.source -}}
+      {{- $clusters := $p.clusters -}}
+      {{- /* A lane installs on its one cluster, every ring from the
+             component's chart of the lane's source. */ -}}
+      {{- with $c.lane -}}
+        {{- if not (hasKey ($co.sources | default dict) .source) -}}
+          {{- fail (printf "cd-project: project.customers.%s.lane.source: %q is not a source of component %s (project.components.%s.sources)" $c.name .source $cn $cn) -}}
+        {{- end -}}
+        {{- $csrc = include "cd-project.overSource" (dict "source" $csrc "over" (index $co.sources .source)) | fromYaml -}}
+        {{- $clusters = list $laneStage -}}
+      {{- end -}}
+      {{- range $cl := $clusters -}}
+        {{- $key := include "cd-pipeline.fill" (dict "s" $stageName "tokens" (dict "stage" $cl "customer" $c.name "component" $cn)) -}}
+        {{- if not (regexMatch "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$" $key) -}}
+          {{- fail (printf "cd-project: pipeline.graph.stageName %q gives %q for customer %s's component %s on %s, which is not a Stage name (lower-case letters, digits and -, at most 63; tokens {stage}, {customer} and {component})" $stageName $key $c.name $cn $cl) -}}
+        {{- end -}}
+        {{- range $i := $installs -}}
+          {{- if eq $i.key $key -}}
+            {{- fail (printf "cd-project: pipeline.graph.stageName %q gives %q twice: it names each customer's Stage of each component on each cluster apart" $stageName $key) -}}
+          {{- end -}}
+        {{- end -}}
+        {{- $installs = append $installs (dict "key" $key "cluster" $cl "customer" $c.name "component" $cn "service" (printf "%s-%s-%s" $p.name $c.name $cn) "source" $csrc "stageSource" "") -}}
+      {{- end -}}
+    {{- end -}}
+  {{- else -}}
+  {{- range $k := list "components" "lane" -}}
+    {{- if index $c $k -}}
+      {{- fail (printf "cd-project: project.customers.%s.%s needs project.components" $c.name $k) -}}
+    {{- end -}}
+  {{- end -}}
   {{- $customers = append $customers $cust -}}
   {{- range $cl := $p.clusters -}}
     {{- $key := include "cd-pipeline.fill" (dict "s" $stageName "tokens" (dict "stage" $cl "customer" $c.name)) -}}
@@ -561,6 +692,7 @@ Call with the chart's root context.
     {{- end -}}
     {{- $installs = append $installs (dict "key" $key "cluster" $cl "customer" $c.name "service" (printf "%s-%s" $p.name $c.name) "source" $isrc "stageSource" $ss) -}}
   {{- end -}}
+  {{- end -}}
 {{- else -}}
   {{- range $cl := $p.clusters -}}
     {{- $csrc := dict -}}
@@ -580,7 +712,7 @@ Call with the chart's root context.
 {{- end -}}
 {{- /* A project of companions alone installs its companions and no chart:
        the Stage's own key names nothing. */ -}}
-{{- $all := ternary (concat $installs $parts) $parts (not (empty $p.source)) -}}
+{{- $all := ternary (concat $installs $parts) $parts (or (not (empty $p.source)) (not (empty $p.components))) -}}
 {{- $seenKeys := dict -}}
 {{- range $i := $all -}}
   {{- if hasKey $seenKeys $i.key -}}
@@ -809,10 +941,12 @@ Call with the rendered documents.
 
 {{/*
 The middle of a customer install's Application names: the platform's sealed
-pipeline.project.installName (default {project}) with {project}, {vendor}
-(where pipeline.project sets it) and {customer} filled. With customer "",
-{customer} stays a token, for cd-pipeline to fill on each customer's chain.
-Call with (dict "values" .Values "customer" <name or "">).
+pipeline.project.installName (default {project}, or
+{project}-{customer}-{component} with project.components) with {project},
+{vendor} (where pipeline.project sets it), {customer} and {component} filled.
+With customer "" (component ""), {customer} ({component}) stays a token, for
+cd-pipeline to fill on each customer's chain.
+Call with (dict "values" .Values "customer" <name or ""> "component" <name or "">).
 */}}
 {{- define "cd-project.installName" -}}
 {{- $v := .values -}}
@@ -820,5 +954,15 @@ Call with (dict "values" .Values "customer" <name or "">).
 {{- $tokens := dict "project" $v.project.name -}}
 {{- with $k.vendor -}}{{- $_ := set $tokens "vendor" . -}}{{- end -}}
 {{- with .customer -}}{{- $_ := set $tokens "customer" . -}}{{- end -}}
-{{- include "cd-pipeline.fill" (dict "s" ($k.installName | default "{project}") "tokens" $tokens) -}}
+{{- with .component -}}{{- $_ := set $tokens "component" . -}}{{- end -}}
+{{- include "cd-pipeline.fill" (dict "s" ($k.installName | default (ternary "{project}-{customer}-{component}" "{project}" (not (empty $v.project.components)))) "tokens" $tokens) -}}
+{{- end -}}
+
+{{/*
+The name of a customer's Stage: the platform's pipeline.graph.stageName,
+default {stage}-{customer}, or {stage}-{customer}-{component} with
+project.components. Call with .Values.
+*/}}
+{{- define "cd-project.stageName" -}}
+{{- dig "graph" "stageName" (ternary "{stage}-{customer}-{component}" "{stage}-{customer}" (not (empty .project.components))) (.pipeline | default dict) -}}
 {{- end -}}

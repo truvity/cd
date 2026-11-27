@@ -560,6 +560,7 @@ and per project `name`, `stages` (or `stageOrder`, see [Derived Stages](#derived
 | `projects[].chart` | `repoURL`, `name` (index repositories), `semver`, `versionPrefix` (repositories whose tags carry one), `discoveryLimit`, `subscribeAs` (`chart`, the default, or `image`: an image subscription with SemVer selection and `strictSemvers: false`, for an OCI chart whose `v`-prefixed tags Helm's tag listing drops; `oci://` is dropped from the repository, the pin takes the discovered tag as it is, `name` and `versionPrefix` are refused). `pin` (`tag`, the default, or `digest`: the promotion writes the Freight image's digest; see [Promoting a digest](#promoting-a-digest)), `strictSemvers` (an image subscription's own setting; unset keeps `false`). |
 | `projects[].sources` | Further sources of the project's chart, by name (`[a-z0-9-]`, at most 30 characters), each with the keys of `chart`. Each one gets a Warehouse of its own, `<warehouse>-<source>`, with `warehouse`'s `interval` and `freightCreationPolicy` (`warehouse.subscriptions` is `chart`'s alone). A Stage that takes a source (`stages[].source`, or `stageSources` for derived Stages) requests that Warehouse's Freight, and its promotion and checks read the source in place of `chart`; see [Further sources](#further-sources). |
 | `projects[].customers` | Derived Stages only: the customers one Kargo Project delivers the product to, each a name or `{name, chart}`. Each gets a Warehouse `<warehouse>-<customer>` (on `chart`, or its own) and a chain of Stages, one for each Stage of `stageOrder`, named by `graph.stageName` (default `{stage}-{customer}`); a customer's Stages request only its Warehouse and promote only from its own, and its first Stage promotes on its own. The project has no Warehouse of its own. `{stage}` in Application names and pins is the Stage of `stageOrder`, `{customer}` the customer; approvers are one subject for each customer's Stage. With `sources`, each customer also has a Warehouse `<warehouse>-<customer>-<source>` for each source (on `customers[].sources.<source>`, else `sources.<source>`), which its Stage of a Stage `stageSources` names takes. |
+| `projects[].components` | Derived Stages only, with `customers`: a product of several parts, each a chart of its own, by name (`[a-z0-9-]`, at most 30 characters), each `{chart, sources}` with the keys of `chart`. Each component gets one Warehouse, `<warehouse>-<component>`, shared by every customer that takes it, and one of each of its `sources`, `<warehouse>-<component>-<source>`; the project and its customers have no Warehouse of their own. Each customer lists the components it takes (`customers[].components`, required) and gets a chain of Stages for each along `stageOrder`, named by `graph.stageName` (default `{stage}-{customer}-{component}`; a name without both tokens is refused). `{component}` fills Application names, pins, the promotion's wording and approver subjects (`approver-{stage}-{customer}-{component}`) beside `{customer}`. A customer with `lane: {source, stage}` is a lane: one Stage, on the first Stage of `stageOrder` alone (`stage` defaults to it; any other is refused), taking each of its components' Warehouses of `source`, promoting on its own and never onward. Not with `chart`, `sources`, `stageSources`, `companions`, or a customer's `chart`, `sources` or `companions` (`tests/cases/cd-pipeline/components`). |
 | `projects[].companions` | Further artifacts that move with the chart in one Freight, by name, each with the keys of `chart` and a `pinKey` (default the chart's filled key with `-<companion>`). Every Warehouse of the project subscribes to the chart and to each companion; each Stage writes every pin in one `yaml-update`. A customer may hold a companion to its own `semver` (`customers[].companions.<name>.semver`); a companion may name its artifact from a further source (`companions.<name>.sources.<source>`, the keys of `chart` laid over its own), which that source's Warehouses subscribe to. See [Companions](#companions). |
 | `projects[].warehouse` | `name` (default the project's), `interval` (`5m0s`), `freightCreationPolicy` (`Automatic`), `subscriptions`, `freightCreationCriteria`. `freightCreationCriteria.expression` (required, non-empty) is rendered verbatim as the Warehouse's `spec.freightCreationCriteria`: Kargo creates Freight from a discovery only when the expression is true, for instance `imageFrom('repo-a')?.Tag == imageFrom('repo-b')?.Tag` over two `subscriptions`, so the two images move together. It applies to the project's own Warehouse alone, not to the Warehouses of `sources`; needs a Kargo that supports it (1.11 does). Unset, nothing is rendered (`tests/cases/cd-pipeline/freight-creation-criteria`). |
 | `projects[].access.subjects[]` | `name`, `claims`, `stages`, `approve`. |
@@ -1200,6 +1201,46 @@ another repository; one that does not is refused. A customer's install on a
 cluster whose Stage takes the source (`project.pipeline.stageSources`) takes
 every ring from that chart, and its companions serve the artifact of that
 source (below) (`tests/cases/cd-project/customer-sources`).
+
+### Components of a project
+
+A product made of several parts, each a chart of its own (a sign-in server
+and its admin console, say), released apart but delivered for the same
+customers, names each part in `project.components.<name>`: `source` (the keys
+of `project.source`: `chart`, `infraChart`, `semver`, `versionPrefix`,
+`subscribeAs`, `kind`) and `sources`, further sources of the same chart from
+another repository (`chart`, `semver`, `versionPrefix`, `subscribeAs`). The
+components are the platform's, as customers are: `pipeline.project.components`
+registers them, sealed; the company names only registered ones, and either
+list without the other is refused. `project.source`, `project.sources`,
+`project.companions` and `project.pipeline.stageSources` are refused beside
+them, and so are a customer's `chart`, `semver`, `sources` and `companions`.
+
+One Kargo Project still delivers them all, so one ProjectConfig: each
+component has one Warehouse, `<warehouse>-<component>`, shared by every
+customer that takes it, and one of each of its sources,
+`<warehouse>-<component>-<source>`. Each customer names the components it
+takes, `project.customers[].components` (required; not every customer takes
+every one), and each one is a chain of Stages along
+`project.pipeline.stageOrder`, named by `pipeline.graph.stageName` (default
+`{stage}-{customer}-{component}`), and an install on each cluster keyed by
+that name in `pins`, `values` and `products`, the service
+`<project>-<customer>-<component>`. Its product facts take `{customer}` and
+`{component}` (cd-delivery fills `{component}` in `applicationPrefix`,
+`appProject` and `applicationLabels` as it fills `{customer}`), and the middle
+of its Application names is `pipeline.project.installName`, default
+`{project}-{customer}-{component}`; an installName without `{component}` is
+refused. The platform's `pipeline.project.semver` holds for every component.
+
+A customer with `lane: {source, stage}` is a lane: a preview of its
+components from the source of that name, named `<customer>-<lane>` so its
+Stages, installs and pins are its own (`devel-globex-master-keycloak`). It is
+installed on the first cluster of `project.pipeline.stageOrder` alone
+(`stage` defaults to it; any other is refused), every ring from the
+component's chart of that source, and its one Stage takes the component's
+Warehouse of the source, promotes on its own and promotes nothing onward. A
+pin for a lane on a later cluster is refused like any unknown key
+(`tests/cases/cd-project/components`).
 
 ### Companions of a project
 

@@ -117,10 +117,29 @@ func companionArtifact(companion map[string]any, source string) string {
 // platform's pipeline.project.installName (default {project}) with the
 // project's name, its vendor and the customer filled ("" leaves {customer}).
 func installName(values map[string]any, customer string) string {
+	return componentInstallName(values, customer, "")
+}
+
+// hasComponents is whether the project is made of components
+// (project.components).
+func hasComponents(values map[string]any) bool {
+	return len(parity.Map(parity.Map(values["project"])["components"])) > 0
+}
+
+// componentInstallName is installName with the component filled too (""
+// leaves {component}); with project.components the default is
+// {project}-{customer}-{component}.
+func componentInstallName(values map[string]any, customer, component string) string {
 	kargo := parity.Map(parity.Map(values["pipeline"])["project"])
 	name, ok := kargo["installName"].(string)
 	if !ok {
 		name = "{project}"
+		if hasComponents(values) {
+			name = "{project}-{customer}-{component}"
+		}
+	}
+	if component != "" {
+		name = strings.ReplaceAll(name, "{component}", component)
 	}
 	fill := []string{"{project}", values["project"].(map[string]any)["name"].(string)}
 	if vendor, ok := kargo["vendor"].(string); ok {
@@ -133,12 +152,78 @@ func installName(values map[string]any, customer string) string {
 }
 
 // stageNameTemplate is the platform's pipeline.graph.stageName, default
-// {stage}-{customer}.
+// {stage}-{customer}, or {stage}-{customer}-{component} with components.
 func stageNameTemplate(values map[string]any) string {
 	if name, ok := parity.Map(parity.Map(values["pipeline"])["graph"])["stageName"].(string); ok {
 		return name
 	}
+	if hasComponents(values) {
+		return "{stage}-{customer}-{component}"
+	}
 	return "{stage}-{customer}"
+}
+
+// componentsSlice is installsSlice for a project of components: each
+// customer's component an install of its own, the service
+// <project>-<customer>-<component>, keyed by its Stage's name, from the
+// component's chart, or for a lane customer on its one cluster (the first of
+// stageOrder) from the component's chart of the lane's source; its facts
+// with the customer, the component and their Application names' middle.
+func componentsSlice(values map[string]any, cluster string) map[string]any {
+	project := values["project"].(map[string]any)
+	name := project["name"].(string)
+	components := parity.Map(project["components"])
+	first := parity.List(parity.Map(project["pipeline"])["stageOrder"])[0]
+	out := map[string]any{
+		"platform": values["platform"].(map[string]any)[cluster],
+		"services": []any{},
+		"pins":     map[string]any{},
+		"values":   map[string]any{},
+		"products": map[string]any{},
+	}
+	for _, entry := range parity.List(project["customers"]) {
+		c := parity.Map(entry)
+		customer := c["name"].(string)
+		lane := parity.Map(c["lane"])
+		if len(lane) > 0 && cluster != first {
+			continue // a lane installs on the first cluster alone
+		}
+		taken := parity.Strings(c["components"])
+		slices.Sort(taken)
+		for _, cn := range taken {
+			co := parity.Map(components[cn])
+			src := parity.Map(co["source"])
+			chart := src["chart"].(string)
+			if len(lane) > 0 {
+				chart = parity.Map(parity.Map(co["sources"])[lane["source"].(string)])["chart"].(string)
+			}
+			service := name + "-" + customer + "-" + cn
+			key := strings.NewReplacer("{stage}", cluster, "{customer}", customer, "{component}", cn).Replace(stageNameTemplate(values))
+			out["services"] = append(out["services"].([]any), service)
+			out["pins"].(map[string]any)[service] = ""
+			if pin, ok := parity.Map(values["pins"])[key]; ok {
+				out["pins"].(map[string]any)[service] = pin
+			}
+			if payload, ok := parity.Map(values["values"])[key]; ok {
+				out["values"].(map[string]any)[service] = payload
+			}
+			if product, ok := parity.Map(values["products"])[key]; ok {
+				cut := strings.LastIndex(chart, "/")
+				facts := maps.Clone(product.(map[string]any))
+				facts["repository"] = chart[:cut]
+				facts["chart"] = chart[cut+1:]
+				facts["kind"] = "product"
+				if kind, ok := src["kind"]; ok {
+					facts["kind"] = kind
+				}
+				facts["customer"] = customer
+				facts["component"] = cn
+				facts["applicationName"] = componentInstallName(values, customer, cn)
+				out["products"].(map[string]any)[service] = facts
+			}
+		}
+	}
+	return out
 }
 
 // companySlice is what cd-company is given for one cluster of a project: the
@@ -212,6 +297,9 @@ func addCompanions(values map[string]any, cluster string, out map[string]any) {
 func installsSlice(values map[string]any, cluster string) map[string]any {
 	project := values["project"].(map[string]any)
 	name := project["name"].(string)
+	if hasComponents(values) {
+		return componentsSlice(values, cluster)
+	}
 	if customers := projectCustomers(project); len(customers) > 0 {
 		out := map[string]any{
 			"platform": values["platform"].(map[string]any)[cluster],
@@ -525,6 +613,18 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 					if own, ok := parity.Map(parity.List(project["customers"])[i])["companions"]; ok {
 						entry["companions"] = own
 					}
+					// With components: the ones the customer takes, and its
+					// lane, with its one Stage spelled out.
+					if own, ok := parity.Map(parity.List(project["customers"])[i])["components"]; ok {
+						entry["components"] = own
+					}
+					if lane := parity.Map(parity.Map(parity.List(project["customers"])[i])["lane"]); len(lane) > 0 {
+						one := maps.Clone(lane)
+						if _, ok := one["stage"]; !ok {
+							one["stage"] = parity.List(pipeline["stageOrder"])[0]
+						}
+						entry["lane"] = one
+					}
 					// The customer's own chart from a further source, with
 					// that source's range and keys.
 					if own := parity.Map(parity.Map(parity.List(project["customers"])[i])["sources"]); len(own) > 0 {
@@ -580,6 +680,33 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 			} else if base := installName(values, ""); len(projectCustomers(project)) > 0 && base != project["name"] {
 				// The Stages watch the installs by the platform's name.
 				p["applications"] = []any{base}
+			}
+			// Each component's chart and its further sources, within the
+			// platform's range.
+			if components := parity.Map(project["components"]); len(components) > 0 {
+				chartOf := func(s map[string]any) map[string]any {
+					sc := map[string]any{"repoURL": s["chart"], "semver": withPlatformRange(s["semver"].(string), platformRange)}
+					for _, key := range []string{"versionPrefix", "subscribeAs"} {
+						if v, ok := s[key]; ok {
+							sc[key] = v
+						}
+					}
+					return sc
+				}
+				out := map[string]any{}
+				for cn, cv := range components {
+					co := parity.Map(cv)
+					one := map[string]any{"chart": chartOf(parity.Map(co["source"]))}
+					if named := parity.Map(co["sources"]); len(named) > 0 {
+						sources := map[string]any{}
+						for sn, sv := range named {
+							sources[sn] = chartOf(parity.Map(sv))
+						}
+						one["sources"] = sources
+					}
+					out[cn] = one
+				}
+				p["components"] = out
 			}
 			if named, ok := project["sources"]; ok {
 				sources := map[string]any{}

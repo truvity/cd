@@ -18,6 +18,9 @@ Stages, as YAML documents. Call with (dict "root" . "p" <project map>).
 {{- if $p.customers -}}
 {{- fail (printf "cd-pipeline: projects.%s.customers needs stageOrder: a customer's chain of Stages is derived" $name) -}}
 {{- end -}}
+{{- if $p.components -}}
+{{- fail (printf "cd-pipeline: projects.%s.components needs stageOrder: a component's chains of Stages are derived" $name) -}}
+{{- end -}}
 {{- /* The companions of each further source: a companion may name its
        artifact from a source (companions.<name>.sources.<source>), so that
        a Warehouse of preview charts holds preview artifacts beside them.

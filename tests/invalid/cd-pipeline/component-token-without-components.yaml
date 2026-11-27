@@ -1,0 +1,32 @@
+# expect: promotion.pinFile names {component} but the project has no components
+# A {component} token in a project with no components.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+promotion:
+  pinFile: "projects/{slug}/{customer}/{component}/{stage}/pin.yaml"
+  pinKey: "pins.{stage}-{customer}"
+  commitMessage: "chore({slug}): promote {component} {version} to {stage} for {customer}"
+  prTitle: "chore({slug}): promote {component} to {stage} for {customer}"
+graph:
+  upstreams:
+    stage: [devel]
+    prod: [stage]
+  applicationName: "{stage}-{app}"
+  approvers:
+    claims:
+      groups: ["{stage}:{slug}:{customer}:approver"]
+  admins:
+    claims:
+      groups: ['platform:admin']
+projects:
+  - name: shared-sso
+    vendor: shared
+    warehouse:
+      name: sso
+    applications: ["{slug}-{customer}-{component}"]
+    customers:
+      - globex
+    stageOrder: [devel, stage, prod]
+    chart:
+      repoURL: oci://registry.example.com/charts/sso
+      semver: '>=1.0.0'

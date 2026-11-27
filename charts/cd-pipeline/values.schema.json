@@ -421,7 +421,7 @@
         "stageName": {
           "type": "string",
           "minLength": 1,
-          "description": "The name of a Stage of a customer's chain (`projects[].customers`), with the tokens `{stage}` (the Stage of `stageOrder`) and `{customer}`; default `{stage}-{customer}`."
+          "description": "The name of a Stage of a customer's chain (`projects[].customers`), with the tokens `{stage}` (the Stage of `stageOrder`), `{customer}` and, with `projects[].components`, `{component}`; default `{stage}-{customer}`, or `{stage}-{customer}-{component}` with components."
         },
         "promotedVersion": {
           "type": "boolean",
@@ -1079,11 +1079,171 @@
                         "description": "A further source of the project's chart: its own Warehouse, <warehouse>-<source>, and the repository the Stages that take it promote from. The same keys as `chart`; `warehouse.subscriptions` applies to `chart` alone."
                       },
                       "description": "This customer's chart from a further source, by the source's name (a key of `sources`): its Warehouse `<warehouse>-<customer>-<source>` subscribes to it. A source not named here gives the customer the project's `sources.<source>`."
+                    },
+                    "components": {
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                        "maxLength": 30
+                      },
+                      "description": "With `components` (required there): the components this customer takes, each a key of `components`. One chain of Stages for each. Not every customer takes every component."
+                    },
+                    "lane": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "source"
+                      ],
+                      "properties": {
+                        "source": {
+                          "type": "string",
+                          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                          "maxLength": 30,
+                          "description": "A source of each component the customer takes (`components.<component>.sources`): the lane's Stages take `<warehouse>-<component>-<source>`."
+                        },
+                        "stage": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "The lane's one Stage: the first Stage of `stageOrder` (the default), and no other."
+                        }
+                      },
+                      "description": "With `components`: this customer is a lane, a preview of its components from a further source. Its chain is one Stage, the first of `stageOrder`, which takes the components' Warehouses of `source`, promotes on its own and promotes nothing onward. Name the lane in the customer, `<customer>-<lane>`, so its Stages, Applications and pins are its own."
                     }
                   }
                 }
               ]
             }
+          },
+          "components": {
+            "type": "object",
+            "minProperties": 1,
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+              "maxLength": 30
+            },
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "chart"
+              ],
+              "properties": {
+                "chart": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "repoURL": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "The chart's name in an index repository; none for an OCI one."
+                    },
+                    "semver": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "versionPrefix": {
+                      "type": "string",
+                      "description": "Written in front of the version in the pin, for a repository whose tags carry one."
+                    },
+                    "discoveryLimit": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "subscribeAs": {
+                      "type": "string",
+                      "enum": [
+                        "chart",
+                        "image"
+                      ],
+                      "description": "How the Warehouse discovers the chart. `chart` (default) is a chart subscription. `image` is an image subscription with SemVer selection and `strictSemvers: false`, for an OCI chart whose tags carry a `v` (Helm's tag listing drops them, so a chart subscription finds nothing). A leading `oci://` is dropped from `repoURL` for the subscription, the promotion steps write the discovered tag as it is (the `v` stays), and `name` and `versionPrefix` are refused."
+                    },
+                    "pin": {
+                      "type": "string",
+                      "enum": [
+                        "tag",
+                        "digest"
+                      ],
+                      "description": "What the promotion writes as the pin. `tag` (default) is the discovered version or tag. `digest` is the artifact's digest (`imageFrom(...).Digest`), for an artifact that is deployed by what it is rather than by what it is called; it needs `subscribeAs: image`, refuses `versionPrefix`, `name` and any promoted-version check (there is no chart version in the Application to compare), and adds a `{tag}` token to `promotion.commitMessage` and `promotion.prTitle`."
+                    },
+                    "strictSemvers": {
+                      "type": "boolean",
+                      "description": "The image subscription's `strictSemvers`, with `subscribeAs: image`. Unset keeps `false`; a Warehouse whose live object has Kargo's own default (`true`) sets it, so the spec does not differ from the stored object forever."
+                    }
+                  },
+                  "required": [
+                    "repoURL",
+                    "semver"
+                  ],
+                  "description": "The component's chart: its Warehouse <warehouse>-<component>, shared by every customer that takes the component."
+                },
+                "sources": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                    "maxLength": 30
+                  },
+                  "additionalProperties": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "repoURL": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "The chart's name in an index repository; none for an OCI one."
+                      },
+                      "semver": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "versionPrefix": {
+                        "type": "string",
+                        "description": "Written in front of the version in the pin, for a repository whose tags carry one."
+                      },
+                      "discoveryLimit": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "subscribeAs": {
+                        "type": "string",
+                        "enum": [
+                          "chart",
+                          "image"
+                        ],
+                        "description": "How the Warehouse discovers the chart. `chart` (default) is a chart subscription. `image` is an image subscription with SemVer selection and `strictSemvers: false`, for an OCI chart whose tags carry a `v` (Helm's tag listing drops them, so a chart subscription finds nothing). A leading `oci://` is dropped from `repoURL` for the subscription, the promotion steps write the discovered tag as it is (the `v` stays), and `name` and `versionPrefix` are refused."
+                      },
+                      "pin": {
+                        "type": "string",
+                        "enum": [
+                          "tag",
+                          "digest"
+                        ],
+                        "description": "What the promotion writes as the pin. `tag` (default) is the discovered version or tag. `digest` is the artifact's digest (`imageFrom(...).Digest`), for an artifact that is deployed by what it is rather than by what it is called; it needs `subscribeAs: image`, refuses `versionPrefix`, `name` and any promoted-version check (there is no chart version in the Application to compare), and adds a `{tag}` token to `promotion.commitMessage` and `promotion.prTitle`."
+                      },
+                      "strictSemvers": {
+                        "type": "boolean",
+                        "description": "The image subscription's `strictSemvers`, with `subscribeAs: image`. Unset keeps `false`; a Warehouse whose live object has Kargo's own default (`true`) sets it, so the spec does not differ from the stored object forever."
+                      }
+                    },
+                    "description": "The component's chart from a further source: its own Warehouse, <warehouse>-<component>-<source>, that a lane customer (customers[].lane.source) takes. The same keys as `chart`."
+                  },
+                  "description": "The component's further sources, by name: each one a Warehouse <warehouse>-<component>-<source>, for the lane customers whose lane names the source."
+                }
+              }
+            },
+            "description": "Derived Stages only (`stageOrder`), with `customers`: a product made of several parts, each one a chart of its own, delivered by one Kargo Project for several customers. Each component has one Warehouse, `<warehouse>-<component>`, shared by every customer that takes it, and one of each of its sources, `<warehouse>-<component>-<source>`; the project renders no Warehouse of its own and no customer's. Each customer takes the components it lists (`customers[].components`), a chain of Stages for each, one for each Stage of `stageOrder`, named by `graph.stageName` (default `{stage}-{customer}-{component}`, which must name both). `{component}` fills Application names, pins and the promotion's wording beside `{customer}`. Not with `chart`, `sources`, `stageSources` or `companions`."
           },
           "warehouse": {
             "type": "object",

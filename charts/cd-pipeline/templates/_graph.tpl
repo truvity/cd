@@ -29,6 +29,10 @@ The rules, for each Stage of `stageOrder`, in that order:
   project names any source, a Stage with no upstream that is not the first of
   `stageOrder` promotes by pull request, like a hop: it is a later cluster fed
   by a Warehouse of its own, not the project's first.
+- components: with `components`, each customer's chains are one for each
+  component it takes, on that component's Warehouse (or, for a lane
+  customer, its Warehouse of the lane's source, one Stage on the first of
+  `stageOrder`); `{component}` beside `{customer}` in every name.
 - access: with `access.approvers`, one subject per Stage but the first, named
   and claimed by `graph.approvers` ({stage}, {slug}), that may promote the first
   Stage and its own and, on the last Stage, approve Freight; with
@@ -58,11 +62,70 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- range $c := ($p.customers | default list) -}}
 {{- $customers = append $customers (ternary (dict "name" $c) $c (kindIs "string" $c)) -}}
 {{- end -}}
+{{- /* COMPONENTS: one Kargo Project for a product made of several parts, each
+       its own chart, for several customers. Each component has one Warehouse,
+       `<warehouse>-<component>`, shared by every customer that takes it, and
+       one of each source it names, `<warehouse>-<component>-<source>`. Each
+       customer takes the components it lists, a chain of Stages for each,
+       named by graph.stageName (default `{stage}-{customer}-{component}`). A
+       lane customer (customers[].lane) is a chain of one Stage, the first of
+       stageOrder, on its components' Warehouses of the lane's source; it
+       never promotes onward. */ -}}
+{{- $components := $p.components | default dict -}}
+{{- $chainsOfComponents := list -}}
+{{- if $components -}}
+{{- if not $customers -}}{{- fail (printf "cd-pipeline: projects.%s.components needs customers: each customer names the components it takes" $name) -}}{{- end -}}
+{{- range $k := list "chart" "sources" "stageSources" "companions" -}}
+{{- if index $p $k -}}{{- fail (printf "cd-pipeline: projects.%s sets components and %s: each component names its own chart (components.<component>.chart) and its sources (components.<component>.sources)" $name $k) -}}{{- end -}}
+{{- end -}}
+{{- $srcs := dict -}}
+{{- range $cn := keys $components | sortAlpha -}}
+{{- $co := index $components $cn | default dict -}}
+{{- if hasKey $srcs $cn -}}{{- fail (printf "cd-pipeline: projects.%s.components: %q is also another component's Warehouse of a source (<component>-<source>); name the component or the source apart" $name $cn) -}}{{- end -}}
+{{- $_ := set $srcs $cn (required (printf "cd-pipeline: projects.%s.components.%s.chart is required" $name $cn) $co.chart) -}}
+{{- range $sn := keys ($co.sources | default dict) | sortAlpha -}}
+{{- $key := printf "%s-%s" $cn $sn -}}
+{{- if or (hasKey $srcs $key) (hasKey $components $key) -}}{{- fail (printf "cd-pipeline: projects.%s: component %q's Warehouse of source %q is named %q, as another component's is; name the component or the source apart" $name $cn $sn $key) -}}{{- end -}}
+{{- $_ := set $srcs $key (index $co.sources $sn) -}}
+{{- end -}}
+{{- end -}}
+{{- $seen := dict -}}
+{{- range $c := $customers -}}
+{{- if hasKey $seen $c.name -}}{{- fail (printf "cd-pipeline: projects.%s.customers: %q is listed twice" $name $c.name) -}}{{- end -}}
+{{- $_ := set $seen $c.name true -}}
+{{- range $k := list "chart" "sources" "companions" -}}
+{{- if index $c $k -}}{{- fail (printf "cd-pipeline: projects.%s.customers.%s.%s: with components a customer takes each component's chart (components.<component>)" $name $c.name $k) -}}{{- end -}}
+{{- end -}}
+{{- $cc := required (printf "cd-pipeline: projects.%s.customers.%s.components is required: with components each customer names the ones it takes" $name $c.name) $c.components -}}
+{{- if ne (len $cc) (len (uniq $cc)) -}}{{- fail (printf "cd-pipeline: projects.%s.customers.%s.components lists a component twice" $name $c.name) -}}{{- end -}}
+{{- $laneSource := "" -}}
+{{- $laneStage := "" -}}
+{{- with $c.lane -}}
+{{- $laneSource = required (printf "cd-pipeline: projects.%s.customers.%s.lane.source is required: the source whose Warehouses the lane takes" $name $c.name) .source -}}
+{{- $laneStage = .stage | default (first $order) -}}
+{{- if ne $laneStage (first $order) -}}{{- fail (printf "cd-pipeline: projects.%s.customers.%s.lane.stage: %q is not the first Stage of stageOrder (%s); a lane is a preview on the first Stage alone and never promotes onward" $name $c.name $laneStage (first $order)) -}}{{- end -}}
+{{- end -}}
+{{- range $cn := $cc | sortAlpha -}}
+{{- if not (hasKey $components $cn) -}}{{- fail (printf "cd-pipeline: projects.%s.customers.%s.components: %q is not a component of the project (components: %s)" $name $c.name $cn (keys $components | sortAlpha | join ", ")) -}}{{- end -}}
+{{- $chain := dict "name" $c.name "component" $cn -}}
+{{- with $laneSource -}}
+{{- if not (hasKey ((index $components $cn).sources | default dict) .) -}}{{- fail (printf "cd-pipeline: projects.%s.customers.%s.lane.source: %q is not a source of component %s (components.%s.sources)" $name $c.name . $cn $cn) -}}{{- end -}}
+{{- $_ := set $chain "source" (printf "%s-%s" $cn .) -}}
+{{- $_ := set $chain "stages" (list $laneStage) -}}
+{{- else -}}
+{{- $_ := set $chain "source" $cn -}}
+{{- end -}}
+{{- $chainsOfComponents = append $chainsOfComponents $chain -}}
+{{- end -}}
+{{- end -}}
+{{- $_ := set $p "sources" $srcs -}}
+{{- end -}}
 {{- /* The sources the project names: with customers, `sources` is replaced
        below by one source per customer, and one per customer and named
        source. */ -}}
 {{- $named := $p.sources | default dict -}}
-{{- if $customers -}}
+{{- if $components -}}{{- $named = dict -}}{{- end -}}
+{{- if and $customers (not $components) -}}
 {{- $srcs := dict -}}
 {{- $seen := dict -}}
 {{- range $c := $customers -}}
@@ -150,24 +213,39 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- $projectTokens := include "cd-pipeline.projectTokens" $p | fromYaml -}}
 {{- $e2eApp := $p.e2eApplication | default (printf "%s-e2e" $slug) -}}
 {{- $stages := list -}}
-{{- $stageName := $g.stageName | default "{stage}-{customer}" -}}
+{{- $stageName := $g.stageName | default (ternary "{stage}-{customer}-{component}" "{stage}-{customer}" (not (empty $components))) -}}
+{{- if $components -}}
+{{- range $t := list "{customer}" "{component}" -}}
+{{- if not (contains $t $stageName) -}}{{- fail (printf "cd-pipeline: projects.%s: graph.stageName %q has no %s, so the Stages of a project with components would not be told apart" $name $stageName $t) -}}{{- end -}}
+{{- end -}}
+{{- end -}}
 {{- $chainsOf := ternary $customers (list (dict)) (gt (len $customers) 0) -}}
+{{- if $components -}}{{- $chainsOf = $chainsOfComponents -}}{{- end -}}
 {{- $firsts := list -}}
+{{- $stageNames := dict -}}
 {{- range $c := $chainsOf -}}
 {{- $ctok := $projectTokens -}}
 {{- if $c.name -}}{{- $ctok = merge (dict "customer" $c.name) $projectTokens -}}{{- end -}}
-{{- range $st := $order -}}
+{{- /* The tokens of a chain's Stage names: its customer, and its component. */ -}}
+{{- $ntok := dict "customer" $c.name -}}
+{{- with $c.component -}}{{- $_ := set $ntok "component" . -}}{{- $ctok = merge (dict "component" .) $ctok -}}{{- end -}}
+{{- range $st := ($c.stages | default $order) -}}
 {{- $apps := list -}}
 {{- range $a := (index ($p.applicationsByStage | default dict) $st | default $p.applications | default (list $slug)) -}}
 {{- $apps = append $apps (include "cd-pipeline.fill" (dict "s" $appName "tokens" (merge (dict "stage" $st "app" $a) $ctok))) -}}
 {{- end -}}
 {{- $sname := $st -}}
-{{- if $c.name -}}{{- $sname = include "cd-pipeline.fill" (dict "s" $stageName "tokens" (dict "stage" $st "customer" $c.name)) -}}{{- end -}}
+{{- if $c.name -}}{{- $sname = include "cd-pipeline.fill" (dict "s" $stageName "tokens" (merge (dict "stage" $st) $ntok)) -}}{{- end -}}
+{{- if $c.component -}}
+{{- if hasKey $stageNames $sname -}}{{- fail (printf "cd-pipeline: projects.%s: graph.stageName %q gives %q twice; name the customers and components apart" $name $stageName $sname) -}}{{- end -}}
+{{- $_ := set $stageNames $sname true -}}
+{{- end -}}
 {{- $s := dict "name" $sname "applications" $apps -}}
 {{- if $c.name -}}{{- $_ := set $s "env" $st -}}{{- $_ := set $s "customer" $c.name -}}{{- end -}}
-{{- if hasKey $upstream $st -}}
+{{- with $c.component -}}{{- $_ := set $s "component" . -}}{{- end -}}
+{{- if and (hasKey $upstream $st) (not $c.stages) -}}
 {{- $u := index $upstream $st -}}
-{{- if $c.name -}}{{- $u = include "cd-pipeline.fill" (dict "s" $stageName "tokens" (dict "stage" $u "customer" $c.name)) -}}{{- end -}}
+{{- if $c.name -}}{{- $u = include "cd-pipeline.fill" (dict "s" $stageName "tokens" (merge (dict "stage" $u) $ntok)) -}}{{- end -}}
 {{- $_ := set $s "from" $u -}}
 {{- else -}}
 {{- $firsts = append $firsts $sname -}}
@@ -180,7 +258,8 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- /* A customer's Stage takes its customer's Warehouse, or, where
        stageSources names a source, its customer's Warehouse of that source. */ -}}
 {{- $src := index $srcOf $st | default "" -}}
-{{- if $c.name -}}{{- $src = ternary (printf "%s-%s" $c.name $src) $c.name (ne $src "") -}}{{- end -}}
+{{- if $c.component -}}{{- $src = $c.source -}}
+{{- else if $c.name -}}{{- $src = ternary (printf "%s-%s" $c.name $src) $c.name (ne $src "") -}}{{- end -}}
 {{- with $src -}}
 {{- $_ := set $s "source" . -}}
 {{- $stChart = index $sources . -}}
@@ -203,19 +282,27 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- $claims := $ap.claims -}}
 {{- if not $claims -}}{{- fail "cd-pipeline: graph.approvers.claims is required by access.approvers" -}}{{- end -}}
 {{- range $c := $chainsOf -}}
+{{- $ntok := dict "customer" $c.name -}}
+{{- with $c.component -}}{{- $_ := set $ntok "component" . -}}{{- end -}}
 {{- $cfirst := $first -}}
-{{- if $c.name -}}{{- $cfirst = include "cd-pipeline.fill" (dict "s" $stageName "tokens" (dict "stage" $first "customer" $c.name)) -}}{{- end -}}
-{{- range $st := $order -}}
+{{- if $c.name -}}{{- $cfirst = include "cd-pipeline.fill" (dict "s" $stageName "tokens" (merge (dict "stage" $first) $ntok)) -}}{{- end -}}
+{{- /* A lane's one Stage is its first: no approver but the admins'. */ -}}
+{{- range $st := ($c.stages | default $order) -}}
 {{- if ne $st $first -}}
 {{- $tokens := dict "stage" $st "slug" $slug "project" $name -}}
 {{- $sname := $st -}}
 {{- /* One approver for each customer's Stage: a subject name that does not
-       spell the customer takes it as a suffix. */ -}}
+       spell the customer takes it as a suffix, and with components the
+       component after it. */ -}}
 {{- $subj := $ap.subject | default "approver-{stage}" -}}
 {{- if $c.name -}}
 {{- if not (contains "{customer}" $subj) -}}{{- $subj = printf "%s-{customer}" $subj -}}{{- end -}}
 {{- $_ := set $tokens "customer" $c.name -}}
-{{- $sname = include "cd-pipeline.fill" (dict "s" $stageName "tokens" (dict "stage" $st "customer" $c.name)) -}}
+{{- with $c.component -}}
+{{- if not (contains "{component}" $subj) -}}{{- $subj = printf "%s-{component}" $subj -}}{{- end -}}
+{{- $_ := set $tokens "component" . -}}
+{{- end -}}
+{{- $sname = include "cd-pipeline.fill" (dict "s" $stageName "tokens" (merge (dict "stage" $st) $ntok)) -}}
 {{- end -}}
 {{- $subjects = append $subjects (dict "name" (include "cd-pipeline.fill" (dict "s" $subj "tokens" $tokens)) "claims" (include "cd-pipeline.fillClaims" (dict "claims" $claims "tokens" $tokens) | fromYaml) "stages" (list $cfirst $sname) "approve" (eq $st $last)) -}}
 {{- end -}}
@@ -234,7 +321,8 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- $_ := set $p "access" (dict "subjects" $subjects) -}}
 {{- $_ := set $p "stages" $stages -}}
 {{- if $customers -}}{{- $_ := set $p "customerWarehousesOnly" true -}}{{- end -}}
-{{- range $k := list "stageOrder" "upstreams" "autoPromote" "noAutoPromote" "noPrereleases" "stageSources" "applications" "applicationsByStage" "e2eStages" "e2eApplication" "metricsGateStages" "customers" -}}
+{{- if $components -}}{{- $_ := set $p "componentChains" true -}}{{- end -}}
+{{- range $k := list "stageOrder" "upstreams" "autoPromote" "noAutoPromote" "noPrereleases" "stageSources" "applications" "applicationsByStage" "e2eStages" "e2eApplication" "metricsGateStages" "customers" "components" -}}
 {{- $_ := unset $p $k -}}
 {{- end -}}
 {{- toYaml $p -}}

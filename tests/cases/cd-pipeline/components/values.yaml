@@ -1,0 +1,63 @@
+# One Kargo Project for a product of several parts, each a chart of its own,
+# for several customers. Each component has one Warehouse, shared by every
+# customer that takes it: sso-keycloak, sso-portal, sso-demo, and
+# sso-keycloak-master of keycloak's source `master`. generic, globex, initech,
+# umbrella and hooli take keycloak and portal; internal takes demo alone. Each
+# customer has a chain of Stages for each of its components along stageOrder,
+# <stage>-<customer>-<component>. globex-master is a lane: one Stage,
+# devel-globex-master-keycloak, on sso-keycloak-master, promoting on its own
+# and nothing onward. Approvers are for each customer's and component's
+# Stages.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+promotion:
+  pinFile: "projects/{slug}/{customer}/{component}/{stage}/pin.yaml"
+  pinKey: "pins.{stage}-{customer}-{component}"
+  commitMessage: "chore({slug}): promote {component} {version} to {stage} for {customer}"
+  prTitle: "chore({slug}): promote {component} to {stage} for {customer}"
+graph:
+  upstreams:
+    stage: [devel]
+    prod: [stage]
+  applicationName: "{stage}-{app}"
+  approvers:
+    claims:
+      groups: ["{stage}:{slug}:{customer}:approver"]
+  admins:
+    claims:
+      groups: [platform:admin]
+projects:
+  - name: shared-sso
+    vendor: shared
+    warehouse:
+      name: sso
+    applications: ["{slug}-{customer}-{component}"]
+    components:
+      keycloak:
+        chart:
+          repoURL: oci://registry.example.com/charts/keycloak
+          semver: ">=0.1.0 <2.0.0"
+        sources:
+          master:
+            repoURL: oci://preview.example.com/charts/keycloak
+            semver: ">=0.0.0-0"
+      portal:
+        chart:
+          repoURL: oci://registry.example.com/charts/portal
+          semver: ">=0.1.0 <1.0.0"
+      demo:
+        chart:
+          repoURL: oci://registry.example.com/charts/demo
+          semver: ">=0.1.0 <1.0.0"
+    customers:
+      - {name: generic, components: [keycloak, portal]}
+      - {name: globex, components: [keycloak, portal]}
+      - {name: initech, components: [keycloak, portal]}
+      - {name: umbrella, components: [keycloak, portal]}
+      - {name: hooli, components: [keycloak, portal]}
+      - {name: internal, components: [demo]}
+      - {name: globex-master, components: [keycloak], lane: {source: master}}
+    access:
+      approvers: true
+      admins: true
+    stageOrder: [devel, stage, prod]

@@ -40,12 +40,12 @@
         },
         "applicationPrefix": {
           "type": "string",
-          "description": "Prepended to every Application's name (empty is allowed); accepts {vendor} and {customer} where the platform gives them."
+          "description": "Prepended to every Application's name (empty is allowed); accepts {vendor}, {customer} and {component} where the platform gives them."
         },
         "appProject": {
           "type": "string",
           "minLength": 1,
-          "description": "The AppProject every Application runs under, with {product} and {cluster} tokens and, where the platform gives them, {vendor} and {customer}."
+          "description": "The AppProject every Application runs under, with {product} and {cluster} tokens and, where the platform gives them, {vendor}, {customer} and {component}."
         },
         "vendor": {
           "type": "string",
@@ -59,12 +59,18 @@
           "maxLength": 63,
           "description": "Whom this installation is for: the {customer} token, as vendor."
         },
+        "component": {
+          "type": "string",
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+          "maxLength": 63,
+          "description": "Which part of a product made of several (each its own chart) this installation is: the {component} token, as vendor."
+        },
         "applicationLabels": {
           "type": "object",
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Labels on every Application; values accept the {product} and {cluster} tokens and, where the platform gives them, {vendor} and {customer}."
+          "description": "Labels on every Application; values accept the {product} and {cluster} tokens and, where the platform gives them, {vendor}, {customer} and {component}."
         },
         "waves": {
           "type": "object",
@@ -888,6 +894,11 @@
             "type": "string",
             "minLength": 1,
             "description": "Kinds `product` and `static-site`: this product's `{customer}` in the platform's name patterns, over `platform.customer`: one install of a product for one customer."
+          },
+          "component": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Kinds `product` and `static-site`: this product's `{component}` in the platform's name patterns, over `platform.component`: one part of a product made of several, beside the others in the same call."
           },
           "chartVersion": {
             "type": "string",
