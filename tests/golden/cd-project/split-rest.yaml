@@ -12,6 +12,7 @@ spec:
     name: stage
     namespace: shop
   project: shop-stage
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-infra
@@ -62,6 +63,7 @@ spec:
     name: stage
     namespace: shop
   project: shop-stage
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop

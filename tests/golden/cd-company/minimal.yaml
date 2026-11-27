@@ -12,6 +12,7 @@ spec:
     name: devel
     namespace: example-service
   project: example-service-devel
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: example-service-infra
@@ -62,6 +63,7 @@ spec:
     name: devel
     namespace: example-service
   project: example-service-devel
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: example-service

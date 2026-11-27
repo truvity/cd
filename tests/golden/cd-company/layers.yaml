@@ -12,6 +12,7 @@ spec:
     name: east
     namespace: example-service
   project: example-service-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: example-service-infra
@@ -61,6 +62,7 @@ spec:
     name: east
     namespace: example-service
   project: example-service-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: example-service
@@ -118,6 +120,7 @@ spec:
     name: east
     namespace: example-worker
   project: example-worker-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: example-worker-infra
@@ -167,6 +170,7 @@ spec:
     name: east
     namespace: example-worker
   project: example-worker-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: example-worker

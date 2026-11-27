@@ -12,6 +12,7 @@ spec:
     name: east
     namespace: edge
   project: gateway-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: gateway
@@ -51,6 +52,7 @@ spec:
     name: east
     namespace: shop
   project: shop-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-infra
@@ -100,6 +102,7 @@ spec:
     name: east
     namespace: shop
   project: shop-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop

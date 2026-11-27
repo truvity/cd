@@ -10,6 +10,10 @@ platform:
   # What an Application does on removal and how it syncs. These are Argo CD
   # mechanism, not estate facts.
   finalizer: true
+  # How many past syncs each Application keeps in status.history. Every entry
+  # holds the sources' valuesObject inline, so Argo CD's default of 10 can grow
+  # an Application past what etcd accepts in one write.
+  revisionHistoryLimit: 3
   sync:
     prune: true
     selfHeal: true

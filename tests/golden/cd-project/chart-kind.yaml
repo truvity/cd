@@ -12,6 +12,7 @@ spec:
     name: dev
     namespace: docs-site
   project: docs-dev
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: docs
@@ -51,6 +52,7 @@ spec:
     name: stage
     namespace: docs-site
   project: docs-stage
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: docs

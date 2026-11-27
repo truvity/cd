@@ -12,6 +12,7 @@ spec:
     name: east
     namespace: docs
   project: docs-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: docs
@@ -54,6 +55,7 @@ spec:
     name: east
     namespace: docs
   project: docs-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: docs

@@ -18,7 +18,7 @@ that passes its own dict gets the same refusal of an unknown key from
 {{- $products := .products | default dict -}}
 {{- $docs := list -}}
 {{- if $products -}}
-{{- include "cd-delivery.assertKeys" (dict "what" "platform" "got" $plat "allowed" (list "tier" "finalizer" "sync" "syncRetry" "clusterName" "argocdNamespace" "applicationPrefix" "applicationSuffixes" "appProject" "vendor" "customer" "applicationLabels" "waves" "chartRegistry" "cloud" "postgres" "events" "database" "identity" "telemetry" "e2e" "availability" "alerts" "dashboards" "staticSite")) -}}
+{{- include "cd-delivery.assertKeys" (dict "what" "platform" "got" $plat "allowed" (list "tier" "finalizer" "revisionHistoryLimit" "sync" "syncRetry" "clusterName" "argocdNamespace" "applicationPrefix" "applicationSuffixes" "appProject" "vendor" "customer" "applicationLabels" "waves" "chartRegistry" "cloud" "postgres" "events" "database" "identity" "telemetry" "e2e" "availability" "alerts" "dashboards" "staticSite")) -}}
 {{- range $name := (keys $products | sortAlpha) -}}
 {{- $p := get $products $name -}}
 {{- $kind := $p.kind | default "product" -}}
@@ -268,6 +268,10 @@ ring composed. Call with (dict "ctx" <product ctx> "ring" infra|app|e2e
 {{- $source = dict "repoURL" $repo "chart" (printf "%s%s" $chart $suffix) "targetRevision" $revision "helm" (dict "releaseName" $release "valuesObject" $values) -}}
 {{- end -}}
 {{- $spec := dict "project" (include "cd-delivery.fillInstallation" (dict "plat" $plat "what" "platform.appProject" "s" (include "cd-delivery.fill" (dict "s" (required "cd-delivery: platform.appProject is required" $plat.appProject) "product" $name "cluster" $cluster)))) "sources" (list $source) "destination" (dict "name" $cluster "namespace" ($p.namespace | default $name)) "syncPolicy" $syncPolicy -}}
+{{- /* Each history entry holds the sources' valuesObject inline: Argo CD's
+       default of 10 entries can make an Application too large for etcd to
+       accept a write. Three keep a rollback within reach. */ -}}
+{{- $_ := set $spec "revisionHistoryLimit" (hasKey $plat "revisionHistoryLimit" | ternary $plat.revisionHistoryLimit 3) -}}
 {{- $ignore := dig "ignoreDifferences" $ring (list) $p -}}
 {{- /* The platform's ignoreDifferences for alert rules (platform.alerts), on
        the application ring of a product whose alerts reach its chart: the

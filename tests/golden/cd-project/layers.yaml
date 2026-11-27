@@ -12,6 +12,7 @@ spec:
     name: east
     namespace: shop
   project: shop-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-infra
@@ -61,6 +62,7 @@ spec:
     name: east
     namespace: shop
   project: shop-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop
@@ -118,6 +120,7 @@ spec:
     name: west
     namespace: shop
   project: shop-west
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-infra
@@ -167,6 +170,7 @@ spec:
     name: west
     namespace: shop
   project: shop-west
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop

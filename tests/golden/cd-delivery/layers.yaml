@@ -12,6 +12,7 @@ spec:
     name: east
     namespace: shop-applied
   project: shop-applied-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-applied-infra
@@ -62,6 +63,7 @@ spec:
     name: east
     namespace: shop-applied
   project: shop-applied-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-applied
@@ -117,6 +119,7 @@ spec:
     name: east
     namespace: shop-prerelease
   project: shop-prerelease-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-prerelease-infra
@@ -167,6 +170,7 @@ spec:
     name: east
     namespace: shop-prerelease
   project: shop-prerelease-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-prerelease
@@ -222,6 +226,7 @@ spec:
     name: east
     namespace: shop-sentinel
   project: shop-sentinel-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-sentinel-infra
@@ -271,6 +276,7 @@ spec:
     name: east
     namespace: shop-sentinel
   project: shop-sentinel-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-sentinel
@@ -326,6 +332,7 @@ spec:
     name: east
     namespace: shop-skipped
   project: shop-skipped-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-skipped-infra
@@ -375,6 +382,7 @@ spec:
     name: east
     namespace: shop-skipped
   project: shop-skipped-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-skipped
