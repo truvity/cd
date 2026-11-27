@@ -563,9 +563,9 @@ and per project `name`, `stages` (or `stageOrder`, see [Derived Stages](#derived
 | `projects[].warehouse` | `name` (default the project's), `interval` (`5m0s`), `freightCreationPolicy` (`Automatic`), `subscriptions`, `freightCreationCriteria`. `freightCreationCriteria.expression` (required, non-empty) is rendered verbatim as the Warehouse's `spec.freightCreationCriteria`: Kargo creates Freight from a discovery only when the expression is true, for instance `imageFrom('repo-a')?.Tag == imageFrom('repo-b')?.Tag` over two `subscriptions`, so the two images move together. It applies to the project's own Warehouse alone, not to the Warehouses of `sources`; needs a Kargo that supports it (1.11 does). Unset, nothing is rendered (`tests/cases/cd-pipeline/freight-creation-criteria`). |
 | `projects[].access.subjects[]` | `name`, `claims`, `stages`, `approve`. |
 | `projects[].access.approvers`, `.admins` | With `stageOrder`: derive one approver subject per Stage after the first, or one admin subject (see [Derived Stages](#derived-stages)). |
-| `projects[].stageOrder` and the keys it reads | `upstreams`, `autoPromote`, `noAutoPromote`, `stageSources`, `applications`, `applicationsByStage`, `e2eStages`, `e2eApplication`, `metricsGateStages`: see [Derived Stages](#derived-stages). |
+| `projects[].stageOrder` and the keys it reads | `upstreams`, `autoPromote`, `noAutoPromote`, `noPrereleases`, `stageSources`, `applications`, `applicationsByStage`, `e2eStages`, `e2eApplication`, `metricsGateStages`: see [Derived Stages](#derived-stages). |
 | `projects[].metricsGate` | The project's metrics-gate inputs: `namespace` and `release` of the workload (default the slug), `e2eJobRequired` (default true). |
-| `projects[].stages[]` | `name`, `from` (the upstream Stage; none means Freight straight from the Warehouse), `source` (a key of `sources`; none means `chart`; a Stage and its upstream take the same one), `autoPromote`, `noAutoPromote` (the ProjectConfig names the Stage with `autoPromotionEnabled: false`, over `autoPromote`), `applications`, `mode` (`pr` after the first Stage, `direct` for it), `verification`, `promotionTemplate`, `e2eApplication` (an Application that runs the end-to-end suite as a sync hook: the promotion ends with an `argocd-update` step on it, `retry.timeout` `25m0s`, and a check requires the Application to pin the promoted version, its last operation to have Succeeded, with the synced revisions equal to the revisions the Application resolves to (for an OCI chart both are digests, never the version string), and the suite Job of that version to have succeeded (a Sync-hook Job of the operation with `hookPhase` `Succeeded`, or, before `e2e.hook` is on, a Healthy tracked Job); the step is refused by Kargo unless the Application carries `kargo.akuity.io/authorized-stage` for this Stage, which is `products.<name>.e2e.kargoStage` in `cd-delivery`; it is not listed in `applications`; needs `promotedVersion.image` and `.jqImage`). |
+| `projects[].stages[]` | `name`, `from` (the upstream Stage; none means Freight straight from the Warehouse), `source` (a key of `sources`; none means `chart`; a Stage and its upstream take the same one), `autoPromote`, `noAutoPromote` (the ProjectConfig names the Stage with `autoPromotionEnabled: false`, over `autoPromote`), `noPrereleases` (the Stage's promotion refuses a version with a prerelease part; not with `promotionTemplate`), `applications`, `mode` (`pr` after the first Stage, `direct` for it), `verification`, `promotionTemplate`, `e2eApplication` (an Application that runs the end-to-end suite as a sync hook: the promotion ends with an `argocd-update` step on it, `retry.timeout` `25m0s`, and a check requires the Application to pin the promoted version, its last operation to have Succeeded, with the synced revisions equal to the revisions the Application resolves to (for an OCI chart both are digests, never the version string), and the suite Job of that version to have succeeded (a Sync-hook Job of the operation with `hookPhase` `Succeeded`, or, before `e2e.hook` is on, a Healthy tracked Job); the step is refused by Kargo unless the Application carries `kargo.akuity.io/authorized-stage` for this Stage, which is `products.<name>.e2e.kargoStage` in `cd-delivery`; it is not listed in `applications`; needs `promotedVersion.image` and `.jqImage`). |
 
 Durations are written the way the API server stores them (`10m0s`, not `10m`):
 Argo CD compares the manifest with the stored object and a Stage whose
@@ -620,6 +620,24 @@ earlier render left behind (`Prune=false`) cannot keep the Stage promoting.
 With every Stage held, the ProjectConfig holds only such entries. A Stage
 spelled out takes `noAutoPromote: true` for the same
 (`tests/cases/cd-pipeline/no-auto-promote`).
+
+`noPrereleases` lists the Stages that take releases only. A Stage and its
+upstream take Freight from the same Warehouse, so once that Warehouse
+discovers release candidates (a range that ends in `-0`) for an earlier Stage
+to run, every later Stage may be given them too. A Stage this key lists
+refuses them: its promotion starts with a `fail` step (alias `no-prerelease`)
+whose condition is `semverParse(<version>).Prerelease() != ''`, and one more
+for each companion (`no-prerelease-<companion>`). The step reads the
+discovered tag, also where the pin is a digest. The promotion fails before it
+waits on anything or clones the repository, and its message names the Stage
+and the version. A tag that is not a version fails the condition, and the
+promotion with it. Kargo does not hide such Freight from the Stage: a person
+can still start the promotion, and it fails. A name that is not a Stage of
+`stageOrder` is refused, and so is the key on a Stage whose
+`promotionTemplate` is spelled out. A Stage spelled out takes
+`noPrereleases: true` for the same (`tests/cases/cd-pipeline/no-prereleases`).
+An admission policy that lists the steps a Stage may name needs `fail` before
+the key is set.
 
 ### Project tokens
 
@@ -915,6 +933,7 @@ project:
     stageOrder: [dev, stage, prod] # each a cluster of project.clusters
     autoPromote: [dev]
     noAutoPromote: [prod]          # optional: Stages that never promote on their own
+    noPrereleases: [prod]          # optional: Stages that refuse a version like 1.4.0-rc.1
     upstreams: {prod: [stage]}     # optional, over pipeline.graph.upstreams
     stageSources: {dev: preview}   # optional: the Stage takes project.sources.preview
   sources:                         # optional: further sources of the same chart
@@ -956,6 +975,7 @@ pipeline:                          # the allowlisted cd-pipeline settings
     vendor: acme
     customer: globex
     noAutoPromote: [dev]           # Stages the platform holds back
+    # noPrereleases: [prod]        # optional: Stages the platform keeps prereleases out of
     # stages: [dev]                # optional: this release is the leading part of a split project
     # handedOver: [dev]            # optional: or the rest of it (see below)
 platformDigest: <sha256 of the four keys above, see below>
@@ -1009,8 +1029,8 @@ allows (`tests/cases/cd-project/sources`).
 Refused at render: a `project.clusters` entry the platform did not register in
 `clusters`, or one without `platform.<cluster>`; a `pins` or `values` key that
 is not in `project.clusters`; a Stage that is not a cluster of the project, an
-`autoPromote`, `noAutoPromote`, `upstreams` or `stageSources` Stage that is not
-in `stageOrder` (the company's `noAutoPromote` or the platform's); a
+`autoPromote`, `noAutoPromote`, `noPrereleases`, `upstreams` or `stageSources` Stage that is not
+in `stageOrder` (the company's `noAutoPromote` and `noPrereleases` or the platform's); a
 `pipeline.project.name` that does not fill to a namespace name; a template
 that names `{vendor}` or `{customer}` where the platform gives none;
 a `stageSources` value that is not a key of `project.sources`; a source whose
@@ -1029,7 +1049,7 @@ company's one `project.yaml`. The platform says which part each release is, in
 
 - `stages`: the leading Stages of `project.pipeline.stageOrder` that this
   release renders, Applications and Stages, and no other. The company's
-  `clusters`, `stageOrder`, `autoPromote`, `noAutoPromote`, `upstreams` and
+  `clusters`, `stageOrder`, `autoPromote`, `noAutoPromote`, `noPrereleases`, `upstreams` and
   `stageSources` are narrowed to them, and a further source that none of them
   takes is left out (`project.source`'s Warehouse is rendered as always). Only
   a leading part, so a kept Stage stays first, keeps its access and its way of
@@ -1127,6 +1147,13 @@ passed to cd-pipeline's `noAutoPromote` ([Derived Stages](#derived-stages)).
 The platform's is the one that quiesces a pipeline during a move, since two
 renders of one project read the same company files and only the platform's
 values can tell them apart (`tests/cases/cd-project/no-auto-promote`).
+
+Prereleases are kept out of a Stage the same way, by the company
+(`project.pipeline.noPrereleases`) or by the platform
+(`pipeline.project.noPrereleases`); the two lists are added together and
+passed to cd-pipeline's `noPrereleases` ([Derived Stages](#derived-stages),
+`tests/cases/cd-project/no-prereleases`). The platform's is the one a company
+cannot take away.
 
 ### A product with several customers
 

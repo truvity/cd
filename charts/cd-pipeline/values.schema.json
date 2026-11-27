@@ -1205,6 +1205,10 @@
                   "type": "boolean",
                   "description": "The ProjectConfig names the Stage with autoPromotionEnabled false, over `autoPromote`: what a derived Stage that the project's `noAutoPromote` lists is marked with."
                 },
+                "noPrereleases": {
+                  "type": "boolean",
+                  "description": "The Stage takes releases only: its promotion starts with a `fail` step for the chart and for each companion, which refuses a version that has a prerelease part (`1.4.0-rc.1`). What a derived Stage that the project's `noPrereleases` lists is marked with. Not with `promotionTemplate`."
+                },
                 "applications": {
                   "type": "array",
                   "items": {
@@ -1430,6 +1434,14 @@
               "minLength": 1
             },
             "description": "Derived Stages that do not promote on their own, whatever `autoPromote` and the no-upstream rule say; each one a Stage of stageOrder. The ProjectConfig names them with autoPromotionEnabled false."
+          },
+          "noPrereleases": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Derived Stages that take releases only; each one a Stage of stageOrder. Their promotion refuses a version with a prerelease part, so a release candidate an earlier Stage ran cannot be promoted into them."
           },
           "stageSources": {
             "type": "object",

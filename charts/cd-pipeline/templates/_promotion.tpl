@@ -44,6 +44,20 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- if $digestPin -}}{{- $_ := set $wording "tag" (printf "${{ %s.Tag }}" $from) -}}{{- end -}}
 {{- $steps := list -}}
 
+{{- /* Releases only: a Stage marked `noPrereleases` refuses, before anything
+       else runs, a version that has a prerelease part (1.4.0-rc.1), one
+       `fail` step for the chart and one for each companion. The Stage and
+       its upstream take Freight from the same Warehouse, so this is what
+       keeps a release candidate that an earlier Stage ran out of this one.
+       The step reads the discovered tag, also where the pin is a digest. A
+       tag that is not a version fails the step's condition, and the
+       promotion with it. */ -}}
+{{- $guards := list -}}
+{{- if and $s.noPrereleases (not $chartless) -}}
+{{- $gv := printf "%s.%s" $from (ternary "Tag" "Version" $chm.image) -}}
+{{- $guards = append $guards (dict "uses" "fail" "as" "no-prerelease" "if" (printf "${{ semverParse(%s).Prerelease() != '' }}" $gv) "config" (dict "message" (printf "%s takes releases only: ${{ %s }} is a prerelease" $s.name $gv))) -}}
+{{- end -}}
+
 {{- /* The gate: before a hop moves a pin, the Applications that the version it
        promotes from already runs in must be Healthy and Synced. The first Stage
        has none, and no Stage waits on the Applications it is about to update. */ -}}
@@ -72,6 +86,10 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- $cm := include "cd-pipeline.chartMode" (dict "name" $p.name "chart" $co) | fromYaml -}}
 {{- $cfrom := include "cd-pipeline.chartFrom" (dict "repoURL" $cm.repo "name" ($co.name | default "") "vars" false "image" $cm.image) -}}
 {{- $updates = append $updates (dict "key" $key "value" (printf "%s${{ %s.%s }}" ($co.versionPrefix | default "") $cfrom (ternary (ternary "Digest" "Tag" $cm.digest) "Version" $cm.image))) -}}
+{{- if $s.noPrereleases -}}
+{{- $gv := printf "%s.%s" $cfrom (ternary "Tag" "Version" $cm.image) -}}
+{{- $guards = append $guards (dict "uses" "fail" "as" (printf "no-prerelease-%s" $cn) "if" (printf "${{ semverParse(%s).Prerelease() != '' }}" $gv) "config" (dict "message" (printf "%s takes releases only: %s ${{ %s }} is a prerelease" $s.name $cn $gv))) -}}
+{{- end -}}
 {{- end -}}
 {{- $pinPath := printf "./repo/%s" (include "cd-pipeline.fill" (dict "s" $pr.pinFile "tokens" $tokens)) -}}
 {{- /* A missing pin file, seeded: `yaml-update` neither creates a file nor
@@ -125,5 +143,5 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- end -}}
 {{- $vars := list (dict "name" "gitRepo" "value" $repo) -}}
 {{- if not $chartless -}}{{- $vars = concat $vars (list (dict "name" "chartRepo" "value" $chm.repo) (dict "name" "chartName" "value" $chartName)) -}}{{- end -}}
-{{- toYaml (dict "vars" $vars "steps" $steps) -}}
+{{- toYaml (dict "vars" $vars "steps" (concat $guards $steps)) -}}
 {{- end -}}

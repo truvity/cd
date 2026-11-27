@@ -333,6 +333,7 @@ Call with (dict "root" . "p" <project> "s" <stage> "stages" <name -> stage> "slu
 {{- $_ := set $spec "verification" (dict "analysisTemplates" (include "cd-pipeline.names" $templates | fromYamlArray) "args" $verArgs) -}}
 {{- end -}}
 {{- if $s.promotionTemplate -}}
+{{- if $s.noPrereleases -}}{{- fail (printf "cd-pipeline: projects.%s.stages.%s.promotionTemplate is spelled out, so noPrereleases would refuse nothing" $name $s.name) -}}{{- end -}}
 {{- $_ := set $spec "promotionTemplate" $s.promotionTemplate -}}
 {{- else -}}
 {{- $_ := set $spec "promotionTemplate" (dict "spec" (include "cd-pipeline.promotion" (dict "root" $r "p" $p "s" $s "stages" .stages "slug" $slug "eff" .eff) | fromYaml)) -}}
