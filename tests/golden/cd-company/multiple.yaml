@@ -12,6 +12,7 @@ spec:
     name: stage
     namespace: example-service
   project: example-service-stage
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: example-service-infra
@@ -71,6 +72,7 @@ spec:
     name: stage
     namespace: example-service
   project: example-service-stage
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: example-service
@@ -129,6 +131,7 @@ spec:
     name: stage
     namespace: example-service
   project: example-service-stage
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: example-service-e2e
@@ -184,6 +187,7 @@ spec:
     name: stage
     namespace: example-worker
   project: example-worker-stage
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: example-worker-infra
@@ -234,6 +238,7 @@ spec:
     name: stage
     namespace: example-worker
   project: example-worker-stage
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: example-worker

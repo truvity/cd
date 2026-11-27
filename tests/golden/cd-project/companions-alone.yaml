@@ -14,6 +14,7 @@ spec:
     name: dev
     namespace: shop-globex
   project: dev-globex-shop
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-globex-web
@@ -56,6 +57,7 @@ spec:
     name: dev
     namespace: shop-globex
   project: dev-globex-shop
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-globex-web
@@ -104,6 +106,7 @@ spec:
     name: dev
     namespace: shop-initech
   project: dev-initech-shop
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-initech-web
@@ -146,6 +149,7 @@ spec:
     name: dev
     namespace: shop-initech
   project: dev-initech-shop
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-initech-web
@@ -193,6 +197,7 @@ spec:
     name: stage
     namespace: shop-globex
   project: stage-globex-shop
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-globex-web
@@ -235,6 +240,7 @@ spec:
     name: stage
     namespace: shop-globex
   project: stage-globex-shop
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-globex-web

@@ -573,6 +573,11 @@
             "type": "boolean",
             "description": "Add the Argo CD resources finalizer, so removing an Application removes what it deployed."
           },
+          "revisionHistoryLimit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "spec.revisionHistoryLimit of every Application: how many past syncs it keeps in status.history. Each entry holds the sources' valuesObject inline, so the more it keeps the larger the object; Argo CD's own default of 10 can make an Application too large for etcd to accept. Default 3."
+          },
           "sync": {
             "type": "object",
             "additionalProperties": false,
@@ -1669,6 +1674,7 @@
               "const": {
                 "tier": "primary",
                 "finalizer": true,
+                "revisionHistoryLimit": 3,
                 "sync": {
                   "prune": true,
                   "selfHeal": true,

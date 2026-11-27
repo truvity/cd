@@ -16,6 +16,7 @@ spec:
     name: east
     namespace: atlas
   project: atlas-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: atlas-infra
@@ -76,6 +77,7 @@ spec:
     name: east
     namespace: atlas
   project: atlas-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: atlas
@@ -142,6 +144,7 @@ spec:
     name: east
     namespace: shop
   project: shop-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-infra
@@ -222,6 +225,7 @@ spec:
     - .spec.groups[]?.rules[]?.record
     kind: Rule
   project: shop-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop
@@ -354,6 +358,7 @@ spec:
     name: east
     namespace: shop
   project: shop-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-e2e

@@ -12,6 +12,7 @@ spec:
     name: east
     namespace: tool
   project: tool-east
+  revisionHistoryLimit: 3
   sources:
   - chart: tool-chart
     helm:

@@ -12,6 +12,7 @@ spec:
     name: dev
     namespace: shop
   project: shop-dev
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-infra
@@ -62,6 +63,7 @@ spec:
     name: dev
     namespace: shop
   project: shop-dev
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop

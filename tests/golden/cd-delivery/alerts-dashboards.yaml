@@ -12,6 +12,7 @@ spec:
     name: east
     namespace: cart
   project: cart-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: cart-infra
@@ -62,6 +63,7 @@ spec:
     name: east
     namespace: cart
   project: cart-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: cart
@@ -114,6 +116,7 @@ spec:
     name: east
     namespace: shop
   project: shop-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-infra
@@ -173,6 +176,7 @@ spec:
     - /spec/replicas
     kind: Deployment
   project: shop-east
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop

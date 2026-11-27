@@ -14,6 +14,7 @@ spec:
     name: dev
     namespace: shop
   project: shop-dev-globex
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-infra
@@ -66,6 +67,7 @@ spec:
     name: dev
     namespace: shop
   project: shop-dev-globex
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop
@@ -121,6 +123,7 @@ spec:
     name: stage
     namespace: shop
   project: shop-stage-globex
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop-infra
@@ -173,6 +176,7 @@ spec:
     name: stage
     namespace: shop
   project: shop-stage-globex
+  revisionHistoryLimit: 3
   sources:
   - helm:
       releaseName: shop
