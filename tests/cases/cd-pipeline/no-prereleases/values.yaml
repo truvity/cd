@@ -1,0 +1,41 @@
+# Stages that take releases only. shop's Warehouse discovers release
+# candidates (the range ends in -0), stage runs them, and prod must not:
+# noPrereleases lists prod, so prod's promotion starts with a `fail` step that
+# refuses a chart version with a prerelease part, and stage's has none. In
+# web, a chart pinned by digest with a companion, the Stage spelled out takes
+# `noPrereleases: true`: one step reads the chart's discovered tag and one the
+# companion's.
+git:
+  repoURL: https://git.example.com/acme/environments.git
+graph:
+  upstreams:
+    stage: [dev]
+    prod: [stage]
+projects:
+  - name: shop
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0-0 <2.0.0"
+    stageOrder: [dev, stage, prod]
+    autoPromote: [stage]
+    noPrereleases: [prod]
+  - name: web
+    chart:
+      repoURL: oci://registry.example.com/charts/web
+      semver: ">=1.0.0-0 <2.0.0"
+      subscribeAs: image
+      pin: digest
+    companions:
+      site:
+        repoURL: registry.example.com/static/web/site
+        semver: ">=1.0.0-0 <2.0.0"
+        subscribeAs: image
+        pin: digest
+    stages:
+      - name: stage
+        autoPromote: true
+        applications: [stage-web]
+      - name: prod
+        from: stage
+        noPrereleases: true
+        applications: [prod-web]

@@ -352,7 +352,7 @@ func TestProjectChildrenAreCompanyRenders(t *testing.T) {
 // splitView is the company's project as one release of a split project sees
 // it, derived here apart from the chart: with pipeline.project.stages, the
 // project narrowed to those leading Stages (its clusters, stageOrder,
-// autoPromote, noAutoPromote, upstreams and stageSources, and the further
+// autoPromote, noAutoPromote, noPrereleases, upstreams and stageSources, and the further
 // sources they still take); with pipeline.project.handedOver, the project as
 // it is and the clusters whose Applications the other release renders.
 func splitView(t *testing.T, values map[string]any) (map[string]any, []any) {
@@ -382,7 +382,7 @@ func splitView(t *testing.T, values map[string]any) (map[string]any, []any) {
 	project["clusters"] = keep(parity.List(project["clusters"]))
 	pipeline := parity.Map(project["pipeline"])
 	pipeline["stageOrder"] = stages
-	for _, key := range []string{"autoPromote", "noAutoPromote"} {
+	for _, key := range []string{"autoPromote", "noAutoPromote", "noPrereleases"} {
 		if v, ok := pipeline[key]; ok {
 			pipeline[key] = keep(parity.List(v))
 		}
@@ -481,6 +481,15 @@ func TestProjectPipelineIsCdPipelines(t *testing.T) {
 			}
 			if len(held) > 0 {
 				p["noAutoPromote"] = held
+			}
+			releasesOnly := parity.List(pipeline["noPrereleases"])
+			for _, stage := range parity.List(kargo["noPrereleases"]) {
+				if !slices.Contains(releasesOnly, stage) {
+					releasesOnly = append(releasesOnly, stage)
+				}
+			}
+			if len(releasesOnly) > 0 {
+				p["noPrereleases"] = releasesOnly
 			}
 
 			// The platform's metrics gate: the Stages it seals.

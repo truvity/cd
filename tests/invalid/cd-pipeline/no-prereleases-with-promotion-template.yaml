@@ -1,0 +1,16 @@
+# expect: promotionTemplate is spelled out, so noPrereleases would refuse nothing
+git:
+  repoURL: https://git.example.com/acme/environments.git
+projects:
+  - name: shop
+    chart:
+      repoURL: oci://registry.example.com/charts/shop
+      semver: ">=1.0.0 <2.0.0"
+    stages:
+      - name: prod
+        noPrereleases: true
+        applications: [prod-shop]
+        promotionTemplate:
+          spec:
+            steps:
+              - uses: git-clone

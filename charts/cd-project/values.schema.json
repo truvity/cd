@@ -368,6 +368,16 @@
               },
               "description": "Stages that do not promote on their own, over autoPromote and over the rule that a Stage with no upstream does. The platform may hold back more (pipeline.project.noAutoPromote)."
             },
+            "noPrereleases": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                "maxLength": 63
+              },
+              "description": "Stages that take releases only: their promotion refuses a version with a prerelease part (1.4.0-rc.1), for the chart and for each companion. For the Stage that must never run a release candidate an earlier Stage ran. The platform may name more (pipeline.project.noPrereleases)."
+            },
             "upstreams": {
               "type": "object",
               "propertyNames": {
@@ -1582,6 +1592,16 @@
                 "maxLength": 63
               },
               "description": "Stages the platform holds back from promoting on their own, beside project.pipeline.noAutoPromote: to quiesce a pipeline while it is moved, so that one Kargo Project writes a pin."
+            },
+            "noPrereleases": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                "maxLength": 63
+              },
+              "description": "Stages the platform keeps prereleases out of, beside project.pipeline.noPrereleases: their promotion refuses a version with a prerelease part."
             },
             "stages": {
               "type": "array",

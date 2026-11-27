@@ -104,6 +104,16 @@ Call with the chart's root context.
     {{- fail (printf "cd-project: pipeline.project.noAutoPromote: %q is not a Stage of project.pipeline.stageOrder" $s) -}}
   {{- end -}}
 {{- end -}}
+{{- range $s := ($p.pipeline.noPrereleases | default list) -}}
+  {{- if not (has $s $order) -}}
+    {{- fail (printf "cd-project: project.pipeline.noPrereleases: %q is not a Stage of project.pipeline.stageOrder" $s) -}}
+  {{- end -}}
+{{- end -}}
+{{- range $s := (dig "project" "noPrereleases" list $v.pipeline) -}}
+  {{- if not (has $s $order) -}}
+    {{- fail (printf "cd-project: pipeline.project.noPrereleases: %q is not a Stage of project.pipeline.stageOrder" $s) -}}
+  {{- end -}}
+{{- end -}}
 {{- range $s := (dig "project" "metricsGateStages" list $v.pipeline) -}}
   {{- if not (has $s $order) -}}
     {{- fail (printf "cd-project: pipeline.project.metricsGateStages: %q is not a Stage of project.pipeline.stageOrder" $s) -}}
@@ -196,7 +206,7 @@ serves both.
 
 - stages: the leading Stages of project.pipeline.stageOrder that this release
   renders, its Applications and Stages, and no other. The company's clusters,
-  stageOrder, autoPromote, noAutoPromote, upstreams and stageSources are
+  stageOrder, autoPromote, noAutoPromote, noPrereleases, upstreams and stageSources are
   narrowed to them, and a further source that none of them takes is left out.
   A kept Stage whose upstream would be a Stage left out is refused: it would
   take Freight straight from the Warehouse instead, without saying so.
@@ -263,7 +273,7 @@ Call with the chart's root context.
   {{- $_ := set $n "clusters" $clusters -}}
   {{- $pl := $n.pipeline -}}
   {{- $_ := set $pl "stageOrder" $stages -}}
-  {{- range $k := list "autoPromote" "noAutoPromote" -}}
+  {{- range $k := list "autoPromote" "noAutoPromote" "noPrereleases" -}}
     {{- if hasKey $pl $k -}}
       {{- $kept := list -}}
       {{- range $s := (index $pl $k | default list) -}}{{- if has $s $stages -}}{{- $kept = append $kept $s -}}{{- end -}}{{- end -}}
@@ -350,6 +360,9 @@ Call with the chart's root context.
 {{- /* Either side may hold a Stage back: the company in its own file, the
        platform in what it seals (to quiesce a pipeline it is moving). */ -}}
 {{- with concat ($p.pipeline.noAutoPromote | default list) (dig "project" "noAutoPromote" list $v.pipeline) (dig "project" "handedOver" list $v.pipeline) | uniq -}}{{- $_ := set $project "noAutoPromote" . -}}{{- end -}}
+{{- /* Either side may keep prereleases out of a Stage: the company in its own
+       file, the platform in what it seals. */ -}}
+{{- with concat ($p.pipeline.noPrereleases | default list) (dig "project" "noPrereleases" list $v.pipeline) | uniq -}}{{- $_ := set $project "noPrereleases" . -}}{{- end -}}
 {{- with $p.pipeline.upstreams -}}{{- $_ := set $project "upstreams" . -}}{{- end -}}
 {{- with dig "project" "metricsGateStages" list $v.pipeline -}}{{- $_ := set $project "metricsGateStages" . -}}{{- end -}}
 {{- with $p.sources -}}

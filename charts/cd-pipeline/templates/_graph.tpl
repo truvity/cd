@@ -13,6 +13,8 @@ The rules, for each Stage of `stageOrder`, in that order:
   promote it.
 - autoPromote: a Stage with no upstream, and every Stage `autoPromote` lists;
   never a Stage `noAutoPromote` lists, which is marked `noAutoPromote` instead.
+- noPrereleases: every Stage `noPrereleases` lists: its promotion refuses a
+  version with a prerelease part.
 - applications: `applicationsByStage` for the Stage, else `applications`, else
   the project's slug, each through `graph.applicationName` ({stage}, {app},
   and the project's tokens: cd-pipeline.projectTokens).
@@ -110,6 +112,12 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- fail (printf "cd-pipeline: projects.%s.noAutoPromote: %q is not a Stage of stageOrder" $name $st) -}}
 {{- end -}}
 {{- end -}}
+{{- $noPre := $p.noPrereleases | default list -}}
+{{- range $st := $noPre -}}
+{{- if not (has $st $order) -}}
+{{- fail (printf "cd-pipeline: projects.%s.noPrereleases: %q is not a Stage of stageOrder" $name $st) -}}
+{{- end -}}
+{{- end -}}
 {{- $upstream := dict -}}
 {{- $first := "" -}}
 {{- range $st := $order -}}
@@ -167,6 +175,7 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- /* The opt-out wins over both rules. */ -}}
 {{- if has $st $noAuto -}}{{- $_ := set $s "noAutoPromote" true -}}
 {{- else if or (not (hasKey $upstream $st)) (has $st $auto) -}}{{- $_ := set $s "autoPromote" true -}}{{- end -}}
+{{- if has $st $noPre -}}{{- $_ := set $s "noPrereleases" true -}}{{- end -}}
 {{- $stChart := $p.chart | default dict -}}
 {{- /* A customer's Stage takes its customer's Warehouse, or, where
        stageSources names a source, its customer's Warehouse of that source. */ -}}
@@ -225,7 +234,7 @@ The rules, for each Stage of `stageOrder`, in that order:
 {{- $_ := set $p "access" (dict "subjects" $subjects) -}}
 {{- $_ := set $p "stages" $stages -}}
 {{- if $customers -}}{{- $_ := set $p "customerWarehousesOnly" true -}}{{- end -}}
-{{- range $k := list "stageOrder" "upstreams" "autoPromote" "noAutoPromote" "stageSources" "applications" "applicationsByStage" "e2eStages" "e2eApplication" "metricsGateStages" "customers" -}}
+{{- range $k := list "stageOrder" "upstreams" "autoPromote" "noAutoPromote" "noPrereleases" "stageSources" "applications" "applicationsByStage" "e2eStages" "e2eApplication" "metricsGateStages" "customers" -}}
 {{- $_ := unset $p $k -}}
 {{- end -}}
 {{- toYaml $p -}}
