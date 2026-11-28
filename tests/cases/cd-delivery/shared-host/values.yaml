@@ -1,0 +1,53 @@
+# Two installs that share one host and one listener, each on a path of its
+# own: the application ring of each gets route.pathPrefix beside the hostname
+# and parentRef they share, for its chart's HTTPRoute PathPrefix match. A
+# third install on the same listener has no prefix and serves the host.
+platform:
+  clusterName: east
+  argocdNamespace: argocd
+  applicationPrefix: east-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+  postgres:
+    instances: 1
+    storage: 2Gi
+  events:
+    url: nats://broker.example:4222
+    storage: file
+    replicas: 1
+    maxAge: 24h
+    account: "{product}"
+products:
+  portal:
+    pin: 1.0.0
+    interface: 15
+    namespace: shared-globex
+    hostname: portal.globex.example.com
+    parentRef:
+      group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: shared-globex-portal
+      namespace: gateways
+  ledger:
+    pin: 2.0.0
+    interface: 15
+    namespace: shared-globex
+    hostname: portal.globex.example.com
+    parentRef:
+      group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: shared-globex-portal
+      namespace: gateways
+    pathPrefix: /ledger/
+  ledger-master:
+    pin: 2.1.0-master.3
+    interface: 15
+    chart: ledger
+    namespace: shared-globex
+    hostname: portal.globex.example.com
+    parentRef:
+      group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: shared-globex-portal
+      namespace: gateways
+    pathPrefix: /ledger-master/

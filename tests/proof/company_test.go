@@ -213,7 +213,7 @@ func TestCompanyPayloadMergesOnlyBusinessConfiguration(t *testing.T) {
 func TestCompanyRefusesPlatformOwnedPathsEvenForDormantServices(t *testing.T) {
 	helm := parity.RequireHelm(t)
 	paths := []string{
-		"cloud", "events", "identity", "route.enabled", "route.parentRef", "route.parentRefs", "route.sectionName", "route.surfaces", "route.faro", "serviceAccount", "tier", "pin", "chart", "repository", "interface", "appProject", "installName", "availability", "database", "tls", "archive", "otel", "access", "identityProviders", "alerts",
+		"cloud", "events", "identity", "route.enabled", "route.parentRef", "route.parentRefs", "route.sectionName", "route.pathPrefix", "route.surfaces", "route.faro", "serviceAccount", "tier", "pin", "chart", "repository", "interface", "appProject", "installName", "availability", "database", "tls", "archive", "otel", "access", "identityProviders", "alerts",
 		"postgres.platformOwned", "postgres.instances", "postgres.storage", "postgres.runtimeRole", "postgres.runtimePasswordSecret", "postgres.runtimePassword", "postgres.labels", "postgres.scheduling", "postgres.backup", "postgres.serverTLS",
 		"web.faro", "observability.dashboards",
 	}

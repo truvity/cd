@@ -218,6 +218,16 @@ route:
   parentRef:
     {{- toYaml . | nindent 4 }}
   {{- end }}
+  {{- if hasKey $p "pathPrefix" }}
+  {{- $pp := toString $p.pathPrefix }}
+  {{- if not (regexMatch "^(/[A-Za-z0-9_~-][A-Za-z0-9._~-]*)+/$" $pp) }}
+  {{- fail (printf "cd-delivery: products.%s.pathPrefix %q is not a path prefix: it starts and ends with \"/\" and has one or more segments of letters, digits and -._~, none starting with a dot" $name $pp) }}
+  {{- end }}
+  {{- if gt (len $pp) 1024 }}
+  {{- fail (printf "cd-delivery: products.%s.pathPrefix is %d characters, over 1024" $name (len $pp)) }}
+  {{- end }}
+  pathPrefix: {{ $pp | quote }}
+  {{- end }}
   {{- with $p.surfaces }}
   surfaces:
     {{- range . }}

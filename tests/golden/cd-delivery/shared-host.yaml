@@ -1,0 +1,325 @@
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-ledger-infra
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shared-globex
+  project: ledger-east
+  revisionHistoryLimit: 3
+  sources:
+  - helm:
+      releaseName: ledger-infra
+      valuesObject:
+        events:
+          account: ledger
+          maxAge: 24h
+          replicas: 1
+          storage: file
+        installName: ledger
+        postgres:
+          instances: 1
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: ledger-pg-runtime
+          runtimeRole: ledger_app
+          storage: 2Gi
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/ledger-infra
+    targetRevision: 2.0.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-ledger
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shared-globex
+  project: ledger-east
+  revisionHistoryLimit: 3
+  sources:
+  - helm:
+      releaseName: ledger
+      valuesObject:
+        database:
+          app:
+            passwordSecret: ledger-pg-runtime
+            role: ledger_app
+          host: ledger-infra-pg-rw
+        events:
+          url: nats://broker.example:4222
+        installName: ledger
+        route:
+          enabled: true
+          hostname: portal.globex.example.com
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: ListenerSet
+            name: shared-globex-portal
+            namespace: gateways
+          pathPrefix: /ledger/
+        serviceAccount:
+          app:
+            name: ledger
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/ledger
+    targetRevision: 2.0.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-ledger-master-infra
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shared-globex
+  project: ledger-master-east
+  revisionHistoryLimit: 3
+  sources:
+  - helm:
+      releaseName: ledger-master-infra
+      valuesObject:
+        events:
+          account: ledger-master
+          maxAge: 24h
+          replicas: 1
+          storage: file
+        installName: ledger-master
+        postgres:
+          instances: 1
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: ledger-master-pg-runtime
+          runtimeRole: ledger_master_app
+          storage: 2Gi
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/ledger-infra
+    targetRevision: 2.1.0-master.3
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-ledger-master
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shared-globex
+  project: ledger-master-east
+  revisionHistoryLimit: 3
+  sources:
+  - helm:
+      releaseName: ledger-master
+      valuesObject:
+        database:
+          app:
+            passwordSecret: ledger-master-pg-runtime
+            role: ledger_master_app
+          host: ledger-master-infra-pg-rw
+        events:
+          url: nats://broker.example:4222
+        installName: ledger-master
+        route:
+          enabled: true
+          hostname: portal.globex.example.com
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: ListenerSet
+            name: shared-globex-portal
+            namespace: gateways
+          pathPrefix: /ledger-master/
+        serviceAccount:
+          app:
+            name: ledger-master
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/ledger
+    targetRevision: 2.1.0-master.3
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-portal-infra
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shared-globex
+  project: portal-east
+  revisionHistoryLimit: 3
+  sources:
+  - helm:
+      releaseName: portal-infra
+      valuesObject:
+        events:
+          account: portal
+          maxAge: 24h
+          replicas: 1
+          storage: file
+        installName: portal
+        postgres:
+          instances: 1
+          runtimePassword:
+            generate: true
+          runtimePasswordSecret: portal-pg-runtime
+          runtimeRole: portal_app
+          storage: 2Gi
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/portal-infra
+    targetRevision: 1.0.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false
+
+---
+# Source: cd-delivery/templates/applications.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  name: east-portal
+  namespace: argocd
+spec:
+  destination:
+    name: east
+    namespace: shared-globex
+  project: portal-east
+  revisionHistoryLimit: 3
+  sources:
+  - helm:
+      releaseName: portal
+      valuesObject:
+        database:
+          app:
+            passwordSecret: portal-pg-runtime
+            role: portal_app
+          host: portal-infra-pg-rw
+        events:
+          url: nats://broker.example:4222
+        installName: portal
+        route:
+          enabled: true
+          hostname: portal.globex.example.com
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: ListenerSet
+            name: shared-globex-portal
+            namespace: gateways
+        serviceAccount:
+          app:
+            name: portal
+        tier: primary
+    path: .
+    repoURL: oci://registry.example.com/charts/portal
+    targetRevision: 1.0.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m
+      limit: -1
+      refresh: true
+    syncOptions:
+    - ServerSideApply=true
+    - CreateNamespace=false

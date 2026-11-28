@@ -1,0 +1,27 @@
+# expect: products.ledger: values.app.route.pathPrefix is written by the chart and cannot be set
+# The product's own values cannot move the path prefix either.
+platform:
+  clusterName: east
+  argocdNamespace: argocd
+  applicationPrefix: east-
+  appProject: "{product}-{cluster}"
+  chartRegistry: oci://registry.example.com/charts
+  postgres:
+    instances: 1
+    storage: 2Gi
+  events:
+    url: nats://broker.example:4222
+    storage: file
+    replicas: 1
+    maxAge: 24h
+    account: "{product}"
+products:
+  ledger:
+    pin: 2.0.0
+    interface: 15
+    hostname: portal.globex.example.com
+    pathPrefix: /ledger/
+    values:
+      app:
+        route:
+          pathPrefix: /other/

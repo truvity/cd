@@ -107,7 +107,8 @@ result against their own schemas.
   is served (`route.hostname`, and whatever hostnames, paths or rules the product
   chart reads under `route`), through its own values. The platform keeps the
   listener the route attaches to and the route's existence: `route.parentRef`,
-  `route.parentRefs`, `route.sectionName`, `route.enabled`, `route.surfaces`
+  `route.parentRefs`, `route.sectionName`, `route.enabled`, `route.pathPrefix`
+  (where on a host shared with other installs this one is served), `route.surfaces`
   (extra routes, each with a parent of its own) and `route.faro` (the telemetry
   route). Replacing `route` with a scalar or array fails. The same holds for a
   `kind: chart` service. A `kind: static-site` service keeps `route` reserved whole.
