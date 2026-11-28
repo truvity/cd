@@ -1,0 +1,11 @@
+# expect: values.example-service.app.route.pathPrefix is platform-owned
+# Where on a shared host an install is served is the platform's fact: a
+# company cannot move it, whether or not the platform's facts give one.
+services: [example-service]
+pins: {example-service: ""}
+products:
+  example-service: {kind: product, interface: 15, hostname: example-service.example.com, pathPrefix: /example/}
+values:
+  example-service:
+    app:
+      route: {pathPrefix: /other/}

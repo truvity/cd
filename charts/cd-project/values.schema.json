@@ -1138,6 +1138,12 @@
             ],
             "description": "The route's parent, passed by name."
           },
+          "pathPrefix": {
+            "type": "string",
+            "maxLength": 1024,
+            "pattern": "^(/[A-Za-z0-9_~-][A-Za-z0-9._~-]*)+/$",
+            "description": "Kind `product` only, with `hostname`: the path below the hostname this product's route serves, for an install that shares its host and parent with others (`/ledger/`). Starts and ends with `/`, one or more segments of letters, digits and `-._~`, none of them starting with a dot. Passed to the application ring as `route.pathPrefix`, for the chart's HTTPRoute `PathPrefix` match; no payload may set that path. Unset: nothing passed, the route serves the whole host."
+          },
           "surfaces": {
             "type": "array",
             "items": {
@@ -1525,7 +1531,12 @@
             "description": "Kind `static-site` only: the site artifact."
           }
         },
-        "required": []
+        "required": [],
+        "dependencies": {
+          "pathPrefix": [
+            "hostname"
+          ]
+        }
       },
       "description": "Platform-owned: the project's product facts, per cluster (per Stage with project.customers; cd-company's products.<service>)."
     },

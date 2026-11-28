@@ -34,7 +34,7 @@ that passes its own dict gets the same refusal of an unknown key from
 {{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s (kind chart)" $name) "got" $p "allowed" (list "kind" "pin" "repository" "chart" "namespace" "values")) -}}
 {{- $docs = append $docs (include "cd-delivery.chartProduct" (dict "plat" $plat "name" $name "p" $p)) -}}
 {{- else -}}
-{{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s" $name) "got" $p "allowed" (list "kind" "pin" "interface" "repository" "chart" "hostname" "parentRef" "surfaces" "bucketSlug" "workloadIdentity" "natsIdentity" "mtls" "postgres" "e2e" "faro" "alerts" "dashboards" "identityProviders" "access" "product" "values" "ignoreDifferences" "platformValues" "layers" "namespace" "applicationName" "vendor" "customer" "component")) -}}
+{{- include "cd-delivery.assertKeys" (dict "what" (printf "products.%s" $name) "got" $p "allowed" (list "kind" "pin" "interface" "repository" "chart" "hostname" "parentRef" "pathPrefix" "surfaces" "bucketSlug" "workloadIdentity" "natsIdentity" "mtls" "postgres" "e2e" "faro" "alerts" "dashboards" "identityProviders" "access" "product" "values" "ignoreDifferences" "platformValues" "layers" "namespace" "applicationName" "vendor" "customer" "component")) -}}
 {{- $docs = append $docs (include "cd-delivery.product" (dict "plat" $plat "name" $name "p" $p)) -}}
 {{- end -}}
 {{- end -}}
@@ -65,6 +65,15 @@ Call with (dict "plat" <platform> "name" <product> "p" <product map>).
 {{- /* The platform's pin-gated layers that apply to this pin; a required one that does not is a refusal. */ -}}
 {{- $layers := (include "cd-delivery.activeLayers" (dict "name" $name "p" $p) | fromYaml).layers -}}
 {{- $ctx := dict "plat" $plat "name" $name "p" $p "i" $i "layers" $layers -}}
+{{- /* A path prefix is the platform's fact about where on a shared host the
+       install is served: no payload may move it, the platform's own included. */ -}}
+{{- if hasKey $p "pathPrefix" -}}
+{{- include "cd-delivery.assertUnwritten" (dict "what" (printf "products.%s" $name) "channel" "platformValues.app" "payload" (dig "platformValues" "app" (dict) $p) "paths" (list "route.pathPrefix")) -}}
+{{- range $layer := $layers -}}
+{{- include "cd-delivery.assertUnwritten" (dict "what" (printf "products.%s" $name) "channel" (printf "layers[%s].values.app" $layer.name) "payload" (dig "values" "app" (dict) $layer) "paths" (list "route.pathPrefix")) -}}
+{{- end -}}
+{{- include "cd-delivery.assertUnwritten" (dict "what" (printf "products.%s" $name) "channel" "values.app" "payload" (dig "values" "app" (dict) $p) "paths" (list "route.pathPrefix")) -}}
+{{- end -}}
 {{- $docs := list -}}
 {{- $docs = append $docs (include "cd-delivery.application" (dict "ctx" $ctx "ring" "infra" "values" (include "cd-delivery.infraValues" $ctx | fromYaml))) -}}
 {{- $docs = append $docs (include "cd-delivery.application" (dict "ctx" $ctx "ring" "app" "values" (include "cd-delivery.appValues" $ctx | fromYaml))) -}}

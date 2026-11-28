@@ -16,8 +16,9 @@
      list is what keeps a company out of the Application's own fields, and a
      key that list reserves is not available to it.
      `route` is reserved by its attachment, not whole: which listener the route
-     hangs on (`parentRef`, `parentRefs`, `sectionName`), the extra routes the
-     platform declares (`surfaces`, each with its own parent), the telemetry
+     hangs on (`parentRef`, `parentRefs`, `sectionName`), the path prefix of an
+     install that shares its host with others (`pathPrefix`), the extra routes
+     the platform declares (`surfaces`, each with its own parent), the telemetry
      route (`faro`) and whether the route exists at all (`enabled`). The rest
      of `route` (the hostname and the paths or rules a product chart reads) is
      the company's. A scalar in place of `route` is still refused. */}}
@@ -30,6 +31,7 @@ route:
   parentRef: true
   parentRefs: true
   sectionName: true
+  pathPrefix: true
   surfaces: true
   faro: true
 serviceAccount: true
